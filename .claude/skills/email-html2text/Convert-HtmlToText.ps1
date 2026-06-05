@@ -36,5 +36,3 @@ function Convert-HtmlToText {
         return $Html
     }
 }
-
-Export-ModuleFunction -Function Convert-HtmlToText

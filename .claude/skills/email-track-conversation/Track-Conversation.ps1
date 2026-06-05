@@ -78,5 +78,3 @@ function Track-Conversation {
         return $result
     }
 }
-
-Export-ModuleFunction -Function Track-Conversation

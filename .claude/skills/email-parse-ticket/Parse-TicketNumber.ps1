@@ -64,5 +64,3 @@ function Parse-TicketNumber {
         MatchedPattern = $null
     }
 }
-
-Export-ModuleFunction -Function Parse-TicketNumber

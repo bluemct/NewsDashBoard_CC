@@ -54,5 +54,3 @@ function Get-EwsEmail {
         return $null
     }
 }
-
-Export-ModuleFunction -Function Get-EwsEmail

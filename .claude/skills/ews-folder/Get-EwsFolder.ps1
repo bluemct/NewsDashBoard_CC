@@ -66,5 +66,3 @@ function Get-EwsFolder {
         }
     }
 }
-
-Export-ModuleFunction -Function Get-EwsFolder

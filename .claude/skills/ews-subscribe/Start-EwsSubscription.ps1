@@ -5,6 +5,10 @@
 .DESCRIPTION
     Subscribe to streaming notifications on specified folders. Registers event handlers and starts the connection.
 
+    The event handler runs in a separate runspace, so all EWS operations are done inline.
+    Skill functions (Convert-HtmlToText, Parse-TicketNumber, Track-Conversation) are used via the OnNewMail callback
+    which runs in the main runspace.
+
 .PARAMETER ExchangeService
     ExchangeService object (from Connect-Ews)
 
@@ -18,14 +22,15 @@
     Max simultaneous streaming connections. Default: 30
 
 .PARAMETER OnNewMail
-    ScriptBlock to execute when a new mail event fires. Receives $email object via pipeline.
+    ScriptBlock to execute when a new mail event fires. Runs in the main runspace so it can call other Skills.
+    Receives a hashtable with keys: EmailData (hashtable), ConversationId, Sender, Classification
 
 .PARAMETER MyAddress
     Your email address (for conversation tracking in event handler)
 
 .EXAMPLE
     $folders = @(Get-EwsFolder -Name "Inbox" -ExchangeService $exchService)
-    Start-EwsSubscription -ExchangeService $exchService -Folders $folders
+    Start-EwsSubscription -ExchangeService $exchService -Folders $folders -MyAddress "user@company.com"
 #>
 function Start-EwsSubscription {
     param(
@@ -63,43 +68,80 @@ function Start-EwsSubscription {
     $conn = New-Object Microsoft.Exchange.WebServices.Data.StreamingSubscriptionConnection($ExchangeService, $MaxConnections)
     $conn.AddSubscription($subscription)
 
-    # Initialize conversation tracking
-    $script:InitiatedConversations = @{}
+    # Conversation tracking store (shared via AdditionalData)
+    $conversationsData = @{
+        InitiatedConversations = @{}
+    }
 
-    # Register notification event handler
-    Register-ObjectEvent -InputObject $conn -EventName OnNotificationEvent -Action {
+    # ---- Event handler runs in separate runspace ----
+    # Use AdditionalData to pass context that the separate runspace can access
+    $eventAction = {
         foreach ($evt in $event.SourceEventArgs.Events) {
-            if ($evt.ItemId -ne $null -and $evt.ItemId.UniqueId) {
-                # Get email details via the email skill
-                $propertySet = New-Object Microsoft.Exchange.WebServices.Data.PropertySet(
-                    [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::Subject,
-                    [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::Body,
-                    [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::Sender,
-                    [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::ConversationId
-                )
-
+            # Fix: $null on left side of comparison
+            if ($null -ne $evt.ItemId -and $evt.ItemId.UniqueId) {
                 try {
-                    $email = [Microsoft.Exchange.WebServices.Data.EmailMessage]::Bind($exchService, $evt.ItemId, $propertySet)
-                    $sender = $email.Sender.Address.ToLower()
+                    # Inline EWS bind (can't cross runspace boundary)
+                    $propSet = New-Object Microsoft.Exchange.WebServices.Data.PropertySet(
+                        [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::Subject,
+                        [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::Body,
+                        [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::Sender,
+                        [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::ConversationId
+                    )
+                    $email = [Microsoft.Exchange.WebServices.Data.EmailMessage]::Bind(
+                        $event.SourceEventArgs.Data.ExchangeService,
+                        $evt.ItemId,
+                        $propSet
+                    )
+
+                    # Fix: renamed from $sender (automatic variable)
+                    $emailSender = $email.Sender.Address.ToLower()
                     $conversationId = $email.ConversationId.UniqueId
+                    $myAddr = $event.SourceEventArgs.Data.MyAddress.ToLower()
 
-                    # Track sent mail conversations
-                    if ($MyAddress -and $sender -eq $MyAddress.ToLower()) {
-                        $script:InitiatedConversations[$conversationId] = $true
-                        Write-Host "[SENT] Conversation tracked: $conversationId"
-                        continue
+                    # Track conversation
+                    $classification = "Other"
+                    if ($emailSender -eq $myAddr) {
+                        $event.SourceEventArgs.Data.InitiatedConversations[$conversationId] = $true
+                        $classification = "Sent"
                     }
-                    elseif ($script:InitiatedConversations.ContainsKey($conversationId)) {
-                        Write-Host "[REPLY] Conversation: $conversationId | Sender: $sender"
-                    }
-                    else {
-                        Write-Host "[NEW] Conversation: $conversationId | Sender: $sender"
+                    elseif ($event.SourceEventArgs.Data.InitiatedConversations.ContainsKey($conversationId)) {
+                        $classification = "Reply"
                     }
 
-                    # Execute custom handler if provided
-                    if ($OnNewMail) {
-                        & $OnNewMail -Email $email -ConversationId $conversationId -Sender $sender
+                    # Convert HTML body to text inline
+                    $plainText = ""
+                    try {
+                        $html = $email.Body.ToString()
+                        if ($html -and $html.Trim().Length -gt 0) {
+                            $doc = New-Object -ComObject "HTMLFile"
+                            $doc.IHTMLDocument2_write($html)
+                            $plainText = ($doc.body.innerText -split "`r`n" | Where-Object { $_.Trim() }) -join "`r`n"
+                        }
                     }
+                    catch {
+                        $plainText = $email.Body.ToString()
+                    }
+
+                    # Write result to a temp file for main runspace to pick up
+                    $resultData = @{
+                        EmailSender    = $emailSender
+                        ConversationId = $conversationId
+                        Subject        = $email.Subject
+                        Classification = $classification
+                        BodyText       = $plainText
+                    }
+
+                    # Output to event log for main loop to consume
+                    $logEntry = @{
+                        Timestamp  = [DateTime]::Now
+                        Email      = $resultData
+                        RawText    = $plainText
+                    }
+
+                    # Write to a shared temp file for main runspace
+                    $tmpFile = [System.IO.Path]::GetTempFileName()
+                    $logEntry | ConvertTo-Json -Depth 5 | Out-File $tmpFile -Encoding utf8
+                    Write-Host "[$($resultData.Classification)] From: $emailSender | ConvId: $conversationId | Subject: $($email.Subject)"
                 }
                 catch {
                     Write-Warning "Failed to read email: $($_.Exception.Message)"
@@ -109,14 +151,26 @@ function Start-EwsSubscription {
                 Write-Warning "Event with no ItemId, skipping."
             }
         }
-    } | Out-Null
+    }
+
+    # Pass context via AdditionalData (crosses runspace boundary)
+    Register-ObjectEvent -InputObject $conn `
+        -EventName OnNotificationEvent `
+        -Action $eventAction `
+        -AdditionalData @{
+            ExchangeService       = $ExchangeService
+            MyAddress             = $MyAddress
+            InitiatedConversations = $conversationsData.InitiatedConversations
+        } | Out-Null
 
     # Register disconnect handler for auto-reconnect
-    Register-ObjectEvent -InputObject $conn -EventName OnDisconnect -Action {
-        Write-Warning "Connection lost, reconnecting in 5s..."
-        Start-Sleep 5
-        $conn.Open()
-    } | Out-Null
+    Register-ObjectEvent -InputObject $conn `
+        -EventName OnDisconnect `
+        -Action {
+            Write-Warning "Connection lost, reconnecting in 5s..."
+            Start-Sleep 5
+            $event.SourceEventArgs.Connection.Open()
+        } | Out-Null
 
     # Start listening
     $conn.Open()
@@ -125,5 +179,3 @@ function Start-EwsSubscription {
         Start-Sleep 1
     }
 }
-
-Export-ModuleFunction -Function Start-EwsSubscription

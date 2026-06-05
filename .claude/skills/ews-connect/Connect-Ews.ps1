@@ -40,7 +40,7 @@ function Connect-Ews {
         [string]$UserName,
 
         [Parameter(Mandatory=$false)]
-        [string]$Password,
+        [SecureString]$Password,
 
         [Parameter(Mandatory=$false)]
         [string]$Domain,
@@ -61,7 +61,8 @@ function Connect-Ews {
         if (-not $UserName -or -not $Password) {
             throw "UserName and Password are required for Custom credentials."
         }
-        $Credentials = New-Object Microsoft.Exchange.WebServices.Data.WebCredentials($UserName, $Password, $Domain)
+        $securePassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password))
+        $Credentials = New-Object Microsoft.Exchange.WebServices.Data.WebCredentials($UserName, $securePassword, $Domain)
     }
 
     # Create ExchangeService
@@ -71,7 +72,6 @@ function Connect-Ews {
 
     # Verify connection
     try {
-        $mailbox = New-Object Microsoft.Exchange.WebServices.Data.Mailbox($UserName)
         $folder = [Microsoft.Exchange.WebServices.Data.Folder]::Bind(
             $exchService,
             [Microsoft.Exchange.WebServices.Data.WellKnownFolderName]::Inbox
@@ -84,5 +84,3 @@ function Connect-Ews {
 
     return $exchService
 }
-
-Export-ModuleFunction -Function Connect-Ews
