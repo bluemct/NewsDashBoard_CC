@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>新闻简报任务监控</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Microsoft YaHei', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+  .header h1 { font-size: 28px; color: #fff; }
+  .header .badge { background: #1e293b; padding: 6px 14px; border-radius: 20px; font-size: 13px; color: #94a3b8; }
+  .refresh-btn {
+    background: #0078d4;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s;
+  }
+  .refresh-btn:hover { background: #1a8ae8; }
+  .refresh-btn:active { transform: scale(0.96); }
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
+  .card .label { font-size: 13px; color: #64748b; margin-bottom: 8px; }
+  .card .value { font-size: 32px; font-weight: 700; }
+  .card .sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .green { color: #4ade80; }
+  .red { color: #f87171; }
+  .yellow { color: #fbbf24; }
+  .blue { color: #60a5fa; }
+  .next-run { background: linear-gradient(135deg, #1e3a5f, #1e293b); border: 1px solid #0078d4; }
+  .next-run .value { color: #60a5fa; }
+  .table-wrap { background: #1e293b; border-radius: 12px; border: 1px solid #334155; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 14px 16px; font-size: 12px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #334155; }
+  td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid #1a2332; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover { background: #253347; }
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+  .dot-green { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+  .dot-red { background: #f87171; box-shadow: 0 0 6px #f87171; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+  .tag-ai { background: rgba(123,47,190,0.2); color: #c084fc; }
+  .tag-auto { background: rgba(0,166,110,0.2); color: #4ade80; }
+  .tag-top { background: rgba(0,120,212,0.2); color: #60a5fa; }
+  .error-text { color: #f87171; font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .refresh-hint { text-align: center; color: #475569; font-size: 12px; margin-top: 16px; }
+  .last-update { float: right; font-size: 12px; color: #64748b; }
+  .progress-bar { width: 60px; height: 4px; background: #334155; border-radius: 2px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 8px; }
+  .progress-fill { height: 100%; background: #4ade80; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>每日新闻简报 - 任务监控</h1>
+      <span class="last-update" id="lastUpdate">加载中...</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="refresh-btn" onclick="loadStatus()" title="手动刷新数据">刷新</button>
+      <span class="badge" id="scheduleBadge">每天 07:03</span>
+      <span class="badge" id="totalRuns">共 0 次执行</span>
+    </div>
+  </div>
+
+  <div class="status-grid">
+    <div class="card next-run">
+      <div class="label">下次运行时间</div>
+      <div class="value" id="nextRun">计算中...</div>
+      <div class="sub" id="countdown">--</div>
+    </div>
+    <div class="card">
+      <div class="label">最近一次状态</div>
+      <div class="value" id="lastStatus">--</div>
+      <div class="sub" id="lastTime">--</div>
+    </div>
+    <div class="card">
+      <div class="label">今日新闻总数</div>
+      <div class="value green" id="todayTotal">0</div>
+      <div class="sub">
+        <span class="tag tag-ai">AI: <span id="todayAI">0</span></span>
+        <span class="tag tag-auto">汽车: <span id="todayAuto">0</span></span>
+        <span class="tag tag-top">头条: <span id="todayTop">0</span></span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">成功率</div>
+      <div class="value" id="successRate">--</div>
+      <div class="sub" id="successDetail">--</div>
+    </div>
+    <div class="card">
+      <div class="label">平均耗时</div>
+      <div class="value blue" id="avgDuration">--</div>
+      <div class="sub">秒</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>状态</th>
+          <th>时间</th>
+          <th>AI 新闻</th>
+          <th>汽车新闻</th>
+          <th>头条</th>
+          <th>总数</th>
+          <th>耗时</th>
+          <th>错误信息</th>
+        </tr>
+      </thead>
+      <tbody id="runTable">
+        <tr><td colspan="8" style="text-align:center;color:#475569;">暂无数据</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="refresh-hint">页面每 30 秒自动刷新 · 数据来源: task_status.json</p>
+</div>
+
+<script>
+const API_URL = '/api/status';
+let countdownInterval;
+
+async function loadStatus() {
+  try {
+    const res = await fetch(API_URL + '?t=' + Date.now());
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    document.getElementById('lastUpdate').textContent = '数据加载失败: ' + e.message;
+  }
+}
+
+function render(data) {
+  const runs = data.runs || [];
+  const taskName = data.task_name || '每日新闻简报';
+
+  // Last update time
+  const now = new Date();
+  document.getElementById('lastUpdate').textContent = '最后更新: ' + now.toLocaleString('zh-CN');
+  document.getElementById('scheduleBadge').textContent = '计划: ' + (data.schedule || '每天 07:03');
+  document.getElementById('totalRuns').textContent = '共 ' + runs.length + ' 次执行';
+
+  // Next run time
+  const nextRun = getNextRun();
+  document.getElementById('nextRun').textContent = nextRun.toLocaleDateString('zh-CN') + ' 07:03';
+  updateCountdown(nextRun);
+
+  if (!runs.length) return;
+
+  const last = runs[runs.length - 1];
+
+  // Last status
+  const statusEl = document.getElementById('lastStatus');
+  statusEl.innerHTML = last.status === 'success'
+    ? '<span class="green">成功</span>'
+    : '<span class="red">失败</span>';
+  document.getElementById('lastTime').textContent = formatTime(last.timestamp);
+
+  // Today stats
+  const aiHtml = `<a class="stat-link" href="/news#ai" style="color:inherit;text-decoration:none;">${last.ai_count}</a>`;
+  const autoHtml = `<a class="stat-link" href="/news#auto" style="color:inherit;text-decoration:none;">${last.auto_count}</a>`;
+  const topHtml = `<a class="stat-link" href="/news#top" style="color:inherit;text-decoration:none;">${last.top_count}</a>`;
+  const totalHtml = `<a class="stat-link" href="/news" style="color:inherit;text-decoration:none;">${last.total}</a>`;
+  document.getElementById('todayAI').innerHTML = aiHtml;
+  document.getElementById('todayAuto').innerHTML = autoHtml;
+  document.getElementById('todayTop').innerHTML = topHtml;
+  document.getElementById('todayTotal').innerHTML = totalHtml;
+
+  // Success rate
+  const successCount = runs.filter(r => r.status === 'success').length;
+  const rate = Math.round(successCount / runs.length * 100);
+  const rateEl = document.getElementById('successRate');
+  rateEl.className = 'value ' + (rate >= 80 ? 'green' : rate >= 50 ? 'yellow' : 'red');
+  rateEl.textContent = rate + '%';
+  document.getElementById('successDetail').textContent = `${successCount} 成功 / ${runs.length - successCount} 失败`;
+
+  // Avg duration
+  const durations = runs.map(r => r.duration).filter(Boolean);
+  const avg = durations.length ? (durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(1) : '--';
+  document.getElementById('avgDuration').textContent = avg;
+
+  // Table (newest first)
+  const tbody = document.getElementById('runTable');
+  tbody.innerHTML = runs.slice().reverse().map(r => {
+    const dot = r.status === 'success' ? 'dot-green' : 'dot-red';
+    const statusText = r.status === 'success' ? '成功' : '失败';
+    const errorHtml = r.error ? `<span class="error-text" title="${escHtml(r.error)}">${escHtml(r.error.substring(0, 40))}</span>` : '-';
+    return `<tr>
+      <td><span class="status-dot ${dot}"></span>${statusText}</td>
+      <td>${formatTime(r.timestamp)}</td>
+      <td><span class="tag tag-ai">${r.ai_count}</span></td>
+      <td><span class="tag tag-auto">${r.auto_count}</span></td>
+      <td><span class="tag tag-top">${r.top_count}</span></td>
+      <td>${r.total}</td>
+      <td>${r.duration}s</td>
+      <td>${errorHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+function getNextRun() {
+  const now = new Date();
+  let next = new Date(now);
+  next.setHours(7, 3, 0, 0);
+  if (now >= next) {
+    next.setDate(next.getDate() + 1);
+  }
+  return next;
+}
+
+function updateCountdown(nextRun) {
+  if (countdownInterval) clearInterval(countdownInterval);
+  function tick() {
+    const diff = nextRun - new Date();
+    if (diff <= 0) {
+      document.getElementById('countdown').textContent = '即将运行...';
+      return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    document.getElementById('countdown').textContent = `倒计时: ${h}h ${m}m ${s}s`;
+  }
+  tick();
+  countdownInterval = setInterval(tick, 1000);
+}
+
+function formatTime(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Load and auto-refresh
+loadStatus();
+setInterval(loadStatus, 30000);
+</script>
+</body>
+</html>

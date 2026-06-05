@@ -1,0 +1,8 @@
+reports/*.pptx
+reports/*.json
+news_report.log
+.claude/
+task_status.json
+msn_rendered.html
+msn_full.html
+msn_after_cookies.html

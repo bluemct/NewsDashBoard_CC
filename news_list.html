@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>新闻详情 - 每日简报</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Microsoft YaHei', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; position: sticky; top: 0; z-index: 100; background: #0f172a; padding: 12px 0; border-bottom: 1px solid #1e293b; }
+  .header h1 { font-size: 24px; color: #fff; }
+  .back-btn {
+    background: #334155; color: #e2e8f0; border: none; padding: 8px 18px; border-radius: 8px;
+    font-size: 14px; cursor: pointer; font-family: inherit; transition: background 0.2s;
+    text-decoration: none;
+  }
+  .back-btn:hover { background: #475569; }
+  .section { margin-bottom: 36px; }
+  .section-title {
+    font-size: 20px; font-weight: 700; margin-bottom: 16px; padding-left: 12px;
+    border-left: 4px solid; display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .count { font-size: 14px; font-weight: 400; opacity: 0.7; }
+  .section-ai .section-title { color: #c084fc; border-color: #7b2fbe; }
+  .section-auto .section-title { color: #4ade80; border-color: #00a66e; }
+  .section-top .section-title { color: #60a5fa; border-color: #0078d4; }
+  .news-card {
+    background: #1e293b; border-radius: 10px; padding: 16px 20px; margin-bottom: 10px;
+    border: 1px solid #334155; display: flex; align-items: flex-start; gap: 14px;
+    transition: background 0.15s;
+  }
+  .news-card:hover { background: #253347; }
+  .news-num {
+    min-width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .section-ai .news-num { background: #7b2fbe; }
+  .section-auto .news-num { background: #00a66e; }
+  .section-top .news-num { background: #0078d4; }
+  .news-body { flex: 1; }
+  .news-title { font-size: 15px; line-height: 1.5; margin-bottom: 4px; color: #f1f5f9; }
+  .news-title a { color: inherit; text-decoration: none; }
+  .news-title a:hover { color: #60a5fa; }
+  .news-meta { font-size: 12px; color: #64748b; }
+  .news-source { margin-right: 12px; }
+  .no-news { color: #475569; font-size: 14px; padding: 20px 0; text-align: center; }
+  .last-update { text-align: center; color: #475569; font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>新闻详情</h1>
+    <button class="back-btn" onclick="window.location.href='/'">返回首页</button>
+  </div>
+
+  <div class="section section-ai" id="ai">
+    <div class="section-title">人工智能资讯 <span class="count" id="aiCount"></span></div>
+    <div id="aiList"></div>
+  </div>
+
+  <div class="section section-auto" id="auto">
+    <div class="section-title">汽车行业资讯 <span class="count" id="autoCount"></span></div>
+    <div id="autoList"></div>
+  </div>
+
+  <div class="section section-top" id="top">
+    <div class="section-title">头条精选 <span class="count" id="topCount"></span></div>
+    <div id="topList"></div>
+  </div>
+
+  <p class="last-update" id="lastUpdate">加载中...</p>
+</div>
+
+<script>
+// Auto-scroll to section from hash (called after data is rendered)
+function scrollToSection() {
+  if (window.location.hash) {
+    const target = document.querySelector(window.location.hash);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+}
+
+async function loadNews() {
+  try {
+    const res = await fetch('/api/news?t=' + Date.now());
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    document.getElementById('lastUpdate').textContent = '数据加载失败: ' + e.message;
+  }
+}
+
+function render(data) {
+  const ts = data.timestamp;
+  document.getElementById('lastUpdate').textContent =
+    '数据来源: 最近一次运行 ' + (ts ? new Date(ts).toLocaleString('zh-CN') : '未知');
+
+  ['ai', 'auto', 'top'].forEach(cat => {
+    const items = data[cat] || [];
+    document.getElementById(cat + 'Count').textContent = `(${items.length} 条)`;
+    const container = document.getElementById(cat + 'List');
+
+    if (!items.length) {
+      container.innerHTML = '<div class="no-news">暂无相关新闻</div>';
+      return;
+    }
+
+    container.innerHTML = items.map((item, i) => {
+      const source = item.source || '-';
+      const srcClass = cat === 'ai' ? 'tag-ai' : cat === 'auto' ? 'tag-auto' : 'tag-top';
+      return `<div class="news-card">
+        <div class="news-num">${i + 1}</div>
+        <div class="news-body">
+          <div class="news-title">
+            ${item.url ? `<a href="${escHtml(item.url)}" target="_blank" rel="noopener">${escHtml(item.title)}</a>` : escHtml(item.title)}
+          </div>
+          <div class="news-meta">
+            <span class="news-source">[${escHtml(source)}]</span>
+            ${item.date ? `<span>${escHtml(item.date)}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  });
+
+  // Scroll to section after DOM is ready
+  scrollToSection();
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadNews();
+setInterval(loadNews, 30000);
+</script>
+</body>
+</html>
