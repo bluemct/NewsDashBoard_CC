@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py -c ' *)",
+      "Bash(where py *)",
+      "Bash(where python *)",
+      "Bash(python -c \"import ssl; print\\('SSL: OK'\\)\")",
+      "Bash(python -m pip --version)",
+      "Bash(python -m ensurepip --upgrade)",
+      "Bash(python -m pip install playwright --default-timeout=120 -i https://pypi.tuna.tsinghua.edu.cn/simple)",
+      "Bash(python -m playwright install chromium)",
+      "Bash(python -m pip install python-pptx --default-timeout=120 -i https://pypi.tuna.tsinghua.edu.cn/simple)",
+      "Bash(python msn_news_report.py)",
+      "Bash(python debug_msn_pw.py)",
+      "Bash(python debug_msn_cookies.py)",
+      "Bash(python dashboard_server.py)",
+      "Bash(curl -s http://localhost:8899/api/status)",
+      "Bash(curl -s http://localhost:8899/)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -v http://localhost:8899/api/status)",
+      "Bash(curl -s \"http://localhost:8899/api/status?t=123456\")",
+      "Bash(curl -s http://localhost:8899/api/news)",
+      "Bash(curl -s http://localhost:8899/news)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(f'AI:{len\\(d[\\\\\"ai\\\\\"]\\)}, Auto:{len\\(d[\\\\\"auto\\\\\"]\\)}, Top:{len\\(d[\\\\\"top\\\\\"]\\)}'\\)\")",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)"
+    ]
+  }
+}

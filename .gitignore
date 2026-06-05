@@ -1,7 +1,10 @@
 reports/*.pptx
 reports/*.json
 news_report.log
-.claude/
+.claude/scheduled_tasks.json
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+**/.claude/skills/**/*.checksum
 task_status.json
 msn_rendered.html
 msn_full.html
