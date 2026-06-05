@@ -28,7 +28,16 @@
       "Bash(git config *)",
       "Bash(git remote *)",
       "Bash(git branch *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git commit *)",
+      "Bash(find /c/Users/SI-Agent/ -maxdepth 4 -name \"*.ps1\" -newer /c/Users/SI-Agent/AgentProject/msn_news_report.py 2>/dev/null | head -20)",
+      "Read(//c/Users/SI-Agent//**)",
+      "Bash(mkdir -p c:/Users/SI-Agent/AgentProject/.claude/skills/ews-connect c:/Users/SI-Agent/AgentProject/.claude/skills/ews-folder c:/Users/SI-Agent/AgentProject/.claude/skills/ews-email c:/Users/SI-Agent/AgentProject/.claude/skills/ews-subscribe c:/Users/SI-Agent/AgentProject/.claude/skills/email-html2text c:/Users/SI-Agent/AgentProject/.claude/skills/email-parse-ticket c:/Users/SI-Agent/AgentProject/.claude/skills/email-track-conversation 2>&1)",
+      "Edit(/.claude/skills/ews-connect/**)",
+      "Edit(/.claude/skills/ews-folder/**)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills"
     ]
   }
 }
