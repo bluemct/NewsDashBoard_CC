@@ -20,19 +20,20 @@ metadata:
 ## Usage
 
 ```powershell
-# 加载 EWS DLL
-Import-Module -Name "C:\path\to\Microsoft.Exchange.WebServices.dll"
+# 加载 Skill 脚本
+. .claude/skills/ews-connect/Connect-Ews.ps1
 
-# 使用默认域凭据（推荐内网环境）
-$Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+# 连接（使用默认域凭据）
+$exchService = Connect-Ews `
+    -DllPath "C:\path\to\Microsoft.Exchange.WebServices.dll" `
+    -EwsUrl "https://mail.21vianet.com/EWS/Exchange.asmx"
 
-# 或使用用户名密码
-# $Credentials = New-Object Microsoft.Exchange.WebServices.Data.WebCredentials("user", "password", "domain")
-
-# 创建 ExchangeService 对象
-$exchService = New-Object Microsoft.Exchange.WebServices.Data.ExchangeService
-$exchService.Credentials = $Credentials
-$exchService.url = 'https://mail.21vianet.com/EWS/Exchange.asmx'
+# 或指定用户名密码
+$exchService = Connect-Ews `
+    -DllPath "C:\path\to\Microsoft.Exchange.WebServices.dll" `
+    -CredentialType "Custom" `
+    -UserName "user" -Password "pass" -Domain "domain" `
+    -EwsUrl "https://mail.21vianet.com/EWS/Exchange.asmx"
 ```
 
 ## Output

@@ -20,24 +20,21 @@ metadata:
 ## Usage
 
 ```powershell
-# 声明需要的属性
-$propertySet = New-Object Microsoft.Exchange.WebServices.Data.PropertySet(
-    [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::Subject,
-    [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::Body,
-    [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::Sender,
-    [Microsoft.Exchange.WebServices.Data.EmailMessageSchema]::ConversationId
-)
+# 加载 Skill 脚本
+. .claude/skills/ews-email/Get-EwsEmail.ps1
 
-# 绑定邮件
-$email = [Microsoft.Exchange.WebServices.Data.EmailMessage]::Bind(
-    $exchService, $evt.ItemId, $propertySet
-)
+# 获取邮件详情（默认属性）
+$email = Get-EwsEmail -ItemId $evt.ItemId -ExchangeService $exchService
 
 # 提取字段
 $subject = $email.Subject
 $sender = $email.Sender.Address.ToLower()
 $conversationId = $email.ConversationId.UniqueId
 $body = $email.Body.ToString()
+
+# 只获取指定属性（更快）
+$email = Get-EwsEmail -ItemId $evt.ItemId -ExchangeService $exchService `
+    -Properties @('Subject', 'Sender')
 ```
 
 ## Related Skills

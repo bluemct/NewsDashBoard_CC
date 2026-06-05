@@ -19,51 +19,13 @@ metadata:
 ## Usage
 
 ```powershell
-function Get-Folder {
-    param([string]$Name, $exchService)
-
-    # 系统文件夹（收件箱等）
-    if ($Name -eq "Inbox") {
-        return [Microsoft.Exchange.WebServices.Data.Folder]::Bind(
-            $exchService,
-            [Microsoft.Exchange.WebServices.Data.WellKnownFolderName]::Inbox
-        )
-    }
-    elseif ($Name -eq "Sent Items") {
-        return [Microsoft.Exchange.WebServices.Data.Folder]::Bind(
-            $exchService,
-            [Microsoft.Exchange.WebServices.Data.WellKnownFolderName]::SentItems
-        )
-    }
-    else {
-        # 自定义文件夹 - 按显示名称搜索
-        $folderView = New-Object Microsoft.Exchange.WebServices.Data.FolderView(1)
-        $folderView.PropertySet = [Microsoft.Exchange.WebServices.Data.BasePropertySet]::FirstClassProperties
-
-        $searchFilter = New-Object Microsoft.Exchange.WebServices.Data.SearchFilter+IsEqualTo(
-            [Microsoft.Exchange.WebServices.Data.FolderSchema]::DisplayName,
-            $Name
-        )
-
-        $folders = $exchService.FindFolders(
-            [Microsoft.Exchange.WebServices.Data.WellKnownFolderName]::MsgFolderRoot,
-            $searchFilter,
-            $folderView
-        )
-
-        if ($folders.TotalCount -gt 0) {
-            return $folders.Folders[0]
-        }
-        else {
-            return $null
-        }
-    }
-}
+# 加载 Skill 脚本
+. .claude/skills/ews-folder/Get-EwsFolder.ps1
 
 # 使用示例
-$inbox = Get-Folder -Name "Inbox" -exchService $exchService
-$customFolder = Get-Folder -Name "EDM" -exchService $exchService
-$sent = Get-Folder -Name "Sent Items" -exchService $exchService
+$inbox = Get-EwsFolder -Name "Inbox" -ExchangeService $exchService
+$sent = Get-EwsFolder -Name "Sent Items" -ExchangeService $exchService
+$custom = Get-EwsFolder -Name "EDM" -ExchangeService $exchService
 ```
 
 ## Output

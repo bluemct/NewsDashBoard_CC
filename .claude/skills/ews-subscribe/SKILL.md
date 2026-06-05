@@ -20,51 +20,22 @@ metadata:
 ## Usage
 
 ```powershell
-# 1. 获取要监听的文件夹
+# 加载 Skill 脚本
+. .claude/skills/ews-folder/Get-EwsFolder.ps1
+. .claude/skills/ews-subscribe/Start-EwsSubscription.ps1
+
+# 获取要监听的文件夹
 $folders = @(
-    Get-Folder -Name "Inbox"
-    Get-Folder -Name "Sent Items"
-    Get-Folder -Name "MyCustomFolder"
+    Get-EwsFolder -Name "Inbox" -ExchangeService $exchService
+    Get-EwsFolder -Name "Sent Items" -ExchangeService $exchService
+    Get-EwsFolder -Name "MyCustomFolder" -ExchangeService $exchService
 ) | Where-Object { $_ }
 
-# 2. 提取 FolderId 数组
-$folderIds = [Microsoft.Exchange.WebServices.Data.FolderId[]]@(
-    $folders[0].Id, $folders[1].Id, $folders[2].Id
-)
-
-# 3. 创建流式订阅（监听 NewMail 事件）
-$subscription = $exchService.SubscribeToStreamingNotifications(
-    $folderIds,
-    [Microsoft.Exchange.WebServices.Data.EventType]::NewMail
-)
-
-# 4. 创建连接（最多同时保持 30 个连接）
-$conn = New-Object Microsoft.Exchange.WebServices.Data.StreamingSubscriptionConnection(
-    $exchService, 30
-)
-$conn.AddSubscription($subscription)
-
-# 5. 注册事件处理
-Register-ObjectEvent -InputObject $conn -EventName OnNotificationEvent -Action {
-    foreach ($evt in $event.SourceEventArgs.Events) {
-        Write-Host "Event: $($evt.EventType) | ItemId: $($evt.ItemId.UniqueId)"
-        # 用 ews-email 获取邮件详情
-    }
-}
-
-# 6. 断线重连
-Register-ObjectEvent -InputObject $conn -EventName OnDisconnect -Action {
-    Write-Warning "Disconnected, reconnecting..."
-    Start-Sleep 5
-    $conn.Open()
-}
-
-# 7. 启动监听
-$conn.Open()
-Write-Host "Streaming subscription started. Press Ctrl+C to stop."
-while ($conn.IsOpen) {
-    Start-Sleep 1
-}
+# 启动监听
+Start-EwsSubscription `
+    -ExchangeService $exchService `
+    -Folders $folders `
+    -MyAddress "user@company.com"
 ```
 
 ## Available Event Types
