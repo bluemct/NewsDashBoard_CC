@@ -34,10 +34,40 @@
       "Read(//c/Users/SI-Agent//**)",
       "Bash(mkdir -p c:/Users/SI-Agent/AgentProject/.claude/skills/ews-connect c:/Users/SI-Agent/AgentProject/.claude/skills/ews-folder c:/Users/SI-Agent/AgentProject/.claude/skills/ews-email c:/Users/SI-Agent/AgentProject/.claude/skills/ews-subscribe c:/Users/SI-Agent/AgentProject/.claude/skills/email-html2text c:/Users/SI-Agent/AgentProject/.claude/skills/email-parse-ticket c:/Users/SI-Agent/AgentProject/.claude/skills/email-track-conversation 2>&1)",
       "Edit(/.claude/skills/ews-connect/**)",
-      "Edit(/.claude/skills/ews-folder/**)"
+      "Edit(/.claude/skills/ews-folder/**)",
+      "Bash(pwsh -Command \". ./.claude/skills/ews-connect/Connect-Ews.ps1; Connect-Ews -DllPath 'C:\\\\Users\\\\ma.chuntao\\\\Desktop\\\\Services\\\\ews\\\\lib\\\\40\\\\Microsoft.Exchange.WebServices.dll' -EwsUrl 'https://mail.21vianet.com/EWS/Exchange.asmx'\")",
+      "Bash(mkdir -p .claude/skills/xlsx-to-csv)",
+      "Edit(/.claude/skills/xlsx-to-csv/**)",
+      "Bash(python -c \"import openpyxl; print\\('openpyxl', openpyxl.__version__\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -m pip install openpyxl)",
+      "Bash(python .claude/skills/xlsx-to-csv/xlsx_to_csv.py \"0518_SN-55741/Token1-15 - SN-55741 Batch 3 - 副本.xlsx\")",
+      "Bash(python .claude/skills/xlsx-to-csv/xlsx_to_csv.py \"SN-56230/Token1-15 - SN-56230 Batch 3 Completion.xlsx\")",
+      "Bash(mkdir -p .claude/skills/msg-to-html)",
+      "Edit(/.claude/skills/msg-to-html/**)",
+      "Bash(python -c \"import win32com.client; print\\('pypiwin32 OK'\\)\")",
+      "Bash(python -m pip install pypiwin32)",
+      "Bash(python .claude/skills/msg-to-html/msg_to_html.py \"SN-54886/所需采取的行动：请将旧版Azure Blob存储帐户迁移至常规用途v2帐户 - Action required Migrate your legacy Azure Blob Storage account to a general-purpose v2 account.msg\")",
+      "Bash(python -m pip install extract-msg)",
+      "Bash(python .claude/skills/msg-to-html/msg_to_html.py \"c:/Users/SI-Agent/AgentProject/SN-54886/所需采取的行动：请将旧版Azure Blob存储帐户迁移至常规用途v2帐户 - Action required Migrate your legacy Azure Blob Storage account to a general-purpose v2 account.msg\")",
+      "Bash(cmd /c \"cd /d c:\\\\\\\\Users\\\\\\\\SI-Agent\\\\\\\\AgentProject\\\\\\\\SN-54886 && python .claude\\\\\\\\skills\\\\\\\\msg-to-html\\\\\\\\msg_to_html.py \\\\\"所需采取的行动：请将旧版Azure Blob存储帐户迁移至常规用途v2帐户 - Action required Migrate your legacy Azure Blob Storage account to a general-purpose v2 account.msg\\\\\"\")",
+      "Bash(python -c \"import win32com.client; outlook = win32com.client.Dispatch\\('Outlook.Application'\\); print\\('Outlook connected, version:', outlook.Version\\)\")",
+      "Bash(python .claude/skills/msg-to-html/msg_to_html.py \"c:/Users/SI-Agent/AgentProject/SN-54886/email.msg\")",
+      "Bash(python \"c:/Users/SI-Agent/AgentProject/.claude/skills/msg-to-html/msg_to_html.py\" \"c:/Users/SI-Agent/AgentProject/SN-54886/email.msg\")",
+      "Bash(python .claude/skills/xlsx-to-csv/xlsx_to_csv.py \"SN-54886/Token1-12 SN-54886 Mooncake - Merged 24 subst.xlsx\")",
+      "Bash(python \"c:/Users/SI-Agent/AgentProject/.claude/skills/msg-to-html/msg_to_html.py\" \"c:/Users/SI-Agent/AgentProject/SN-54886/email.msg\" \"c:/Users/SI-Agent/AgentProject/SN-54886/email-clean.html\")",
+      "Bash(python -c \"print\\(f'{os.path.getsize\\(\\\\\"c:/Users/SI-Agent/AgentProject/SN-54542/final.html\\\\\"\\)} bytes'\\)\")",
+      "Bash(python \"c:/Users/SI-Agent/AgentProject/.claude/skills/msg-to-html/msg_to_html.py\" \"c:/Users/SI-Agent/AgentProject/SN-54886/email.msg\" \"c:/Users/SI-Agent/AgentProject/SN-54886/email-final.html\")",
+      "Bash(python -c ' *)",
+      "Bash(python \"c:/Users/SI-Agent/AgentProject/.claude/skills/msg-to-html/msg_to_html.py\" \"c:/Users/SI-Agent/AgentProject/SN-54886/email.msg\" \"c:/Users/SI-Agent/AgentProject/SN-54886/email-saveas.html\")",
+      "Bash(python -c \"import PyInstaller; print\\('OK'\\)\")",
+      "Bash(python -m pip install pyinstaller)",
+      "Bash(python -m PyInstaller --onefile --name msg-to-html --hidden-import=win32com --hidden-import=win32com.client --hidden-import=pythoncom \"c:/Users/SI-Agent/AgentProject/.claude/skills/msg-to-html/msg_to_html.py\")",
+      "Bash(\"c:/Users/SI-Agent/AgentProject/dist/msg-to-html.exe\" --help)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills"
+      "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills",
+      "C:\\Users\\SI-Agent\\AgentProject\\.claude\\skills"
     ]
   }
 }

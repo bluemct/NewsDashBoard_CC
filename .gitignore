@@ -9,3 +9,16 @@ task_status.json
 msn_rendered.html
 msn_full.html
 msn_after_cookies.html
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+
+# Test/work data folders
+0518_SN-*/
+SN-*/
+
+# Temp files
+*.msg
+*.checksum
