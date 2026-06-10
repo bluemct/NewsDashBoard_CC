@@ -1,59 +1,20 @@
 ---
 name: email-parse-ticket
-description: Extract ticket/request numbers from email body text using regex
-metadata:
-  type: skill
-  version: "1.0"
-  language: powershell
-  dependency: none
+description: Extract ticket/request numbers from email body text using Python regex
 ---
 
-# Email Parse Ticket Skill
+# Parse Ticket Number
 
-从邮件正文中通过正则表达式提取工单号。
-
-## Prerequisites
-
-无外部依赖。
+Extract ticket/request numbers from email text using regex patterns.
 
 ## Usage
 
-```powershell
-function Parse-TicketNumber {
-    param([string]$text)
+```bash
+python .claude/skills/email-parse-ticket/parse_ticket.py --text "Your Request #12345 is ready"
 
-    if ($text -match 'Request\s*#\s*(\d+)') {
-        return @{
-            Found  = $true
-            Number = $Matches[1]
-        }
-    }
-    else {
-        return @{
-            Found  = $false
-            Number = $null
-        }
-    }
-}
+# Custom pattern
+python .claude/skills/email-parse-ticket/parse_ticket.py --text "CASE-00123" --pattern "CASE[-:]?\s*(\d+)"
 
-# 示例
-$result = Parse-TicketNumber -text $plainText
-if ($result.Found) {
-    Write-Host "Ticket Number: $($result.Number)"
-}
+# From stdin
+echo "工单 98765" | python .claude/skills/email-parse-ticket/parse_ticket.py
 ```
-
-## Custom Patterns
-
-根据实际业务调整正则，常见模式：
-
-| 格式 | 正则 |
-|------|------|
-| `Request #12345` | `Request\s*#\s*(\d+)` |
-| `Ticket-12345` | `Ticket[-:]?\s*(\d+)` |
-| `工单 12345` | `工单\s*(\d+)` |
-| `CASE-00123` | `CASE[-:]?\s*(\d+)` |
-
-## Related Skills
-
-- `email-html2text` — 先转换为纯文本再提取

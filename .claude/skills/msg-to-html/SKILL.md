@@ -1,11 +1,11 @@
 ---
 name: msg-to-html
-description: "Convert Outlook .msg files to HTML code for copy-paste into RTF-capable email systems"
+description: "Convert Outlook .msg files to HTML code using win32com"
 ---
 
 # MSG to HTML Converter
 
-Convert Outlook `.msg` email files to HTML format. The output HTML contains the full email body, subject, sender, recipients, and date — ready to copy-paste into a system that converts HTML to RTF.
+Convert Outlook `.msg` email files to HTML format via win32com. Outputs the raw HTMLBody with zero modifications.
 
 ## Usage
 
@@ -22,17 +22,10 @@ python .claude/skills/msg-to-html/msg_to_html.py <input.msg> [output.html]
 
 ## Output
 
-- HTML file with full email content (header + body)
-- Console prints the HTML code for easy copy-paste
+- HTML file with raw HTMLBody (zero modifications)
 
 ## Requirements
 
 - Python 3.x
 - `win32com` (install: `pip install pypiwin32`)
-
-## Example
-
-```bash
-python .claude/skills/msg-to-html/msg_to_html.py email.msg
-python .claude/skills/msg-to-html/msg_to_html.py email.msg output.html
-```
+- Outlook running and connected to Exchange
