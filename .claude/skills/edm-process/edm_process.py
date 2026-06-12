@@ -112,6 +112,68 @@ def convert_xlsx_to_csv(xlsx_path):
     return result.returncode == 0
 
 
+def replace_span_tokens(html, mapping):
+    """Replace %%TokenN%% / %%SubIdN%% split across <span> tags."""
+    text_to_html = {}
+    tp = 0
+    in_tag = False
+    for i, ch in enumerate(html):
+        if ch == '<':
+            in_tag = True
+            continue
+        if in_tag:
+            if ch == '>':
+                in_tag = False
+            continue
+        text_to_html[tp] = i
+        tp += 1
+
+    pattern = re.compile(r'%%(Token\d+|SubId\d+)%%')
+
+    plain = []
+    in_tag = False
+    for ch in html:
+        if ch == '<':
+            in_tag = True
+            continue
+        if in_tag:
+            if ch == '>':
+                in_tag = False
+            continue
+        plain.append(ch)
+    plain_text = ''.join(plain)
+
+    matches = list(pattern.finditer(plain_text))
+    if not matches:
+        return html
+
+    result_parts = []
+    prev_end_html = 0
+    for m in matches:
+        name = m.group(1)
+        value = mapping.get(name)
+        if not value:
+            continue
+
+        first_html = text_to_html[m.start()]
+        last_text_html = text_to_html[m.end() - 1]
+
+        result_parts.append(html[prev_end_html:first_html])
+        result_parts.append(value)
+
+        rest = html[last_text_html + 1:]
+        end_span = rest.find('</span>')
+        if end_span >= 0:
+            prev_end_html = last_text_html + 1 + end_span + len('</span>')
+        else:
+            prev_end_html = last_text_html + 1
+
+        print(f"[TOKEN] %%{name}%% -> {value} (cross-span)")
+
+    result_parts.append(html[prev_end_html:])
+    return ''.join(result_parts)
+
+
 def convert_msg_to_html(msg_path, output_html):
     """Convert .msg to HTML via win32com (Outlook HTMLBody)."""
     import pythoncom
@@ -136,35 +198,49 @@ def convert_msg_to_html(msg_path, output_html):
 
     html_body = msg.HTMLBody or ""
     subject = msg.Subject or ""
-    del msg
+
+    try:
+        msg.Close(0)
+    except Exception:
+        pass
+
     pythoncom.CoUninitialize()
 
-    if html_body:
-        # Insert subject line at top of body, matching Outlook's style
-        safe_subject = subject.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        subject_block = (
-            f"<p class=MsoNormal><b><span lang=ZH-CN\n"
-            f"style='font-family:等线;mso-hansi-font-family:Calibri;mso-bidi-font-family:等线;\n"
-            f"color:black'>主题</span></b><span style='font-family:等线;mso-hansi-font-family:Calibri;\n"
-            f"mso-bidi-font-family:等线;color:black'>: {safe_subject}</span></p>\n"
-            f"\n"
-            f"<p class=MsoNormal><o:p>&nbsp;</o:p></p>\n"
-        )
-        # Insert right after <body ...> tag
-        body_pos = html_body.lower().find("<body")
-        if body_pos > 0:
-            body_close = html_body.find(">", body_pos)
-            if body_close > 0:
-                html_body = html_body[:body_close + 1] + "\n" + subject_block + html_body[body_close + 1:]
+    if not html_body:
+        print("[HTML] no HTMLBody found", file=sys.stderr)
+        return False
 
-        with open(output_html, "w", encoding="utf-8", newline="") as f:
-            f.write(html_body)
+    # Insert subject line at top of body, matching Outlook's style
+    safe_subject = subject.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    subject_block = (
+        f"<p class=MsoNormal><b><span lang=ZH-CN\n"
+        f"style='font-family:等线;mso-hansi-font-family:Calibri;mso-bidi-font-family:等线;\n"
+        f"color:black'>主题</span></b><span style='font-family:等线;mso-hansi-font-family:Calibri;\n"
+        f"mso-bidi-font-family:等线;color:black'>: {safe_subject}</span></p>\n"
+        f"\n"
+        f"<p class=MsoNormal><o:p>&nbsp;</o:p></p>\n"
+    )
+    body_pos = html_body.lower().find("<body")
+    if body_pos > 0:
+        body_close = html_body.find(">", body_pos)
+        if body_close > 0:
+            html_body = html_body[:body_close + 1] + "\n" + subject_block + html_body[body_close + 1:]
+
+    # Load token mapping from Tokenmapping.json
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    mapping_path = os.path.join(project_root, "Tokenmapping.json")
+    if os.path.isfile(mapping_path):
+        import json
+        with open(mapping_path, "r", encoding="utf-8") as f:
+            mapping_list = json.load(f)
+        token_mapping = {item["Name"]: item["Value"] for item in mapping_list}
+        html_body = replace_span_tokens(html_body, token_mapping)
+
+    with open(output_html, "w", encoding="utf-8", newline="") as f:
+        f.write(html_body)
         size_kb = os.path.getsize(output_html) / 1024
         print(f"[HTML] saved: {os.path.basename(output_html)} ({size_kb:.1f} KB)")
         return True
-    else:
-        print("[HTML] no HTMLBody found", file=sys.stderr)
-        return False
 
 
 def process_edm():
