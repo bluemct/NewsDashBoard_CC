@@ -238,9 +238,23 @@ def convert_msg_to_html(msg_path, output_html):
 
     with open(output_html, "w", encoding="utf-8", newline="") as f:
         f.write(html_body)
-        size_kb = os.path.getsize(output_html) / 1024
-        print(f"[HTML] saved: {os.path.basename(output_html)} ({size_kb:.1f} KB)")
-        return True
+
+    # Save head+body combined HTML for Unimarketing API
+    # Platform needs content without <html>/<head>/<body> wrapper tags to inject footer,
+    # but we need the <head> styles preserved for correct formatting.
+    head_match = re.search(r"<head[^>]*>(.*?)</head>", html_body, re.DOTALL | re.IGNORECASE)
+    body_match = re.search(r"<body[^>]*>(.*?)</body>", html_body, re.DOTALL | re.IGNORECASE)
+    if head_match and body_match:
+        combined_path = output_html.replace(".html", "_combined.html")
+        combined = head_match.group(1) + body_match.group(1)
+        with open(combined_path, "w", encoding="utf-8", newline="") as f:
+            f.write(combined)
+        size_kb = os.path.getsize(combined_path) / 1024
+        print(f"[HTML-COMBINED] saved: {os.path.basename(combined_path)} ({size_kb:.1f} KB)")
+
+    size_kb = os.path.getsize(output_html) / 1024
+    print(f"[HTML] saved: {os.path.basename(output_html)} ({size_kb:.1f} KB)")
+    return True
 
 
 def process_edm():

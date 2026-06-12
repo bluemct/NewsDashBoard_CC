@@ -16,7 +16,7 @@ description: Process EDM email — extract SN, create folder, convert xlsx to CS
 5. 从原始邮件提取嵌套 EDM 模板 `.msg`（无收件人的那个），保存到 SN 文件夹
 6. 通过 win32com 读取嵌套 .msg 的 HTMLBody，在 `<body>` 后插入主题行
 7. 自动替换 `%%TokenN%%` / `%%SubIdN%%` 占位符（支持跨 `<span>` 拆分，从 `Tokenmapping.json` 读取映射）
-8. 保存为 `EDM_template.html`
+8. 保存为 `EDM_template.html`（完整 HTML）、`EDM_template_combined.html`（head+body 无外层标签）
 
 ## Token 占位符替换
 
@@ -46,7 +46,8 @@ python .claude/skills/edm-process/edm_process.py
 - `Token1-3 SN-xxxxx.xlsx` — 原始联系人列表
 - `Token1-3 SN-xxxxx.csv` — GB18030 编码 CSV（单元格验证通过）
 - `请在...2026.msg` — 嵌套 EDM 模板 .msg
-- `EDM_template.html` — Outlook 原生 HTMLBody + 主题行
+- `EDM_template.html` — 完整 Outlook HTMLBody + 主题行 + token 替换
+- `EDM_template_combined.html` — `<head>` + `<body>` 内容（无外层标签），用于 Unimarketing API 创建消息
 
 ## Requirements
 
@@ -61,5 +62,6 @@ python .claude/skills/edm-process/edm_process.py
 
 - 原始邮件包含两个嵌套 `.msg` 附件：审批邮件（有收件人）和 EDM 模板邮件（无收件人）
 - 脚本只保存无收件人的 EDM 模板邮件
-- `EDM_template.html` 在 `<body>` 后插入主题行，并按 `Tokenmapping.json` 替换跨 `<span>` 占位符
+- `EDM_template.html` 保留完整 HTML（含 `<html>`, `<head>`, `<body>` 标签）
+- `EDM_template_combined.html` 合并 `<head>` 样式 + `<body>` 内容（无外层标签），用于 Unimarketing API 创建消息时保留 Word 格式并确保平台注入 footer
 - xlsx 文件复制（不移动）到 SN 文件夹，Temp/ 保留原始文件

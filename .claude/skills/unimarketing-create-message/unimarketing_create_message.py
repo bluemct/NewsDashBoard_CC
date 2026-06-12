@@ -32,8 +32,15 @@ def _clean_word_html(raw: str) -> str:
 
 
 def _extract_body(html: str) -> str:
-    """Return the full HTML document as-is (not just body)."""
-    return html
+    """Extract head + body content (without <html>, <head>, <body> wrapper tags).
+
+    Preserves Word styles from <head> while keeping platform happy with footer injection.
+    """
+    head_match = re.search(r"<head[^>]*>(.*?)</head>", html, re.DOTALL | re.IGNORECASE)
+    body_match = re.search(r"<body[^>]*>(.*?)</body>", html, re.DOTALL | re.IGNORECASE)
+    head = head_match.group(1) if head_match else ""
+    body = body_match.group(1) if body_match else html
+    return head + body
 
 
 def _build_message_xml(
@@ -56,6 +63,7 @@ def _build_message_xml(
         '  <um:header align="left"></um:header>\n'
         '  <um:footer align="left"></um:footer>\n'
         f'  <um:isContainPageHeadFooter>{include_header_footer}</um:isContainPageHeadFooter>\n'
+        f'  <um:footerName>htmlHeader</um:footerName>\n'
         f'  <um:language>{language}</um:language>\n'
         f'  <um:triggerType>{trigger_type}</um:triggerType>\n'
         '  <content type="text" xml:base="http://www.unimarketing.com.cn/xmlns/">'
