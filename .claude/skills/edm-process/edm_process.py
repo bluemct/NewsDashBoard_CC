@@ -112,6 +112,70 @@ def convert_xlsx_to_csv(xlsx_path):
     return result.returncode == 0
 
 
+def generate_formal_test_csv(xlsx_path):
+    """Generate formal_*.csv (all rows) and test_*.csv (2 test rows with replaced emails)."""
+    import csv
+    import shutil
+    import glob
+
+    sn_dir = os.path.dirname(xlsx_path)
+    base = os.path.splitext(os.path.basename(xlsx_path))[0]
+    csv_files = glob.glob(os.path.join(sn_dir, base + "*.csv"))
+    csv_path = csv_files[0] if csv_files else None
+
+    if not csv_path or not os.path.exists(csv_path):
+        print("[CSV] no source CSV found for formal/test generation", file=sys.stderr)
+        return
+
+    # Read source CSV
+    with open(csv_path, encoding="gb18030", newline="") as f:
+        reader = list(csv.reader(f))
+        header = reader[0]
+        rows = reader[1:]
+
+    # Formal CSV: copy all rows
+    formal_path = os.path.join(sn_dir, f"formal_{base}.csv")
+    shutil.copy2(csv_path, formal_path)
+    print(f"[CSV-FORMAL] saved: {os.path.basename(formal_path)} ({len(rows)} rows)")
+
+    # Test CSV: pick two distinct rows with most tokens filled, replace Email
+    email_idx = None
+    for i, col in enumerate(header):
+        if col.strip().lower() == "email":
+            email_idx = i
+            break
+
+    token_cols = [i for i, col in enumerate(header) if col.strip().lower().startswith("token")]
+    row_scores = []
+    for i, row in enumerate(rows):
+        score = sum(1 for idx in token_cols if idx < len(row) and row[idx].strip())
+        if score > 0:
+            row_scores.append((score, i, row))
+    row_scores.sort(reverse=True)
+
+    test_rows = [header]
+    if len(row_scores) >= 2:
+        r1 = list(row_scores[0][2])
+        r2 = list(row_scores[1][2])
+    elif len(row_scores) == 1:
+        r1 = list(row_scores[0][2])
+        r2 = list(rows[0])
+        r2[email_idx] = ""
+    else:
+        r1 = list(rows[0]) if rows else list(header)
+        r2 = list(rows[1]) if len(rows) > 1 else ["" * len(header)]
+
+    if email_idx is not None:
+        r1[email_idx] = "ma.chuntao@oe.21vianet.com"
+        r2[email_idx] = "microsoft.163163@163.com"
+
+    test_path = os.path.join(sn_dir, f"test_{base}.csv")
+    with open(test_path, "w", encoding="gb18030", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerows(test_rows)
+    print(f"[CSV-TEST] saved: {os.path.basename(test_path)} (2 rows)")
+
+
 def replace_span_tokens(html, mapping):
     """Replace %%TokenN%% / %%SubIdN%% split across <span> tags."""
     text_to_html = {}
@@ -236,6 +300,14 @@ def convert_msg_to_html(msg_path, output_html):
         token_mapping = {item["Name"]: item["Value"] for item in mapping_list}
         html_body = replace_span_tokens(html_body, token_mapping)
 
+    # Remove Outlook's "_MailOriginal" anchor block between subject and table content, add a blank line
+    html_body = re.sub(
+        r'<a\s+name="_MailOriginal">\s*<span[^>]*>\s*<o:p>\s*&nbsp;\s*</o:p>\s*</span>\s*</a>\s*</p>',
+        "<p class=MsoNormal><o:p>&nbsp;</o:p></p>",
+        html_body,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+
     with open(output_html, "w", encoding="utf-8", newline="") as f:
         f.write(html_body)
 
@@ -302,6 +374,7 @@ def process_edm():
         shutil.copy2(src, dst)
         print(f"[COPY] {xlsx_file} -> {sn}/")
         convert_xlsx_to_csv(dst)
+        generate_formal_test_csv(dst)
 
     # Extract nested EDM template .msg (no-recipients one)
     target_idx = find_target_attachment_idx(msg_path)

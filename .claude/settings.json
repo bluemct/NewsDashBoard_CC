@@ -219,7 +219,11 @@
       "Bash(curl -s \"http://services.unimarketing.com.cn/message/?q=2026-06-12&apikey=customersupport&alt=atom&max-results=5\" -u \"customersupport:/CUkafFTgALhtSSZn9KcZ1hw4lI=\" -H \"Accept: application/atom+xml\" -H \"Authorization: OAuth\")",
       "Bash(python .claude/skills/unimarketing-create-message/unimarketing_create_message.py --title '测试 header-footer - SN-56262' --html-file EDM/SN-56262/EDM_template.html --folder 14409 --header-footer -v)",
       "Bash(python .claude/skills/unimarketing-create-message/unimarketing_create_message.py --title '测试 header-footer - SN-56262' --html-file EDM/SN-56262/EDM_template.html --folder 14409 --header-footer)",
-      "Bash(python .claude/skills/unimarketing-create-message/unimarketing_create_message.py --title '测试 header-footer 左对齐 - SN-56262' --html-file EDM/SN-56262/EDM_template.html --folder 14409 --header-footer)"
+      "Bash(python .claude/skills/unimarketing-create-message/unimarketing_create_message.py --title '测试 header-footer 左对齐 - SN-56262' --html-file EDM/SN-56262/EDM_template.html --folder 14409 --header-footer)",
+      "Bash(python .claude/skills/unimarketing-create-message/unimarketing_create_message.py --title 'SN-56262 计划维护通知 - EDM测试' --html-file EDM/SN-56262/EDM_template.html --folder 14409 --header-footer)",
+      "Bash(python .claude/skills/unimarketing-create-message/unimarketing_create_message.py --title 'SN-56262 计划维护通知 - EDM测试 body' --html-file EDM/SN-56262/EDM_template.html --folder 14409 --header-footer)",
+      "Bash(python .claude/skills/unimarketing-create-message/unimarketing_create_message.py --title 'SN-56262 计划维护通知 - EDM测试最终' --html-file EDM/SN-56262/EDM_template.html --folder 14409 --header-footer)",
+      "Bash(python edm_gui.py)"
     ],
     "additionalDirectories": [
       "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills",

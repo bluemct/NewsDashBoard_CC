@@ -45,6 +45,8 @@ python .claude/skills/edm-process/edm_process.py
 `EDM/SN-xxxxx/` 目录下生成：
 - `Token1-3 SN-xxxxx.xlsx` — 原始联系人列表
 - `Token1-3 SN-xxxxx.csv` — GB18030 编码 CSV（单元格验证通过）
+- `formal_Token1-3 SN-xxxxx.csv` — 正式 CSV（保留原信息全部行）
+- `test_Token1-3 SN-xxxxx.csv` — 测试 CSV（保留两行最长且不同的行，替换 Email 为测试邮箱）
 - `请在...2026.msg` — 嵌套 EDM 模板 .msg
 - `EDM_template.html` — 完整 Outlook HTMLBody + 主题行 + token 替换
 - `EDM_template_combined.html` — `<head>` + `<body>` 内容（无外层标签），用于 Unimarketing API 创建消息
