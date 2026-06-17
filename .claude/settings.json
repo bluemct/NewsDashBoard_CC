@@ -223,7 +223,42 @@
       "Bash(python .claude/skills/unimarketing-create-message/unimarketing_create_message.py --title 'SN-56262 计划维护通知 - EDM测试' --html-file EDM/SN-56262/EDM_template.html --folder 14409 --header-footer)",
       "Bash(python .claude/skills/unimarketing-create-message/unimarketing_create_message.py --title 'SN-56262 计划维护通知 - EDM测试 body' --html-file EDM/SN-56262/EDM_template.html --folder 14409 --header-footer)",
       "Bash(python .claude/skills/unimarketing-create-message/unimarketing_create_message.py --title 'SN-56262 计划维护通知 - EDM测试最终' --html-file EDM/SN-56262/EDM_template.html --folder 14409 --header-footer)",
-      "Bash(python edm_gui.py)"
+      "Bash(python edm_gui.py)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(taskkill //F //IM pythonw.exe)",
+      "Bash(start \"\" python edm_gui.py)",
+      "Bash(python -c \"import edm_gui; print\\('imports OK'\\)\")",
+      "Bash(python -c \"import edm_gui; app = edm_gui.EDMGUI\\(\\)\")",
+      "Bash(cmd /c \"start python edm_gui.py\")",
+      "Bash(python -c \"import PyInstaller; print\\('PyInstaller', PyInstaller.__version__\\)\")",
+      "Bash(python -c \"import pywin32_postinstall; print\\('pywin32 found'\\)\")",
+      "Bash(python -c \"import win32com; print\\('win32com found'\\)\")",
+      "Bash(python -c \"import pythoncom; print\\('pythoncom found'\\)\")",
+      "Bash(pyinstaller --clean edm_gui.spec)",
+      "Bash(python -m PyInstaller --clean edm_gui.spec)",
+      "Bash(cmd /c \"start \"\" \"dist\\\\EDM Email Processor\\\\EDM Email Processor.exe\"\")",
+      "Bash(cp .claude/skills/edm-process/edm_process.py _edm_build/)",
+      "Bash(cp .claude/skills/xlsx-to-csv/xlsx_to_csv.py _edm_build/)",
+      "Bash(python -m PyInstaller --clean --y edm_gui.spec)",
+      "Bash(python test_compare_html.py)",
+      "Bash(git status *)",
+      "Bash(git reset *)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('edm_gui.py', encoding='utf-8'\\).read\\(\\)\\); print\\('Syntax OK'\\)\")",
+      "Bash(python -m PyInstaller --clean --distpath dist --noconfirm edm_gui.spec)",
+      "Bash(python update_unimarketing_contacts.py --dry-run \"EDM/SN-56262/test_Token1-15 SN 56262.csv\")",
+      "Bash(python update_unimarketing_contacts.py \"EDM/SN-56262/test_Token1-15 SN 56262.csv\")",
+      "Bash(cp .claude/skills/edm-process/edm_process.py \"EDM-Email-Processor-Source/\")",
+      "Bash(cp .claude/skills/xlsx-to-csv/xlsx_to_csv.py \"EDM-Email-Processor-Source/\")",
+      "Bash(mkdir -p \"$HOME/AgentProject/.claude/skills/unimarketing-test-list\")",
+      "Edit(/.claude/skills/unimarketing-test-list/**)",
+      "Bash(python .claude/skills/unimarketing-test-list/unimarketing_test_list.py --xlsx \"C:\\\\Users\\\\SI-Agent\\\\AgentProject\\\\EDM\\\\SN-56262\\\\Token1-15 SN 56262.xlsx\" --sn \"SN-56262\")",
+      "Bash(iconv -f gbk -t utf-8)",
+      "Bash(python .claude/skills/unimarketing-test-list/unimarketing_test_list.py --xlsx \"C:\\\\Users\\\\SI-Agent\\\\AgentProject\\\\EDM\\\\SN-56262\\\\Token1-15 SN 56262.xlsx\" --sn \"SN-56262\" --formal)",
+      "Bash(python test_verify_contact.py)",
+      "Bash(python verify_formal_import.py)",
+      "Bash(python debug_list.py)",
+      "Bash(python debug_list2.py)",
+      "Bash(mv \"$HOME/AgentProject/.claude/skills/unimarketing-test-list\" \"$HOME/AgentProject/.claude/skills/unimarketing-contactimport2list\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills",
@@ -234,7 +269,8 @@
       "C:\\Users\\SI-Agent\\AgentProject\\EDM\\SN-56195",
       "\\dev",
       "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills\\unimarketing-create-contact",
-      "c:\\Users\\SI-Agent\\.claude\\projects\\c--Users-SI-Agent-AgentProject\\memory"
+      "c:\\Users\\SI-Agent\\.claude\\projects\\c--Users-SI-Agent-AgentProject\\memory",
+      "C:\\Users\\SI-Agent\\AgentProject\\.claude\\skills\\unimarketing-test-list"
     ]
   }
 }

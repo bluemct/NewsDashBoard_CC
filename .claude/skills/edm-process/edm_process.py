@@ -113,10 +113,11 @@ def convert_xlsx_to_csv(xlsx_path):
 
 
 def generate_formal_test_csv(xlsx_path):
-    """Generate formal_*.csv (all rows) and test_*.csv (2 test rows with replaced emails)."""
+    """Generate formal_*.csv (all rows) and test_*.csv (N rows, one per test email)."""
     import csv
     import shutil
     import glob
+    import json
 
     sn_dir = os.path.dirname(xlsx_path)
     base = os.path.splitext(os.path.basename(xlsx_path))[0]
@@ -138,7 +139,22 @@ def generate_formal_test_csv(xlsx_path):
     shutil.copy2(csv_path, formal_path)
     print(f"[CSV-FORMAL] saved: {os.path.basename(formal_path)} ({len(rows)} rows)")
 
-    # Test CSV: pick two distinct rows with most tokens filled, replace Email
+    # Load test emails from config.json
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    config_path = os.path.join(project_root, "config.json")
+    default_emails = [
+        "ma.chuntao@oe.21vianet.com",
+        "microsoft.163163@163.com",
+    ]
+    if os.path.isfile(config_path):
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        test_emails = config.get("test_emails", default_emails)
+    else:
+        test_emails = default_emails
+    test_count = max(len(test_emails), 2)
+
+    # Find Email and Token columns
     email_idx = None
     for i, col in enumerate(header):
         if col.strip().lower() == "email":
@@ -153,27 +169,30 @@ def generate_formal_test_csv(xlsx_path):
             row_scores.append((score, i, row))
     row_scores.sort(reverse=True)
 
-    test_rows = [header]
-    if len(row_scores) >= 2:
-        r1 = list(row_scores[0][2])
-        r2 = list(row_scores[1][2])
-    elif len(row_scores) == 1:
-        r1 = list(row_scores[0][2])
-        r2 = list(rows[0])
-        r2[email_idx] = ""
-    else:
-        r1 = list(rows[0]) if rows else list(header)
-        r2 = list(rows[1]) if len(rows) > 1 else ["" * len(header)]
+    # Collect up to test_count distinct rows
+    selected = []
+    idx = 0
+    while len(selected) < test_count:
+        if idx < len(row_scores):
+            selected.append(list(row_scores[idx][2]))
+        elif len(rows) > len(selected):
+            selected.append(list(rows[len(selected)]))
+        else:
+            selected.append(["" for _ in header])
+        idx += 1
 
     if email_idx is not None:
-        r1[email_idx] = "ma.chuntao@oe.21vianet.com"
-        r2[email_idx] = "microsoft.163163@163.com"
+        for i, row in enumerate(selected):
+            if i < len(test_emails):
+                row[email_idx] = test_emails[i]
 
     test_path = os.path.join(sn_dir, f"test_{base}.csv")
     with open(test_path, "w", encoding="gb18030", newline="") as f:
         writer = csv.writer(f)
-        writer.writerows(test_rows)
-    print(f"[CSV-TEST] saved: {os.path.basename(test_path)} (2 rows)")
+        writer.writerow(header)
+        for row in selected:
+            writer.writerow(row)
+    print(f"[CSV-TEST] saved: {os.path.basename(test_path)} ({len(selected)} rows)")
 
 
 def replace_span_tokens(html, mapping):

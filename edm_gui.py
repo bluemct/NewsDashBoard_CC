@@ -210,11 +210,12 @@ def _generate_formal_test_csv(xlsx_path: str, config: dict, logger: ProcessLogge
     shutil.copy2(csv_path, formal_path)
     logger.log(f"[CSV-FORMAL] saved: {os.path.basename(formal_path)} ({len(rows)} rows)")
 
-    # Test CSV — pick 2 rows with most tokens filled, replace email column
+    # Test CSV — pick rows with most tokens filled, replace email column
     test_emails = config.get("test_emails", [
         "ma.chuntao@oe.21vianet.com",
         "microsoft.163163@163.com",
     ])
+    test_count = max(len(test_emails), 2)
 
     email_idx = None
     for i, col in enumerate(header):
@@ -230,25 +231,30 @@ def _generate_formal_test_csv(xlsx_path: str, config: dict, logger: ProcessLogge
             row_scores.append((score, i, row))
     row_scores.sort(reverse=True)
 
-    if len(row_scores) >= 2:
-        r1 = list(row_scores[0][2])
-        r2 = list(row_scores[1][2])
-    else:
-        r1 = list(row_scores[0][2]) if row_scores else (list(rows[0]) if rows else ["" for _ in header])
-        r2 = list(row_scores[1][2]) if len(row_scores) > 1 else (list(rows[1]) if len(rows) > 1 else ["" for _ in header])
+    # Collect up to test_count distinct rows (round-robin from top-scored)
+    selected = []
+    idx = 0
+    while len(selected) < test_count:
+        if idx < len(row_scores):
+            selected.append(list(row_scores[idx][2]))
+        elif len(rows) > len(selected):
+            selected.append(list(rows[len(selected)]))
+        else:
+            selected.append(["" for _ in header])
+        idx += 1
 
     if email_idx is not None:
-        r1[email_idx] = test_emails[0]
-        if len(test_emails) > 1:
-            r2[email_idx] = test_emails[1]
+        for i, row in enumerate(selected):
+            if i < len(test_emails):
+                row[email_idx] = test_emails[i]
 
     test_path = os.path.join(sn_dir, f"test_{base}.csv")
     with open(test_path, "w", encoding="gb18030", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(header)
-        writer.writerow(r1)
-        writer.writerow(r2)
-    logger.log(f"[CSV-TEST] saved: {os.path.basename(test_path)} (2 rows)")
+        for row in selected:
+            writer.writerow(row)
+    logger.log(f"[CSV-TEST] saved: {os.path.basename(test_path)} ({len(selected)} rows)")
 
     # Clean up raw CSV — only keep formal_ and test_
     os.remove(csv_path)
@@ -499,8 +505,8 @@ class EDMGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("EDM Email Processor")
-        self.root.geometry("720x560")
-        self.root.minsize(640, 420)
+        self.root.geometry("800x600")
+        self.root.minsize(640, 450)
 
         # State
         self.msg_var = tk.StringVar()
@@ -508,8 +514,12 @@ class EDMGUI:
         self.output_var = tk.StringVar(value=DEFAULT_OUTPUT_BASE)
         self.last_sn_folder = None
         self._config_widgets = {}
+        self.config_collapsed = False
 
         self._build_ui()
+
+        # Window resize handler — auto-collapse config when window is small
+        self.root.bind("<Configure>", self._on_resize)
 
     def _build_ui(self):
         style = ttk.Style()
@@ -524,42 +534,44 @@ class EDMGUI:
         style.map("Action.TButton", background=[("active", "#3b82f6")])
 
         # Main container
-        main = ttk.Frame(self.root, padding=20)
+        main = ttk.Frame(self.root, padding=16)
         main.pack(fill="both", expand=True)
 
         # Title
         ttk.Label(main, text="EDM Email Processor", style="Title.TLabel").pack(
-            anchor="w", pady=(0, 14)
+            anchor="w", pady=(0, 10)
         )
 
         # Input files
-        input_frame = ttk.LabelFrame(main, text="Input Files", padding=12)
-        input_frame.pack(fill="x", pady=(0, 10))
+        input_frame = ttk.LabelFrame(main, text="Input Files", padding=8)
+        input_frame.pack(fill="x", pady=(0, 6))
+        input_frame.columnconfigure(1, weight=1)
 
         ttk.Label(input_frame, text="MSG File:").grid(row=0, column=0, sticky="w", padx=(0, 8))
-        msg_entry = ttk.Entry(input_frame, textvariable=self.msg_var, width=55, state="readonly")
-        msg_entry.grid(row=0, column=1, padx=(0, 6))
-        ttk.Button(input_frame, text="Browse...", command=self._browse_msg).grid(row=0, column=2)
+        msg_entry = ttk.Entry(input_frame, textvariable=self.msg_var, width=30, state="readonly")
+        msg_entry.grid(row=0, column=1, padx=(0, 6), sticky="ew")
+        ttk.Button(input_frame, text="Browse...", command=self._browse_msg).grid(row=0, column=2, sticky="e")
 
-        ttk.Label(input_frame, text="XLSX File:").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(8, 0))
-        xlsx_entry = ttk.Entry(input_frame, textvariable=self.xlsx_var, width=55, state="readonly")
-        xlsx_entry.grid(row=1, column=1, padx=(0, 6), pady=(8, 0))
-        ttk.Button(input_frame, text="Browse...", command=self._browse_xlsx).grid(row=1, column=2, pady=(8, 0))
+        ttk.Label(input_frame, text="XLSX File:").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(4, 0))
+        xlsx_entry = ttk.Entry(input_frame, textvariable=self.xlsx_var, width=30, state="readonly")
+        xlsx_entry.grid(row=1, column=1, padx=(0, 6), pady=(4, 0), sticky="ew")
+        ttk.Button(input_frame, text="Browse...", command=self._browse_xlsx).grid(row=1, column=2, sticky="e", pady=(4, 0))
 
         # Output folder
-        output_frame = ttk.LabelFrame(main, text="Output", padding=12)
-        output_frame.pack(fill="x", pady=(0, 10))
+        output_frame = ttk.LabelFrame(main, text="Output", padding=8)
+        output_frame.pack(fill="x", pady=(0, 6))
+        output_frame.columnconfigure(1, weight=1)
 
         ttk.Label(output_frame, text="Folder:").grid(row=0, column=0, sticky="w", padx=(0, 8))
-        out_entry = ttk.Entry(output_frame, textvariable=self.output_var, width=55, state="readonly")
-        out_entry.grid(row=0, column=1, padx=(0, 6))
-        ttk.Button(output_frame, text="Browse...", command=self._browse_output).grid(row=0, column=2)
+        out_entry = ttk.Entry(output_frame, textvariable=self.output_var, width=30, state="readonly")
+        out_entry.grid(row=0, column=1, padx=(0, 6), sticky="ew")
+        ttk.Button(output_frame, text="Browse...", command=self._browse_output).grid(row=0, column=2, sticky="e")
 
         # Config section — collapsible
         config_outer = ttk.Frame(main)
-        config_outer.pack(fill="x", pady=(0, 10))
+        config_outer.pack(fill="x", pady=(0, 6))
 
-        self.config_frame = ttk.LabelFrame(config_outer, text="Config", padding=10)
+        self.config_frame = ttk.LabelFrame(config_outer, text="Config", padding=6)
         self.config_frame.pack(fill="x")
 
         # Notebook for two tabs
@@ -567,13 +579,13 @@ class EDMGUI:
         self.config_notebook.pack(fill="x")
 
         # Tab 1: Test Emails
-        self.tab_config = ttk.Frame(self.config_notebook, padding=8)
+        self.tab_config = ttk.Frame(self.config_notebook, padding=4)
         self.config_notebook.add(self.tab_config, text="  Test Emails  ")
 
         self._build_config_tab(self.tab_config, "config.json", _load_raw_json(CONFIG_PATH))
 
         # Tab 2: Tokenmapping
-        self.tab_token = ttk.Frame(self.config_notebook, padding=8)
+        self.tab_token = ttk.Frame(self.config_notebook, padding=4)
         self.config_notebook.add(self.tab_token, text="  Tokenmapping  ")
 
         self._build_config_tab(self.tab_token, "Tokenmapping.json", _load_raw_json(TOKENMAP_PATH))
@@ -582,21 +594,25 @@ class EDMGUI:
         self.config_toggle_btn = ttk.Button(
             config_outer, text="▼ Collapse Config", command=self._toggle_config
         )
-        self.config_collapsed = False
+        # Start collapsed so Process button is always visible
+        self._toggle_config()
 
         # Buttons
         btn_frame = ttk.Frame(main)
         btn_frame.pack(fill="x", pady=(0, 10))
+        btn_frame.columnconfigure(0, weight=1)
+        btn_frame.columnconfigure(1, weight=2)
+        btn_frame.columnconfigure(2, weight=1)
 
         self.process_btn = ttk.Button(
             btn_frame, text="  Process  ", command=self._run_process, style="Action.TButton"
         )
-        self.process_btn.pack(side="left")
+        self.process_btn.grid(row=0, column=1, pady=4, sticky="ew")
 
         self.open_btn = ttk.Button(
             btn_frame, text="Open Output Folder", command=self._open_folder, state="disabled"
         )
-        self.open_btn.pack(side="right")
+        self.open_btn.grid(row=0, column=2, pady=4, sticky="e")
 
         # Log
         log_frame = ttk.LabelFrame(main, text="Log", padding=8)
@@ -623,7 +639,7 @@ class EDMGUI:
         sb = ttk.Scrollbar(inner, orient="vertical")
         sb.pack(side="right", fill="y")
 
-        preview = tk.Text(inner, height=6, wrap="word", state="disabled",
+        preview = tk.Text(inner, height=4, wrap="word", state="disabled",
                           font=("Consolas", 9), bg="#f5f5f5", fg="#333333",
                           insertborderwidth=0, relief="flat", padx=4, pady=4,
                           yscrollcommand=sb.set)
@@ -682,6 +698,14 @@ class EDMGUI:
         else:
             self.config_frame.pack(fill="x")
             self.config_toggle_btn.config(text="▼ Collapse Config")
+
+    def _on_resize(self, event):
+        """Auto-collapse/expand config panel based on window height."""
+        if event.widget is self.root:
+            if event.height < 450 and not self.config_collapsed:
+                self._toggle_config()
+            elif event.height >= 480 and self.config_collapsed:
+                self._toggle_config()
 
     def _browse_msg(self):
         path = filedialog.askopenfilename(
