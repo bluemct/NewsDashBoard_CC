@@ -72,6 +72,31 @@ try:
 except ImportError as e:
     print(f"Warning: Could not import xlsx_to_csv: {e}", file=sys.stderr)
 
+# ---------------------------------------------------------------------------
+# Import Unimarketing contact import functions
+# ---------------------------------------------------------------------------
+_UM_SKILL_DIR = os.path.join(_SCRIPT_DIR, ".claude", "skills", "unimarketing-contactimport2list")
+_EDM_BUILD_DIR = os.path.join(_SCRIPT_DIR, "_edm_build")
+
+if not getattr(sys, "frozen", False) and _UM_SKILL_DIR not in sys.path:
+    sys.path.insert(0, _UM_SKILL_DIR)
+elif getattr(sys, "frozen", False) and _EDM_BUILD_DIR not in sys.path:
+    sys.path.insert(0, _EDM_BUILD_DIR)
+
+try:
+    from unimarketing_test_list import (
+        generate_test_csv as _um_generate_test_csv,
+        generate_formal_csv as _um_generate_formal_csv,
+        get_attr_mapping as _um_get_attr_mapping,
+        create_list as _um_create_list,
+        create_import_task as _um_create_import_task,
+        submit_contacts as _um_submit_contacts,
+        execute_import as _um_execute_import,
+        poll_import_status as _um_poll_import_status,
+    )
+except ImportError as e:
+    print(f"Warning: Could not import unimarketing_test_list: {e}", file=sys.stderr)
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -80,6 +105,21 @@ DEFAULT_OUTPUT_BASE = os.path.join(os.path.expanduser("~"), "Desktop", "EDM")
 
 CONFIG_PATH = os.path.join(_SCRIPT_DIR, "config.json")
 TOKENMAP_PATH = os.path.join(_SCRIPT_DIR, "Tokenmapping.json")
+
+# PyInstaller puts datas in _internal/ next to the exe
+def _find_config(name: str) -> str:
+    """Find a config file — tries exe dir first, then _internal/."""
+    direct = os.path.join(_SCRIPT_DIR, name)
+    if os.path.isfile(direct):
+        return direct
+    internal = os.path.join(_SCRIPT_DIR, "_internal", name)
+    if os.path.isfile(internal):
+        return internal
+    return direct  # fall back to direct even if missing
+
+def _resolve_config(path: str) -> str:
+    """Resolve CONFIG_PATH or TOKENMAP_PATH to actual file location."""
+    return _find_config(os.path.basename(path))
 
 # ---------------------------------------------------------------------------
 # Config file loading
@@ -93,17 +133,19 @@ def _load_config() -> dict:
             "microsoft.163163@163.com",
         ]
     }
-    if os.path.isfile(CONFIG_PATH):
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+    _path = _resolve_config(CONFIG_PATH)
+    if os.path.isfile(_path):
+        with open(_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         defaults.update(data)
     return defaults
 
 def _load_tokenmap() -> dict:
     """Load Tokenmapping.json from script directory. Returns empty dict if missing."""
-    if not os.path.isfile(TOKENMAP_PATH):
+    _path = _resolve_config(TOKENMAP_PATH)
+    if not os.path.isfile(_path):
         return {}
-    with open(TOKENMAP_PATH, "r", encoding="utf-8") as f:
+    with open(_path, "r", encoding="utf-8") as f:
         mapping_list = json.load(f)
     return {item["Name"]: item["Value"] for item in mapping_list}
 
@@ -582,13 +624,13 @@ class EDMGUI:
         self.tab_config = ttk.Frame(self.config_notebook, padding=4)
         self.config_notebook.add(self.tab_config, text="  Test Emails  ")
 
-        self._build_config_tab(self.tab_config, "config.json", _load_raw_json(CONFIG_PATH))
+        self._build_config_tab(self.tab_config, "config.json", _load_raw_json(_resolve_config(CONFIG_PATH)))
 
         # Tab 2: Tokenmapping
         self.tab_token = ttk.Frame(self.config_notebook, padding=4)
         self.config_notebook.add(self.tab_token, text="  Tokenmapping  ")
 
-        self._build_config_tab(self.tab_token, "Tokenmapping.json", _load_raw_json(TOKENMAP_PATH))
+        self._build_config_tab(self.tab_token, "Tokenmapping.json", _load_raw_json(_resolve_config(TOKENMAP_PATH)))
 
         # Config toggle button
         self.config_toggle_btn = ttk.Button(
@@ -597,22 +639,40 @@ class EDMGUI:
         # Start collapsed so Process button is always visible
         self._toggle_config()
 
-        # Buttons
-        btn_frame = ttk.Frame(main)
-        btn_frame.pack(fill="x", pady=(0, 10))
-        btn_frame.columnconfigure(0, weight=1)
-        btn_frame.columnconfigure(1, weight=2)
-        btn_frame.columnconfigure(2, weight=1)
+        # Buttons — 2 rows
+        btn_outer = ttk.Frame(main)
+        btn_outer.pack(fill="x", pady=(0, 10))
+
+        btn_row1 = ttk.Frame(btn_outer)
+        btn_row1.pack(fill="x", pady=(0, 2))
+        btn_row1.columnconfigure(0, weight=1)
+        btn_row1.columnconfigure(1, weight=2)
+        btn_row1.columnconfigure(2, weight=1)
 
         self.process_btn = ttk.Button(
-            btn_frame, text="  Process  ", command=self._run_process, style="Action.TButton"
+            btn_row1, text="  Process  ", command=self._run_process, style="Action.TButton"
         )
-        self.process_btn.grid(row=0, column=1, pady=4, sticky="ew")
+        self.process_btn.grid(row=0, column=1, sticky="ew")
 
         self.open_btn = ttk.Button(
-            btn_frame, text="Open Output Folder", command=self._open_folder, state="disabled"
+            btn_row1, text="Open Output Folder", command=self._open_folder, state="disabled"
         )
-        self.open_btn.grid(row=0, column=2, pady=4, sticky="e")
+        self.open_btn.grid(row=0, column=2, sticky="e")
+
+        btn_row2 = ttk.Frame(btn_outer)
+        btn_row2.pack(fill="x", pady=(2, 0))
+        btn_row2.columnconfigure(0, weight=1)
+        btn_row2.columnconfigure(1, weight=1)
+
+        self.import_test_btn = ttk.Button(
+            btn_row2, text="Import Test List", command=self._import_test_list, state="disabled"
+        )
+        self.import_test_btn.grid(row=0, column=0, padx=(0, 6), sticky="ew")
+
+        self.import_formal_btn = ttk.Button(
+            btn_row2, text="Import Formal List", command=self._import_formal_list, state="disabled"
+        )
+        self.import_formal_btn.grid(row=0, column=1, padx=(6, 0), sticky="ew")
 
         # Log
         log_frame = ttk.LabelFrame(main, text="Log", padding=8)
@@ -662,7 +722,7 @@ class EDMGUI:
         self._config_widgets[label] = {"status": status, "preview": preview}
 
     def _edit_config(self, label: str):
-        path = CONFIG_PATH if label == "config.json" else TOKENMAP_PATH
+        path = _resolve_config(CONFIG_PATH if label == "config.json" else TOKENMAP_PATH)
         content = _load_raw_json(path)
         dialog = ConfigEditorDialog(self.root, f"Edit {label}", path, content)
         self.root.wait_window(dialog.win)
@@ -671,7 +731,7 @@ class EDMGUI:
 
     def _refresh_config_preview(self, label: str):
         """Update the status label and preview text after editing."""
-        path = CONFIG_PATH if label == "config.json" else TOKENMAP_PATH
+        path = _resolve_config(CONFIG_PATH if label == "config.json" else TOKENMAP_PATH)
         raw = _load_raw_json(path)
 
         widgets = self._config_widgets.get(label)
@@ -722,6 +782,7 @@ class EDMGUI:
         )
         if path:
             self.xlsx_var.set(path)
+            self._enable_import_buttons()
 
     def _browse_output(self):
         path = filedialog.askdirectory(title="Select Output Folder")
@@ -772,6 +833,181 @@ class EDMGUI:
     def _open_folder(self):
         if self.last_sn_folder:
             os.startfile(self.last_sn_folder)
+
+    # ---------------------------------------------------------------------------
+    # Unimarketing List Import
+    # ---------------------------------------------------------------------------
+
+    def _find_sn(self, path: str) -> str | None:
+        """Find SN number in path — tries SN-12345 and SN 12345."""
+        sn = extract_sn(path)
+        if sn:
+            return sn
+        match = re.search(r"SN\s+(\d+)", path)
+        if match:
+            return f"SN-{match.group(1)}"
+        return None
+
+    def _enable_import_buttons(self):
+        """Enable import buttons when xlsx is available."""
+        self.import_test_btn.config(state="normal")
+        self.import_formal_btn.config(state="normal")
+
+    def _disable_import_buttons(self):
+        """Disable import buttons during processing."""
+        self.import_test_btn.config(state="disabled")
+        self.import_formal_btn.config(state="disabled")
+
+    def _run_import(self, import_fn, is_formal: bool = False):
+        """Run an import function directly, passing logger for logging."""
+        xlsx_path = self.xlsx_var.get().strip()
+        if not xlsx_path or not os.path.isfile(xlsx_path):
+            messagebox.showerror("Error", "Please select an xlsx file first.")
+            return
+
+        if is_formal:
+            if not messagebox.askokcancel(
+                "Confirm Formal Import",
+                "警告：请确保当前formal发送队列idle后进行。",
+            ):
+                return
+
+        self._disable_import_buttons()
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", "end")
+        self.log_text.config(state="disabled")
+
+        logger = ProcessLogger(self.root, self.log_text)
+
+        def _do_import():
+            logger.log("=== Import Started ===")
+            try:
+                import_fn(xlsx_path, logger)
+            except SystemExit as e:
+                logger.log(f"ERROR: Import exited with code {e.code}")
+            except Exception as e:
+                logger.log(f"ERROR: {e}")
+            logger.log("")
+            logger.log("=== Import Done ===")
+            self.root.after(0, self._enable_import_buttons)
+
+        thread = threading.Thread(target=_do_import, daemon=True)
+        thread.start()
+
+    def _do_api_import(self, csv_path: str, list_title: str, attrs, logger):
+        """Run the Unimarketing API import pipeline with logger logging."""
+        logger.log("[API] creating list...")
+        list_id = _um_create_list(list_title, attrs)
+        if not list_id:
+            logger.log("[API] FAILED to create list")
+            return
+
+        logger.log("[API] list created: " + str(list_id))
+        logger.log("[API] creating import task...")
+        task_title = f"API导入_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        import_id = _um_create_import_task(list_id, task_title)
+        if not import_id:
+            logger.log("[API] FAILED to create import task")
+            return
+
+        logger.log("[API] import task created: " + str(import_id))
+        logger.log("[API] submitting contacts...")
+        contact_count = _um_submit_contacts(import_id, csv_path, attrs)
+        if not contact_count:
+            logger.log("[API] FAILED to submit contacts")
+            return
+
+        logger.log(f"[API] contacts submitted: {contact_count}")
+        logger.log("[API] executing import...")
+        if not _um_execute_import(import_id):
+            logger.log("[API] FAILED to execute import")
+            return
+
+        logger.log("[API] polling import status...")
+        result = _um_poll_import_status(import_id, contact_count)
+
+        logger.log("")
+        if result.get("status") in ("导入成功", "execute_succeed"):
+            logger.log(f"SUCCESS: Import complete — listId={list_id}, importId={import_id}")
+            logger.log(f"  Total: {result.get('total')} | Valid: {result.get('validNum')} | "
+                        f"Invalid: {result.get('inValidNum')} | Added: {result.get('addToListSuccessNum')} | "
+                        f"New: {result.get('addSuccessNum')} | Updated: {result.get('updateSuccessNum')}")
+        else:
+            logger.log(f"FAILED: Import ended with status={result.get('status')}")
+
+    def _import_test_list(self):
+        def fn(xlsx_path, logger):
+            config = _load_config()
+            test_emails = config.get("test_emails", [])
+            if not test_emails:
+                logger.log("Error: no test_emails in config.json")
+                return
+            output_dir = os.path.dirname(xlsx_path)
+            sn = self._find_sn(xlsx_path)
+            if not sn:
+                logger.log("Error: no SN number found in xlsx path")
+                return
+            xlsx_name = os.path.splitext(os.path.basename(xlsx_path))[0]
+            now = datetime.now().strftime("%Y%m%d%H%M%S")
+            list_title = f"test_{sn}_{xlsx_name}_{now}"
+
+            logger.log(f"=== Unimarketing Test List Import ===")
+            logger.log(f"SN: {sn}")
+            logger.log(f"List: {list_title}")
+            logger.log(f"Test emails: {test_emails}")
+            logger.log("")
+
+            logger.log("[CSV] generating test CSV...")
+            csv_path = _um_generate_test_csv(xlsx_path, output_dir, test_emails)
+            logger.log(f"[CSV] saved: {os.path.basename(csv_path)}")
+
+            with open(csv_path, encoding="gbk", newline="") as f:
+                csv_header = next(csv.reader(f))
+
+            attrs = _um_get_attr_mapping(csv_header)
+            if not attrs:
+                logger.log("[WARN] No Token/SubId columns found")
+            logger.log(f"Attributes: {attrs}")
+            logger.log("")
+
+            logger.log("[API] creating list...")
+            self._do_api_import(csv_path, list_title, attrs, logger)
+
+        self._run_import(fn)
+
+    def _import_formal_list(self):
+        def fn(xlsx_path, logger):
+            output_dir = os.path.dirname(xlsx_path)
+            sn = self._find_sn(xlsx_path)
+            if not sn:
+                logger.log("Error: no SN number found in xlsx path")
+                return
+            xlsx_name = os.path.splitext(os.path.basename(xlsx_path))[0]
+            now = datetime.now().strftime("%Y%m%d%H%M%S")
+            list_title = f"formal_{sn}_{xlsx_name}_{now}"
+
+            logger.log(f"=== Unimarketing Formal List Import ===")
+            logger.log(f"SN: {sn}")
+            logger.log(f"List: {list_title}")
+            logger.log("")
+
+            logger.log("[CSV] generating formal CSV...")
+            csv_path = _um_generate_formal_csv(xlsx_path, output_dir)
+            logger.log(f"[CSV] saved: {os.path.basename(csv_path)}")
+
+            with open(csv_path, encoding="gbk", newline="") as f:
+                csv_header = next(csv.reader(f))
+
+            attrs = _um_get_attr_mapping(csv_header)
+            if not attrs:
+                logger.log("[WARN] No Token/SubId columns found")
+            logger.log(f"Attributes: {attrs}")
+            logger.log("")
+
+            logger.log("[API] creating list...")
+            self._do_api_import(csv_path, list_title, attrs, logger)
+
+        self._run_import(fn, is_formal=True)
 
     def run(self):
         self.root.mainloop()

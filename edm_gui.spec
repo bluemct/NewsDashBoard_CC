@@ -6,7 +6,10 @@ a = Analysis(
     ['edm_gui.py'],
     pathex=['_edm_build'],
     binaries=[],
-    datas=[],
+    datas=[
+        ('config.json', '.'),
+        ('Tokenmapping.json', '.'),
+    ],
     hiddenimports=[
         'olefile',
         'olefile.olefile',
@@ -17,6 +20,8 @@ a = Analysis(
         'win32com.server',
         'win32com.util',
         'pythoncom',
+        'requests',
+        'unimarketing_test_list',
     ],
     hookspath=[],
     hooksconfig={},
