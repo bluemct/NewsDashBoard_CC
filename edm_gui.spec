@@ -10,6 +10,8 @@ a = Analysis(
         ('config.json', '.'),
         ('Tokenmapping.json', '.'),
         ('xlsx_search_dir.json', '.'),
+        ('verify_list_contacts.py', '.'),
+        ('deep_verify_list.py', '.'),
     ],
     hiddenimports=[
         'olefile',

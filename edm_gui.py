@@ -100,11 +100,21 @@ except ImportError as e:
 # ---------------------------------------------------------------------------
 # Import verify_list_contacts for post-import verification
 # ---------------------------------------------------------------------------
-_VERIFY_PATH = os.path.join(_SCRIPT_DIR, "verify_list_contacts.py")
-if os.path.isfile(_VERIFY_PATH):
+def _find_verify_module(name: str) -> str | None:
+    """Find a module file — tries script dir first, then _internal/ (exe mode)."""
+    direct = os.path.join(_SCRIPT_DIR, name)
+    if os.path.isfile(direct):
+        return direct
+    internal = os.path.join(_SCRIPT_DIR, "_internal", name)
+    if os.path.isfile(internal):
+        return internal
+    return None
+
+_verify_path = _find_verify_module("verify_list_contacts.py")
+if _verify_path:
     try:
         import importlib.util
-        _spec = importlib.util.spec_from_file_location("verify_list_contacts", _VERIFY_PATH)
+        _spec = importlib.util.spec_from_file_location("verify_list_contacts", _verify_path)
         _verify_mod = importlib.util.module_from_spec(_spec)
         _spec.loader.exec_module(_verify_mod)
         _verify_list_import = _verify_mod.verify_list_import
@@ -121,11 +131,11 @@ else:
 # ---------------------------------------------------------------------------
 # Import deep_verify for field-by-field comparison
 # ---------------------------------------------------------------------------
-_DEEP_VERIFY_PATH = os.path.join(_SCRIPT_DIR, "deep_verify_list.py")
-if os.path.isfile(_DEEP_VERIFY_PATH):
+_deep_verify_path = _find_verify_module("deep_verify_list.py")
+if _deep_verify_path:
     try:
         import importlib.util
-        _dv_spec = importlib.util.spec_from_file_location("deep_verify_list", _DEEP_VERIFY_PATH)
+        _dv_spec = importlib.util.spec_from_file_location("deep_verify_list", _deep_verify_path)
         _dv_mod = importlib.util.module_from_spec(_dv_spec)
         _dv_spec.loader.exec_module(_dv_mod)
         _deep_verify = _dv_mod.deep_verify
@@ -594,7 +604,7 @@ class ConfigEditorDialog:
         sb = ttk.Scrollbar(text_frame, orient="vertical")
         sb.pack(side="right", fill="y")
 
-        text = tk.Text(text_frame, font=("Consolas", 9), wrap="word",
+        text = tk.Text(text_frame, font=("Consolas", 10), wrap="word",
                        padx=6, pady=6, yscrollcommand=sb.set)
         text.pack(fill="both", expand=True)
         sb.config(command=text.yview)
@@ -641,23 +651,122 @@ class EDMGUI:
         self.xlsx_var = tk.StringVar()
         self.output_var = tk.StringVar(value=DEFAULT_OUTPUT_BASE)
         self.last_sn_folder = None
-        self._config_widgets = {}
-        self.config_collapsed = False
+        self._menu_open_folder_cmd = None  # callback to enable menu item
 
         self._build_ui()
+        self._build_menu()
 
-        # Window resize handler — auto-collapse config when window is small
-        self.root.bind("<Configure>", self._on_resize)
+    def _build_menu(self):
+        """Build the top menu bar."""
+        self._menubar = tk.Menu(self.root, font=("Microsoft YaHei UI", 9))
+        self.root.config(menu=self._menubar)
+
+        # File menu
+        self._file_menu = tk.Menu(self._menubar, tearoff=0, font=("Microsoft YaHei UI", 9))
+        self._menubar.add_cascade(label="文件", menu=self._file_menu)
+        self._file_menu.add_command(label="打开输出文件夹", command=self._open_folder, accelerator="Ctrl+O", state="disabled")
+        self._file_menu.add_command(label="修改输出目录...", command=self._browse_output)
+        self._file_menu.add_separator()
+        self._file_menu.add_command(label="退出", command=self.root.quit, accelerator="Alt+F4")
+
+        # Settings menu
+        settings_menu = tk.Menu(self._menubar, tearoff=0, font=("Microsoft YaHei UI", 9))
+        self._menubar.add_cascade(label="设置", menu=settings_menu)
+        settings_menu.add_command(label="编辑测试邮箱 (config.json)", command=lambda: self._menu_edit_config("config.json"), accelerator="Ctrl+E")
+        settings_menu.add_command(label="编辑令牌映射 (Tokenmapping.json)", command=lambda: self._menu_edit_config("Tokenmapping.json"), accelerator="Ctrl+T")
+        settings_menu.add_separator()
+        settings_menu.add_command(label="XLSX 检索目录...", command=self._menu_edit_search_dir)
+
+        # Help menu
+        help_menu = tk.Menu(self._menubar, tearoff=0, font=("Microsoft YaHei UI", 9))
+        self._menubar.add_cascade(label="帮助", menu=help_menu)
+        help_menu.add_command(label="关于", command=self._show_about)
+
+        # Keyboard shortcuts
+        self.root.bind("<Control-o>", lambda e: self._open_folder())
+        self.root.bind("<Control-e>", lambda e: self._menu_edit_config("config.json"))
+        self.root.bind("<Control-t>", lambda e: self._menu_edit_config("Tokenmapping.json"))
+
+    def _menu_edit_config(self, label: str):
+        """Edit a config JSON file from the menu."""
+        path = _resolve_config(CONFIG_PATH if label == "config.json" else TOKENMAP_PATH)
+        content = _load_raw_json(path)
+        dialog = ConfigEditorDialog(self.root, f"编辑 {os.path.basename(path)}", path, content)
+        self.root.wait_window(dialog.win)
+
+    def _menu_edit_search_dir(self):
+        """Dialog to edit the XLSX search directory."""
+        current = _load_xlsx_search_dir()
+        dir_dialog = tk.Toplevel(self.root)
+        dir_dialog.title("XLSX 检索目录")
+        dir_dialog.geometry("550x120")
+        dir_dialog.resizable(True, False)
+        dir_dialog.transient(self.root)
+        dir_dialog.grab_set()
+        dir_dialog.focus_set()
+
+        ttk.Label(dir_dialog, text="XLSX 文件检索目录路径：", font=("Microsoft YaHei UI", 9)).pack(
+            anchor="w", padx=15, pady=(12, 4)
+        )
+
+        dir_var = tk.StringVar(value=current)
+        entry_frame = ttk.Frame(dir_dialog, padding=(15, 0))
+        entry_frame.pack(fill="x", pady=(0, 8))
+
+        ttk.Entry(entry_frame, textvariable=dir_var, width=55, font=("Consolas", 9)).pack(
+            side="left", fill="x", expand=True, padx=(0, 8)
+        )
+        ttk.Button(entry_frame, text="浏览...", command=lambda: (
+            dir_var.set(filedialog.askdirectory(title="选择检索目录"))
+        )).pack(side="right")
+
+        result = [None]
+
+        def save():
+            val = dir_var.get().strip()
+            if val:
+                _save_xlsx_search_dir(val)
+                result[0] = val
+            dir_dialog.destroy()
+
+        btn_frame = ttk.Frame(dir_dialog, padding=(15, 0, 15, 12))
+        btn_frame.pack(fill="x")
+        btn_frame.pack(side="right")
+        ttk.Button(btn_frame, text="确定", command=save).pack(side="right", padx=(0, 6))
+        ttk.Button(btn_frame, text="取消", command=dir_dialog.destroy).pack(side="right")
+
+        self.root.wait_window(dir_dialog)
+
+    def _show_about(self):
+        messagebox.showinfo(
+            "关于",
+            "EDM Email Processor\n"
+            "自动处理 EDM 邮件：提取 SN、生成 HTML 模板、\n"
+            "转换 CSV、导入 Unimarketing 联系人列表。",
+            parent=self.root,
+        )
 
     def _build_ui(self):
         style = ttk.Style()
         style.theme_use("clam")
+
+        # Font definitions — YaHei UI for UI text, Consolas for monospace
+        _ui_font = ("Microsoft YaHei UI", 10)
+        _ui_font_sm = ("Microsoft YaHei UI", 9)
+        _code_font = ("Consolas", 9)
+        _code_font_sm = ("Consolas", 8)
+
         style.configure("TFrame", background="#ffffff")
-        style.configure("TLabel", background="#ffffff", foreground="#333333")
-        style.configure("Title.TLabel", font=("", 14, "bold"), foreground="#222222")
-        style.configure("TButton", padding=(10, 4), font=("", 9))
-        style.configure("Action.TButton", font=("", 10, "bold"), padding=(16, 8))
-        style.configure("Status.TLabel", font=("Consolas", 9))
+        style.configure("TLabel", font=_ui_font_sm, background="#ffffff", foreground="#333333")
+        style.configure("Title.TLabel", font=("Microsoft YaHei UI", 15, "bold"), foreground="#1a1a1a")
+        style.configure("TButton", padding=(10, 5), font=_ui_font_sm)
+        style.configure("Action.TButton", font=("Microsoft YaHei UI", 11, "bold"), padding=(16, 8))
+        style.configure("Status.TLabel", font=_code_font)
+        style.configure("TLabelframe", font=_ui_font)
+        style.configure("TLabelframe.Label", font=("Microsoft YaHei UI", 10, "bold"))
+        style.configure("TNotebook", font=_ui_font)
+        style.configure("TNotebook.Tab", font=_ui_font_sm, padding=(8, 4))
+        style.configure("TEntry", font=_ui_font_sm, padding=4)
         style.map("TButton", background=[("active", "#e0e0e0")])
         style.map("Action.TButton", background=[("active", "#3b82f6")])
 
@@ -717,36 +826,6 @@ class EDMGUI:
         out_entry.grid(row=0, column=1, padx=(0, 6), sticky="ew")
         ttk.Button(output_frame, text="Browse...", command=self._browse_output).grid(row=0, column=2, sticky="e")
 
-        # Config section — collapsible
-        config_outer = ttk.Frame(main)
-        config_outer.pack(fill="x", pady=(0, 6))
-
-        self.config_frame = ttk.LabelFrame(config_outer, text="Config", padding=6)
-        self.config_frame.pack(fill="x")
-
-        # Notebook for two tabs
-        self.config_notebook = ttk.Notebook(self.config_frame)
-        self.config_notebook.pack(fill="x")
-
-        # Tab 1: Test Emails
-        self.tab_config = ttk.Frame(self.config_notebook, padding=4)
-        self.config_notebook.add(self.tab_config, text="  Test Emails  ")
-
-        self._build_config_tab(self.tab_config, "config.json", _load_raw_json(_resolve_config(CONFIG_PATH)))
-
-        # Tab 2: Tokenmapping
-        self.tab_token = ttk.Frame(self.config_notebook, padding=4)
-        self.config_notebook.add(self.tab_token, text="  Tokenmapping  ")
-
-        self._build_config_tab(self.tab_token, "Tokenmapping.json", _load_raw_json(_resolve_config(TOKENMAP_PATH)))
-
-        # Config toggle button
-        self.config_toggle_btn = ttk.Button(
-            config_outer, text="▼ Collapse Config", command=self._toggle_config
-        )
-        # Start collapsed so Process button is always visible
-        self._toggle_config()
-
         # Buttons — 2 rows
         btn_outer = ttk.Frame(main)
         btn_outer.pack(fill="x", pady=(0, 10))
@@ -787,7 +866,7 @@ class EDMGUI:
         log_frame.pack(fill="both", expand=True)
 
         self.log_text = tk.Text(log_frame, height=12, wrap="word", state="disabled",
-                                font=("Consolas", 9), bg="#f5f5f5", fg="#222222",
+                                font=("Consolas", 10), bg="#f5f5f5", fg="#222222",
                                 insertborderwidth=0, relief="flat")
         self.log_text.pack(fill="both", expand=True)
 
@@ -829,7 +908,7 @@ class EDMGUI:
         self._verify_selected_list_id = None
 
         self.verify_list_box = tk.Listbox(
-            list_frame, height=5, font=("Consolas", 9), selectmode="single"
+            list_frame, height=5, font=("Consolas", 10), selectmode="single"
         )
         self.verify_list_box.pack(fill="x")
         self.verify_list_box.bind("<<ListboxSelect>>", self._on_list_select)
@@ -855,93 +934,9 @@ class EDMGUI:
         vlog_frame.pack(fill="both", expand=True)
 
         self.verify_log_text = tk.Text(vlog_frame, height=16, wrap="word", state="disabled",
-                                        font=("Consolas", 9), bg="#f5f5f5", fg="#222222",
+                                        font=("Consolas", 10), bg="#f5f5f5", fg="#222222",
                                         insertborderwidth=0, relief="flat")
         self.verify_log_text.pack(fill="both", expand=True)
-
-    def _build_config_tab(self, parent: ttk.Frame, label: str, raw_content: str | None):
-        """Build a config tab with a read-only preview and Edit button."""
-        status_text = _format_config_status(label, raw_content)
-        status = tk.Label(
-            parent, text=status_text, justify="left", anchor="w",
-            font=("Consolas", 9), fg="#222222", bg="#ffffff"
-        )
-        status.pack(fill="x", pady=(0, 6))
-
-        # Read-only content preview with scrollbar
-        inner = ttk.Frame(parent)
-        inner.pack(fill="x", pady=(0, 6))
-
-        sb = ttk.Scrollbar(inner, orient="vertical")
-        sb.pack(side="right", fill="y")
-
-        preview = tk.Text(inner, height=4, wrap="word", state="disabled",
-                          font=("Consolas", 9), bg="#f5f5f5", fg="#333333",
-                          insertborderwidth=0, relief="flat", padx=4, pady=4,
-                          yscrollcommand=sb.set)
-        preview.pack(side="left", fill="x", expand=True)
-        sb.config(command=preview.yview)
-
-        if raw_content:
-            formatted = json.dumps(json.loads(raw_content), indent=2, ensure_ascii=False)
-        else:
-            formatted = "(file not found)"
-        preview.config(state="normal")
-        preview.insert("1.0", formatted)
-        preview.config(state="disabled")
-
-        ttk.Button(parent, text="Edit...", command=lambda: self._edit_config(label)).pack(
-            anchor="w", pady=(4, 0)
-        )
-
-        # Store references for refresh
-        self._config_widgets[label] = {"status": status, "preview": preview}
-
-    def _edit_config(self, label: str):
-        path = _resolve_config(CONFIG_PATH if label == "config.json" else TOKENMAP_PATH)
-        content = _load_raw_json(path)
-        dialog = ConfigEditorDialog(self.root, f"Edit {label}", path, content)
-        self.root.wait_window(dialog.win)
-        if dialog.result is not None:
-            self._refresh_config_preview(label)
-
-    def _refresh_config_preview(self, label: str):
-        """Update the status label and preview text after editing."""
-        path = _resolve_config(CONFIG_PATH if label == "config.json" else TOKENMAP_PATH)
-        raw = _load_raw_json(path)
-
-        widgets = self._config_widgets.get(label)
-        if not widgets:
-            return
-
-        widgets["status"].config(text=_format_config_status(label, raw))
-
-        preview = widgets["preview"]
-        if raw:
-            formatted = json.dumps(json.loads(raw), indent=2, ensure_ascii=False)
-        else:
-            formatted = "(file not found)"
-        preview.config(state="normal")
-        preview.delete("1.0", "end")
-        preview.insert("1.0", formatted)
-        preview.config(state="disabled")
-
-    def _toggle_config(self):
-        self.config_collapsed = not self.config_collapsed
-        if self.config_collapsed:
-            self.config_frame.pack_forget()
-            self.config_toggle_btn.config(text="▶ Expand Config")
-        else:
-            self.config_frame.pack(fill="x")
-            self.config_toggle_btn.config(text="▼ Collapse Config")
-
-    def _on_resize(self, event):
-        """Auto-collapse/expand config panel based on window height."""
-        if event.widget is self.root:
-            if event.height < 450 and not self.config_collapsed:
-                self._toggle_config()
-            elif event.height >= 480 and self.config_collapsed:
-                self._toggle_config()
 
     def _browse_msg(self):
         path = filedialog.askopenfilename(
@@ -1025,8 +1020,8 @@ class EDMGUI:
         def on_done(sn_folder):
             self.last_sn_folder = sn_folder
             self.root.after(0, lambda: self.process_btn.config(state="normal"))
-            self.root.after(0, lambda: self.open_btn.config(state="normal"))
-            self.root.after(0, lambda: messagebox.showinfo("Done", f"Processing complete for {sn_folder.split('/')[-1]}"))
+            self.root.after(0, self._enable_menu_open_folder)
+            self.root.after(0, lambda: self._show_done_dialog(sn_folder))
 
         def on_error(msg):
             logger.log(f"ERROR: {msg}")
@@ -1045,6 +1040,45 @@ class EDMGUI:
     def _open_folder(self):
         if self.last_sn_folder:
             os.startfile(self.last_sn_folder)
+
+    def _enable_menu_open_folder(self):
+        """Enable the menu 'open output folder' command and the main open button."""
+        self._file_menu.entryconfig(0, state="normal")
+        self.open_btn.config(state="normal")
+
+    def _show_done_dialog(self, sn_folder):
+        """Custom dialog after process completes with 'Open Folder' button."""
+        sn_name = os.path.basename(sn_folder)
+        win = tk.Toplevel(self.root)
+        win.title("完成")
+        win.geometry("380x150")
+        win.resizable(False, False)
+        win.transient(self.root)
+        win.grab_set()
+        win.focus_set()
+
+        ttk.Label(win, text=f"处理完成：{sn_name}",
+                  font=("Microsoft YaHei UI", 11, "bold")).pack(
+            pady=(18, 8), anchor="w", padx=20
+        )
+
+        ttk.Label(win, text=f"输出目录：{sn_folder}",
+                  font=("Consolas", 9), foreground="#555").pack(
+            anchor="w", padx=20, pady=(0, 16)
+        )
+
+        btn_frame = ttk.Frame(win, padding=(20, 0, 20, 18))
+        btn_frame.pack(fill="x")
+
+        ttk.Button(
+            btn_frame, text="打开文件夹",
+            command=lambda: (os.startfile(sn_folder), win.destroy())
+        ).pack(side="right", padx=(8, 0))
+
+        ttk.Button(
+            btn_frame, text="关闭",
+            command=win.destroy
+        ).pack(side="right")
 
     # ---------------------------------------------------------------------------
     # Unimarketing List Import

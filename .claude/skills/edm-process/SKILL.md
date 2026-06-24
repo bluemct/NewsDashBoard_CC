@@ -13,10 +13,11 @@ description: Process EDM email — extract SN, create folder, convert xlsx to CS
 2. 从原始邮件主题提取 SN 编号（如 `SN-12345`）
 3. 在 `EDM/` 下创建 `SN-12345/` 文件夹
 4. 将 `.xlsx` 复制到 SN 文件夹并转换为 CSV（GB18030 编码）
-5. 从原始邮件提取嵌套 EDM 模板 `.msg`（无收件人的那个），保存到 SN 文件夹
-6. 通过 win32com 读取嵌套 .msg 的 HTMLBody，在 `<body>` 后插入主题行
-7. 自动替换 `%%TokenN%%` / `%%SubIdN%%` 占位符（支持跨 `<span>` 拆分，从 `Tokenmapping.json` 读取映射）
-8. 保存为 `EDM_template.html`
+5. 生成 `formal_*.csv`（全部行）和 `test_*.csv`（N 行，每行配对测试邮箱）
+6. 从原始邮件提取嵌套 EDM 模板 `.msg`（无收件人的那个），保存到 SN 文件夹
+7. 通过 win32com 读取嵌套 .msg 的 HTMLBody，在 `<body>` 后插入主题行
+8. 自动替换 `%%TokenN%%` / `%%SubIdN%%` 占位符（支持跨 `<span>` 拆分，从 `Tokenmapping.json` 读取映射）
+9. 保存为 `EDM_template.html`
 
 ## Token 占位符替换
 
@@ -44,11 +45,12 @@ python .claude/skills/edm-process/edm_process.py
 
 `EDM/SN-xxxxx/` 目录下生成：
 - `Token1-3 SN-xxxxx.xlsx` — 原始联系人列表
-- `Token1-3 SN-xxxxx.csv` — GB18030 编码 CSV（单元格验证通过）
+- `Token1-3 SN-xxxxx.csv` — GB18030 编码 CSV（单元格验证通过，CLI 保留，GUI 删除）
 - `formal_Token1-3 SN-xxxxx.csv` — 正式 CSV（保留原信息全部行）
-- `test_Token1-3 SN-xxxxx.csv` — 测试 CSV（保留两行最长且不同的行，替换 Email 为测试邮箱）
+- `test_Token1-3 SN-xxxxx.csv` — 测试 CSV（保留 N 行最长且不同的行，替换 Email 为测试邮箱）
 - `请在...2026.msg` — 嵌套 EDM 模板 .msg
-- `EDM_template.html` — Outlook 原生 HTMLBody + 主题行
+- `EDM_template.html` — Outlook 原生 HTMLBody + 主题行 + token 替换
+- `process.log` — GUI 处理日志（仅 GUI 生成）
 
 ## EDM GUI Tool (edm_gui.py)
 
@@ -62,6 +64,19 @@ GUI 桌面应用（tkinter），支持通过界面选择文件并处理。额外
 ```bash
 python edm_gui.py
 ```
+
+## Public API
+
+| Function | Description |
+|----------|-------------|
+| `extract_sn(text)` | Extract SN-12345 from text |
+| `find_target_attachment_idx(msg_path)` | Find nested .msg (0 recipients) index via olefile |
+| `save_target_attachment(att, save_dir)` | Save attachment to disk |
+| `convert_xlsx_to_csv(xlsx_path)` | Convert xlsx to CSV (subprocess to xlsx_to_csv skill) |
+| `generate_formal_test_csv(xlsx_path)` | Generate formal_*.csv and test_*.csv from source CSV |
+| `replace_span_tokens(html, mapping)` | Replace %%TokenN%%/%%SubIdN%% split across <span> tags |
+| `convert_msg_to_html(msg_path, output_html)` | Convert .msg to HTML via win32com with token replacement |
+| `process_edm()` | Full EDM workflow entry point |
 
 ## Requirements
 
