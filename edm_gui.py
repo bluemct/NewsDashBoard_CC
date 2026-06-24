@@ -97,6 +97,45 @@ try:
 except ImportError as e:
     print(f"Warning: Could not import unimarketing_test_list: {e}", file=sys.stderr)
 
+# ---------------------------------------------------------------------------
+# Import verify_list_contacts for post-import verification
+# ---------------------------------------------------------------------------
+_VERIFY_PATH = os.path.join(_SCRIPT_DIR, "verify_list_contacts.py")
+if os.path.isfile(_VERIFY_PATH):
+    try:
+        import importlib.util
+        _spec = importlib.util.spec_from_file_location("verify_list_contacts", _VERIFY_PATH)
+        _verify_mod = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_verify_mod)
+        _verify_list_import = _verify_mod.verify_list_import
+        _verify_find_lists_by_sn = _verify_mod.find_lists_by_sn
+        _verify_read_xlsx_emails = _verify_mod.read_xlsx_emails
+        _verify_get_list_info = _verify_mod.get_list_info
+        _HAS_VERIFY = True
+    except Exception as e:
+        print(f"Warning: Could not load verify_list_contacts: {e}", file=sys.stderr)
+        _HAS_VERIFY = False
+else:
+    _HAS_VERIFY = False
+
+# ---------------------------------------------------------------------------
+# Import deep_verify for field-by-field comparison
+# ---------------------------------------------------------------------------
+_DEEP_VERIFY_PATH = os.path.join(_SCRIPT_DIR, "deep_verify_list.py")
+if os.path.isfile(_DEEP_VERIFY_PATH):
+    try:
+        import importlib.util
+        _dv_spec = importlib.util.spec_from_file_location("deep_verify_list", _DEEP_VERIFY_PATH)
+        _dv_mod = importlib.util.module_from_spec(_dv_spec)
+        _dv_spec.loader.exec_module(_dv_mod)
+        _deep_verify = _dv_mod.deep_verify
+        _HAS_DEEP_VERIFY = True
+    except Exception as e:
+        print(f"Warning: Could not load deep_verify_list: {e}", file=sys.stderr)
+        _HAS_DEEP_VERIFY = False
+else:
+    _HAS_DEEP_VERIFY = False
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -631,6 +670,27 @@ class EDMGUI:
             anchor="w", pady=(0, 10)
         )
 
+        # Notebook — two tabs
+        self.notebook = ttk.Notebook(main)
+        self.notebook.pack(fill="both", expand=True)
+
+        # Tab 1: EDM Processor
+        tab1 = ttk.Frame(self.notebook, padding=4)
+        self.notebook.add(tab1, text="  EDM Processor  ")
+        self._build_processor_tab(tab1)
+
+        # Tab 2: Verify
+        tab2 = ttk.Frame(self.notebook, padding=4)
+        self.notebook.add(tab2, text="  Verify  ")
+        self._build_verify_tab(tab2)
+
+    # ------------------------------------------------------------------
+    # Tab 1 — EDM Processor
+    # ------------------------------------------------------------------
+    def _build_processor_tab(self, container):
+        main = ttk.Frame(container)
+        main.pack(fill="both", expand=True)
+
         # Input files
         input_frame = ttk.LabelFrame(main, text="Input Files", padding=8)
         input_frame.pack(fill="x", pady=(0, 6))
@@ -730,6 +790,74 @@ class EDMGUI:
                                 font=("Consolas", 9), bg="#f5f5f5", fg="#222222",
                                 insertborderwidth=0, relief="flat")
         self.log_text.pack(fill="both", expand=True)
+
+    # ------------------------------------------------------------------
+    # Tab 2 — Verify
+    # ------------------------------------------------------------------
+    def _build_verify_tab(self, container):
+        main = ttk.Frame(container)
+        main.pack(fill="both", expand=True)
+
+        # SN input
+        sn_frame = ttk.LabelFrame(main, text="SN Number", padding=8)
+        sn_frame.pack(fill="x", pady=(0, 10))
+        sn_frame.columnconfigure(1, weight=1)
+
+        self.verify_sn_var = tk.StringVar()
+        ttk.Label(sn_frame, text="SN:").grid(row=0, column=0, sticky="w", padx=(0, 8))
+        sn_entry = ttk.Entry(sn_frame, textvariable=self.verify_sn_var, width=30)
+        sn_entry.grid(row=0, column=1, padx=(0, 6), sticky="ew")
+        ttk.Button(sn_frame, text="Discover", command=self._verify_discover).grid(row=0, column=2, sticky="e")
+
+        # XLSX path (discovered)
+        xlsx_frame = ttk.LabelFrame(main, text="XLSX File (Discovered)", padding=8)
+        xlsx_frame.pack(fill="x", pady=(0, 10))
+        xlsx_frame.columnconfigure(1, weight=1)
+
+        self.verify_xlsx_var = tk.StringVar()
+        ttk.Label(xlsx_frame, text="Path:").grid(row=0, column=0, sticky="w", padx=(0, 8))
+        ttk.Entry(xlsx_frame, textvariable=self.verify_xlsx_var, width=50, state="readonly").grid(
+            row=0, column=1, padx=(0, 6), sticky="ew"
+        )
+
+        # List info (formal lists found)
+        list_frame = ttk.LabelFrame(main, text="Formal Lists (Select One)", padding=8)
+        list_frame.pack(fill="x", pady=(0, 10))
+        list_frame.columnconfigure(0, weight=1)
+
+        self._verify_lists = []  # list of (list_id, title)
+        self._verify_selected_list_id = None
+
+        self.verify_list_box = tk.Listbox(
+            list_frame, height=5, font=("Consolas", 9), selectmode="single"
+        )
+        self.verify_list_box.pack(fill="x")
+        self.verify_list_box.bind("<<ListboxSelect>>", self._on_list_select)
+
+        # Verify button
+        btn_frame = ttk.Frame(main)
+        btn_frame.pack(fill="x", pady=(0, 10))
+        btn_frame.columnconfigure(0, weight=1)
+        btn_frame.columnconfigure(1, weight=1)
+
+        self.verify_btn = ttk.Button(
+            btn_frame, text="  Verify (Email Only)  ", command=self._verify_run, style="Action.TButton"
+        )
+        self.verify_btn.grid(row=0, column=0, padx=(0, 6), sticky="ew")
+
+        self.deep_verify_btn = ttk.Button(
+            btn_frame, text="  Deep Verify (All Fields)  ", command=self._deep_verify_run, style="Action.TButton"
+        )
+        self.deep_verify_btn.grid(row=0, column=1, padx=(6, 0), sticky="ew")
+
+        # Verify log
+        vlog_frame = ttk.LabelFrame(main, text="Verification Log", padding=8)
+        vlog_frame.pack(fill="both", expand=True)
+
+        self.verify_log_text = tk.Text(vlog_frame, height=16, wrap="word", state="disabled",
+                                        font=("Consolas", 9), bg="#f5f5f5", fg="#222222",
+                                        insertborderwidth=0, relief="flat")
+        self.verify_log_text.pack(fill="both", expand=True)
 
     def _build_config_tab(self, parent: ttk.Frame, label: str, raw_content: str | None):
         """Build a config tab with a read-only preview and Edit button."""
@@ -962,11 +1090,19 @@ class EDMGUI:
         self.log_text.config(state="disabled")
 
         logger = ProcessLogger(self.root, self.log_text)
+        self._last_import_result = None
 
         def _do_import():
             logger.log("=== Import Started ===")
             try:
-                import_fn(xlsx_path, logger)
+                import_result = import_fn(xlsx_path, logger)
+                if import_result:
+                    list_id, list_title = import_result
+                    self.root.after(0, lambda: setattr(self, '_last_import_result', (list_id, list_title)))
+
+                    # Only auto-verify formal imports (deep verify)
+                    if is_formal and _HAS_DEEP_VERIFY and list_id:
+                        self._run_deep_verify_after_import(list_id, list_title, xlsx_path, logger)
             except SystemExit as e:
                 logger.log(f"ERROR: Import exited with code {e.code}")
             except Exception as e:
@@ -978,13 +1114,94 @@ class EDMGUI:
         thread = threading.Thread(target=_do_import, daemon=True)
         thread.start()
 
+    def _run_deep_verify_after_import(self, list_id: str, list_title: str, xlsx_path: str, logger):
+        """Run deep field-by-field verify after formal import completes."""
+        save_dir = os.path.join(_SCRIPT_DIR, "listverify")
+        now = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        safe_title = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in list_title)[:80]
+        log_name = f"log_deepverify_formal_{safe_title}_{now}.log"
+        log_path = os.path.join(save_dir, log_name)
+
+        gui_root = self.root
+        gui_log_fn = logger.log
+        gui_save_dir = save_dir
+        gui_log_path = log_path
+
+        class _VL:
+            @staticmethod
+            def log(msg):
+                ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                line = f"[{ts}] {msg}"
+                gui_root.after(0, gui_log_fn, line)
+                try:
+                    os.makedirs(gui_save_dir, exist_ok=True)
+                    with open(gui_log_path, "a", encoding="utf-8") as f:
+                        f.write(line + "\n")
+                except Exception:
+                    pass
+
+        vlogger = _VL()
+
+        try:
+            passed, msg = _deep_verify(list_id, xlsx_path, save_dir, vlogger)
+            if passed:
+                self.root.after(0, lambda: messagebox.showinfo("Formal Import Deep Verified", msg))
+            else:
+                self.root.after(0, lambda: messagebox.showwarning("Formal Import Deep Verify Failed", msg))
+        except Exception as e:
+            logger.log(f"[VERIFY] Deep verify error: {e}")
+            self.root.after(0, lambda: messagebox.showerror("Deep Verify Error", f"Error: {e}"))
+
+    def _run_verify_after_import(self, list_id: str, list_title: str, xlsx_path: str, logger, is_formal: bool):
+        """Verify list contacts after import completes."""
+        save_dir = os.path.join(_SCRIPT_DIR, "listverify")
+        log_type = "formal" if is_formal else "test"
+        now = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        # Sanitize list title for filename
+        safe_title = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in list_title)[:80]
+        log_name = f"log_import{log_type}_{safe_title}_{now}.log"
+        log_path = os.path.join(save_dir, log_name)
+
+        def file_logger(msg: str):
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            line = f"[{timestamp}] {msg}"
+            logger.log(line)
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+                with open(log_path, "a", encoding="utf-8") as f:
+                    f.write(line + "\n")
+            except Exception:
+                pass
+
+        try:
+            passed, msg = _verify_list_import(
+                list_id, xlsx_path, save_dir, file_logger, is_formal
+            )
+            if passed:
+                self.root.after(0, lambda: messagebox.showinfo(
+                    "Import Verified", msg
+                ))
+            else:
+                self.root.after(0, lambda: messagebox.showwarning(
+                    "Import Verification Failed", msg
+                ))
+        except Exception as e:
+            logger.log(f"[VERIFY] Error: {e}")
+            self.root.after(0, lambda: messagebox.showerror(
+                "Verify Error", f"Verification error: {e}"
+            ))
+
     def _do_api_import(self, csv_path: str, list_title: str, attrs, logger):
-        """Run the Unimarketing API import pipeline with logger logging."""
+        """Run the Unimarketing API import pipeline with logger logging.
+        Returns (list_id, list_title) on success, None on failure.
+        """
         logger.log("[API] creating list...")
         list_id = _um_create_list(list_title, attrs)
         if not list_id:
             logger.log("[API] FAILED to create list")
-            return
+            return None
 
         logger.log("[API] list created: " + str(list_id))
         logger.log("[API] creating import task...")
@@ -992,20 +1209,20 @@ class EDMGUI:
         import_id = _um_create_import_task(list_id, task_title)
         if not import_id:
             logger.log("[API] FAILED to create import task")
-            return
+            return None
 
         logger.log("[API] import task created: " + str(import_id))
         logger.log("[API] submitting contacts...")
         contact_count = _um_submit_contacts(import_id, csv_path, attrs)
         if not contact_count:
             logger.log("[API] FAILED to submit contacts")
-            return
+            return None
 
         logger.log(f"[API] contacts submitted: {contact_count}")
         logger.log("[API] executing import...")
         if not _um_execute_import(import_id):
             logger.log("[API] FAILED to execute import")
-            return
+            return None
 
         logger.log("[API] polling import status...")
         result = _um_poll_import_status(import_id, contact_count)
@@ -1016,8 +1233,10 @@ class EDMGUI:
             logger.log(f"  Total: {result.get('total')} | Valid: {result.get('validNum')} | "
                         f"Invalid: {result.get('inValidNum')} | Added: {result.get('addToListSuccessNum')} | "
                         f"New: {result.get('addSuccessNum')} | Updated: {result.get('updateSuccessNum')}")
+            return list_id, list_title
         else:
             logger.log(f"FAILED: Import ended with status={result.get('status')}")
+            return None
 
     def _import_test_list(self):
         def fn(xlsx_path, logger):
@@ -1054,8 +1273,7 @@ class EDMGUI:
             logger.log(f"Attributes: {attrs}")
             logger.log("")
 
-            logger.log("[API] creating list...")
-            self._do_api_import(csv_path, list_title, attrs, logger)
+            return self._do_api_import(csv_path, list_title, attrs, logger)
 
         self._run_import(fn)
 
@@ -1088,10 +1306,225 @@ class EDMGUI:
             logger.log(f"Attributes: {attrs}")
             logger.log("")
 
-            logger.log("[API] creating list...")
-            self._do_api_import(csv_path, list_title, attrs, logger)
+            return self._do_api_import(csv_path, list_title, attrs, logger)
 
         self._run_import(fn, is_formal=True)
+
+    # ------------------------------------------------------------------
+    # Verify Tab methods
+    # ------------------------------------------------------------------
+    def _verify_log(self, message: str):
+        """Write to verify tab log."""
+        self.verify_log_text.config(state="normal")
+        self.verify_log_text.insert("end", message + "\n")
+        self.verify_log_text.see("end")
+        self.verify_log_text.config(state="disabled")
+
+    def _verify_discover(self):
+        """Extract SN from input, discover xlsx, then search lists by SN."""
+        sn = self.verify_sn_var.get().strip()
+        if not sn:
+            messagebox.showinfo("Verify", "请输入 SN 号码（如 SN-56287）")
+            return
+
+        # Normalize SN — extract digits for fuzzy search
+        digits = "".join(c for c in sn if c.isdigit())
+        if not digits:
+            messagebox.showinfo("Verify", "请输入有效的 SN 号码（如 SN-56287 或 56287）")
+            return
+
+        # Discover xlsx file (use full SN format for directory search)
+        sn_normalized = sn if "-" in sn else f"SN-{sn}"
+
+        # Discover xlsx file
+        search_dir = _load_xlsx_search_dir()
+        result = discover_xlsx(sn_normalized, search_dir)
+
+        if result:
+            self.verify_xlsx_var.set(result)
+            self._verify_log(f"[DISCOVER] Found xlsx: {result}")
+        else:
+            self._verify_log(f"[DISCOVER] No xlsx found for SN {sn_normalized}")
+            self._verify_log(f"[DISCOVER] Search directory: {search_dir}")
+            messagebox.showinfo(
+                "Verify",
+                f"未找到匹配 {sn_normalized} 的 XLSX 文件。\n\n检索目录：\n{search_dir}"
+            )
+            return
+
+        # Search lists by SN
+        if not _HAS_VERIFY:
+            messagebox.showerror("Verify", "verify_list_contacts module not loaded")
+            return
+
+        self._verify_log(f"[DISCOVER] Searching lists for SN: {digits}")
+        lists = _verify_find_lists_by_sn(digits)
+
+        # Populate formal lists in Listbox
+        self._verify_lists = [(lid, t) for lid, t, ty in lists if ty == "formal"]
+        # Sort by list_id descending (most recent first)
+        self._verify_lists.sort(key=lambda x: int(x[0]), reverse=True)
+
+        self.verify_list_box.delete(0, "end")
+        for lid, t in self._verify_lists:
+            display = f"[{lid}] {t}"
+            self.verify_list_box.insert("end", display)
+            self._verify_log(f"  formal listId={lid} title={t}")
+
+        self._verify_selected_list_id = None
+        self._verify_log(f"[DISCOVER] Found {len(self._verify_lists)} formal list(s)")
+
+        if not self._verify_lists:
+            self._verify_log("[DISCOVER] No formal lists found for this SN")
+
+    def _on_list_select(self, event=None):
+        """When user selects a list from the Listbox."""
+        sel = self.verify_list_box.curselection()
+        if sel:
+            idx = sel[0]
+            self._verify_selected_list_id = self._verify_lists[idx][0]
+
+    def _verify_run(self):
+        """Run verification: compare selected list contacts with xlsx emails."""
+        if not _HAS_VERIFY:
+            messagebox.showerror("Verify", "verify_list_contacts module not loaded")
+            return
+
+        xlsx_path = self.verify_xlsx_var.get().strip()
+        if not xlsx_path or not os.path.isfile(xlsx_path):
+            messagebox.showerror("Verify", "请先输入 SN 号码并点击 Discover 查找 XLSX 文件")
+            return
+
+        if not self._verify_selected_list_id:
+            messagebox.showerror("Verify", "请在列表中选择一个 Formal List")
+            return
+
+        list_id = self._verify_selected_list_id
+        list_title = next((t for lid, t in self._verify_lists if lid == list_id), "")
+
+        # Clear log
+        self.verify_log_text.config(state="normal")
+        self.verify_log_text.delete("1.0", "end")
+        self.verify_log_text.config(state="disabled")
+
+        self.verify_btn.config(state="disabled")
+
+        save_dir = os.path.join(_SCRIPT_DIR, "listverify")
+        now = datetime.now().strftime("%Y%m%d%H%M%S")
+        safe_title = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in list_title)[:60]
+        log_name = f"log_verify_{list_id}_{now}.log"
+        log_path = os.path.join(save_dir, log_name)
+
+        # Logger object with .log() method — use @staticmethod to avoid self param
+        # Logger object with .log() method — capture in closure
+        gui_root = self.root
+        gui_verify_log_fn = self._verify_log
+        gui_save_dir = save_dir
+        gui_log_path = log_path
+
+        class _VL:
+            @staticmethod
+            def log(msg):
+                ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                line = f"[{ts}] {msg}"
+                gui_root.after(0, gui_verify_log_fn, line)
+                try:
+                    os.makedirs(gui_save_dir, exist_ok=True)
+                    with open(gui_log_path, "a", encoding="utf-8") as f:
+                        f.write(line + "\n")
+                except Exception:
+                    pass
+
+        vlogger = _VL()
+
+        def _do():
+            try:
+                passed, msg = _verify_list_import(
+                    list_id, xlsx_path, save_dir, vlogger, is_formal=True
+                )
+                if passed:
+                    self.root.after(0, lambda: messagebox.showinfo("验证成功", msg))
+                else:
+                    self.root.after(0, lambda: messagebox.showwarning("验证失败", msg))
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                self.root.after(0, lambda: messagebox.showerror("验证错误", f"Error: {e}"))
+            self.root.after(0, lambda: self.verify_btn.config(state="normal"))
+
+        thread = threading.Thread(target=_do, daemon=True)
+        thread.start()
+
+    def _deep_verify_run(self):
+        """Run deep field-by-field verification."""
+        if not _HAS_DEEP_VERIFY:
+            messagebox.showerror("Deep Verify", "deep_verify_list module not loaded")
+            return
+
+        xlsx_path = self.verify_xlsx_var.get().strip()
+        if not xlsx_path or not os.path.isfile(xlsx_path):
+            messagebox.showerror("Deep Verify", "请先输入 SN 号码并点击 Discover 查找 XLSX 文件")
+            return
+
+        if not self._verify_selected_list_id:
+            messagebox.showerror("Deep Verify", "请在列表中选择一个 Formal List")
+            return
+
+        list_id = self._verify_selected_list_id
+        list_title = next((t for lid, t in self._verify_lists if lid == list_id), "")
+
+        # Clear log
+        self.verify_log_text.config(state="normal")
+        self.verify_log_text.delete("1.0", "end")
+        self.verify_log_text.config(state="disabled")
+
+        self.verify_btn.config(state="disabled")
+        self.deep_verify_btn.config(state="disabled")
+
+        save_dir = os.path.join(_SCRIPT_DIR, "listverify")
+        now = datetime.now().strftime("%Y%m%d%H%M%S")
+        safe_title = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in list_title)[:60]
+        log_name = f"log_deepverify_{list_id}_{now}.log"
+        log_path = os.path.join(save_dir, log_name)
+
+        gui_root = self.root
+        gui_verify_log_fn = self._verify_log
+        gui_save_dir = save_dir
+        gui_log_path = log_path
+
+        class _VL:
+            @staticmethod
+            def log(msg):
+                ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                line = f"[{ts}] {msg}"
+                gui_root.after(0, gui_verify_log_fn, line)
+                try:
+                    os.makedirs(gui_save_dir, exist_ok=True)
+                    with open(gui_log_path, "a", encoding="utf-8") as f:
+                        f.write(line + "\n")
+                except Exception:
+                    pass
+
+        vlogger = _VL()
+
+        def _do():
+            try:
+                passed, msg = _deep_verify(
+                    list_id, xlsx_path, save_dir, vlogger
+                )
+                if passed:
+                    self.root.after(0, lambda: messagebox.showinfo("深验证成功", msg))
+                else:
+                    self.root.after(0, lambda: messagebox.showwarning("深验证完成", msg))
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                self.root.after(0, lambda: messagebox.showerror("深验证错误", f"Error: {e}"))
+            self.root.after(0, lambda: self.verify_btn.config(state="normal"))
+            self.root.after(0, lambda: self.deep_verify_btn.config(state="normal"))
+
+        thread = threading.Thread(target=_do, daemon=True)
+        thread.start()
 
     def run(self):
         self.root.mainloop()
