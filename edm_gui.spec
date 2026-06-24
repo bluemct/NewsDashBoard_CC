@@ -9,6 +9,7 @@ a = Analysis(
     datas=[
         ('config.json', '.'),
         ('Tokenmapping.json', '.'),
+        ('xlsx_search_dir.json', '.'),
     ],
     hiddenimports=[
         'olefile',

@@ -50,6 +50,19 @@ python .claude/skills/edm-process/edm_process.py
 - `请在...2026.msg` — 嵌套 EDM 模板 .msg
 - `EDM_template.html` — Outlook 原生 HTMLBody + 主题行
 
+## EDM GUI Tool (edm_gui.py)
+
+GUI 桌面应用（tkinter），支持通过界面选择文件并处理。额外功能：
+
+- **Discover 按钮** — 根据 MSG 邮件中的 SN 号，自动在配置目录下检索 XLSX 文件
+- **检索目录配置** — `xlsx_search_dir.json` 文件，可编辑 `search_directory` 字段修改检索路径
+- **Import Test/Formal List** — 直接通过 Unimarketing API 导入联系人列表
+- **PyInstaller 打包** — `edm_gui.spec` 生成 `EDM Email Processor.exe`
+
+```bash
+python edm_gui.py
+```
+
 ## Requirements
 
 - Python 3.x

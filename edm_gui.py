@@ -105,6 +105,9 @@ DEFAULT_OUTPUT_BASE = os.path.join(os.path.expanduser("~"), "Desktop", "EDM")
 
 CONFIG_PATH = os.path.join(_SCRIPT_DIR, "config.json")
 TOKENMAP_PATH = os.path.join(_SCRIPT_DIR, "Tokenmapping.json")
+XLSX_SEARCH_DIR_CONFIG = os.path.join(_SCRIPT_DIR, "xlsx_search_dir.json")
+
+DEFAULT_XLSX_SEARCH_DIR = r"C:\Users\SI-Agent\AgentProject\Microsoft\Azure Service Notifications Collaboration - 2026"
 
 # PyInstaller puts datas in _internal/ next to the exe
 def _find_config(name: str) -> str:
@@ -120,6 +123,50 @@ def _find_config(name: str) -> str:
 def _resolve_config(path: str) -> str:
     """Resolve CONFIG_PATH or TOKENMAP_PATH to actual file location."""
     return _find_config(os.path.basename(path))
+
+
+def _load_xlsx_search_dir() -> str:
+    """Load xlsx_search_dir.json — returns default path if missing."""
+    # Check _internal/ for PyInstaller
+    direct = XLSX_SEARCH_DIR_CONFIG
+    internal = os.path.join(_SCRIPT_DIR, "_internal", "xlsx_search_dir.json")
+    for p in [direct, internal]:
+        if os.path.isfile(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    return json.load(f).get("search_directory", DEFAULT_XLSX_SEARCH_DIR)
+            except (json.JSONDecodeError, KeyError):
+                pass
+    return DEFAULT_XLSX_SEARCH_DIR
+
+
+def _save_xlsx_search_dir(path: str) -> None:
+    """Save search_directory to xlsx_search_dir.json."""
+    with open(XLSX_SEARCH_DIR_CONFIG, "w", encoding="utf-8") as f:
+        json.dump({"search_directory": path}, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+
+def discover_xlsx(sn: str, search_dir: str) -> str | None:
+    """Recursively search search_dir for an .xlsx file inside a folder matching sn.
+
+    Searches for folders whose name contains the SN (e.g. 'SN-53672' or 'SN 53672')
+    and returns the first .xlsx found inside.
+    """
+    if not os.path.isdir(search_dir):
+        return None
+
+    sn_no_dash = sn.replace("-", "")  # SN-53672 → SN53672
+
+    for root, dirs, files in os.walk(search_dir):
+        folder_name = os.path.basename(root).lower()
+        # Match folder names like "SN-53672", "SN 53672", "SN53672", or any containing the digits
+        if sn_no_dash.lower() in folder_name.replace("-", "") or sn.lower() in folder_name:
+            for f in files:
+                if f.lower().endswith(".xlsx"):
+                    return os.path.join(root, f)
+
+    return None
 
 # ---------------------------------------------------------------------------
 # Config file loading
@@ -597,7 +644,8 @@ class EDMGUI:
         ttk.Label(input_frame, text="XLSX File:").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(4, 0))
         xlsx_entry = ttk.Entry(input_frame, textvariable=self.xlsx_var, width=30, state="readonly")
         xlsx_entry.grid(row=1, column=1, padx=(0, 6), pady=(4, 0), sticky="ew")
-        ttk.Button(input_frame, text="Browse...", command=self._browse_xlsx).grid(row=1, column=2, sticky="e", pady=(4, 0))
+        ttk.Button(input_frame, text="Browse...", command=self._browse_xlsx).grid(row=1, column=2, sticky="e", pady=(4, 0), padx=(0, 3))
+        ttk.Button(input_frame, text="Discover", command=self._discover_xlsx).grid(row=1, column=3, sticky="e", pady=(4, 0))
 
         # Output folder
         output_frame = ttk.LabelFrame(main, text="Output", padding=8)
@@ -783,6 +831,42 @@ class EDMGUI:
         if path:
             self.xlsx_var.set(path)
             self._enable_import_buttons()
+
+    def _discover_xlsx(self):
+        """Extract SN from MSG, then search the configured directory for an XLSX file."""
+        msg_path = self.msg_var.get().strip()
+        if not msg_path or not os.path.isfile(msg_path):
+            messagebox.showinfo("Discover", "请先选择 MSG 文件，工具将根据邮件主题中的 SN 号自动检索 XLSX 文件。")
+            return
+
+        # Extract SN from MSG
+        try:
+            from extract_msg import Message as MsgParser
+            msg = MsgParser(msg_path)
+            subject = msg.subject or ""
+            sn = extract_sn(subject)
+            if not sn:
+                sn = extract_sn(msg_path)
+            msg.close()
+        except Exception:
+            sn = extract_sn(msg_path)
+
+        if not sn:
+            messagebox.showinfo("Discover", "无法从 MSG 文件中提取 SN 号，请手动选择 XLSX 文件。")
+            return
+
+        search_dir = _load_xlsx_search_dir()
+        result = discover_xlsx(sn, search_dir)
+
+        if result:
+            self.xlsx_var.set(result)
+            self._enable_import_buttons()
+            messagebox.showinfo("Discover", f"已找到 XLSX 文件：\n{result}")
+        else:
+            messagebox.showinfo(
+                "Discover",
+                f"未找到匹配 {sn} 的 XLSX 文件。\n\n检索目录：\n{search_dir}\n\n请手动选择 XLSX 文件。"
+            )
 
     def _browse_output(self):
         path = filedialog.askdirectory(title="Select Output Folder")
