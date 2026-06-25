@@ -174,24 +174,32 @@ def _resolve_config(path: str) -> str:
     return _find_config(os.path.basename(path))
 
 
+def _xlsx_config_path() -> str:
+    """Return the actual path for reading/writing xlsx_search_dir.json."""
+    if getattr(sys, "frozen", False):
+        # PyInstaller: read/write from _internal/
+        return os.path.join(_SCRIPT_DIR, "_internal", "xlsx_search_dir.json")
+    # Dev mode: project root
+    return XLSX_SEARCH_DIR_CONFIG
+
+
 def _load_xlsx_search_dir() -> str:
     """Load xlsx_search_dir.json — returns default path if missing."""
-    # Check _internal/ for PyInstaller
-    direct = XLSX_SEARCH_DIR_CONFIG
-    internal = os.path.join(_SCRIPT_DIR, "_internal", "xlsx_search_dir.json")
-    for p in [direct, internal]:
-        if os.path.isfile(p):
-            try:
-                with open(p, "r", encoding="utf-8") as f:
-                    return json.load(f).get("search_directory", DEFAULT_XLSX_SEARCH_DIR)
-            except (json.JSONDecodeError, KeyError):
-                pass
+    p = _xlsx_config_path()
+    if os.path.isfile(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                return json.load(f).get("search_directory", DEFAULT_XLSX_SEARCH_DIR)
+        except (json.JSONDecodeError, KeyError):
+            pass
     return DEFAULT_XLSX_SEARCH_DIR
 
 
 def _save_xlsx_search_dir(path: str) -> None:
     """Save search_directory to xlsx_search_dir.json."""
-    with open(XLSX_SEARCH_DIR_CONFIG, "w", encoding="utf-8") as f:
+    p = _xlsx_config_path()
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w", encoding="utf-8") as f:
         json.dump({"search_directory": path}, f, indent=2, ensure_ascii=False)
         f.write("\n")
 
@@ -257,17 +265,42 @@ def _load_raw_json(path: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+def _log_dir() -> str:
+    """Return the central log directory path.
+    Frozen (PyInstaller): exe_dir/_internal/Log/
+    Dev mode: project_root/Log/
+    """
+    if getattr(sys, "frozen", False):
+        return os.path.join(_SCRIPT_DIR, "_internal", "Log")
+    return os.path.join(_SCRIPT_DIR, "Log")
+
+
+def _ensure_log_dir() -> str:
+    """Ensure log directory exists and return its path."""
+    d = _log_dir()
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
 class ProcessLogger:
-    def __init__(self, root: tk.Tk, text_widget: tk.Text):
+    def __init__(self, root: tk.Tk, text_widget: tk.Text, log_file: str = None):
         self.root = root
         self.text_widget = text_widget
         self.lines: list[str] = []
+        self.log_file = log_file
 
     def log(self, message: str):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         line = f"[{timestamp}] {message}"
         self.lines.append(line)
         self.root.after(0, self._append_gui, line)
+        # Also write to log file immediately
+        if self.log_file:
+            try:
+                with open(self.log_file, "a", encoding="utf-8") as f:
+                    f.write(line + "\n")
+            except OSError as e:
+                print(f"[LOG] failed to write to {self.log_file}: {e}", file=sys.stderr)
 
     def _append_gui(self, line: str):
         self.text_widget.config(state="normal")
@@ -468,6 +501,12 @@ def _convert_msg_to_html(
         flags=re.DOTALL | re.IGNORECASE,
     )
 
+    # Fix charset — Outlook declares "unicode" (UTF-16LE) but we save as UTF-8
+    html_body = html_body.replace(
+        'meta http-equiv=Content-Type content="text/html; charset=unicode"',
+        'meta http-equiv=Content-Type content="text/html; charset=utf-8"',
+    )
+
     with open(output_html, "wb") as f:
         f.write(html_body.encode("utf-8"))
 
@@ -555,11 +594,9 @@ def _process(
         if not success:
             logger.log("[HTML] conversion failed")
 
-    # Step 7: Write log
+    # Step 7: Done
     logger.log("=== Processing Complete ===")
     logger.log(f"Output folder: {sn_folder}")
-    log_path = os.path.join(sn_folder, "process.log")
-    logger.write_file(log_path)
 
     on_done(sn_folder)
 
@@ -888,8 +925,8 @@ class EDMGUI:
         sn_entry.grid(row=0, column=1, padx=(0, 6), sticky="ew")
         ttk.Button(sn_frame, text="Discover", command=self._verify_discover).grid(row=0, column=2, sticky="e")
 
-        # XLSX path (discovered)
-        xlsx_frame = ttk.LabelFrame(main, text="XLSX File (Discovered)", padding=8)
+        # XLSX path (discovered or manual browse)
+        xlsx_frame = ttk.LabelFrame(main, text="XLSX File", padding=8)
         xlsx_frame.pack(fill="x", pady=(0, 10))
         xlsx_frame.columnconfigure(1, weight=1)
 
@@ -898,6 +935,7 @@ class EDMGUI:
         ttk.Entry(xlsx_frame, textvariable=self.verify_xlsx_var, width=50, state="readonly").grid(
             row=0, column=1, padx=(0, 6), sticky="ew"
         )
+        ttk.Button(xlsx_frame, text="Browse", command=self._browse_verify_xlsx).grid(row=0, column=2, sticky="e")
 
         # List info (formal lists found)
         list_frame = ttk.LabelFrame(main, text="Formal Lists (Select One)", padding=8)
@@ -1014,7 +1052,11 @@ class EDMGUI:
         self.log_text.delete("1.0", "end")
         self.log_text.config(state="disabled")
 
-        logger = ProcessLogger(self.root, self.log_text)
+        # Save process log to central Log directory
+        log_d = _ensure_log_dir()
+        now = datetime.now().strftime("%Y%m%d%H%M%S")
+        process_log = os.path.join(log_d, f"process_{now}.log")
+        logger = ProcessLogger(self.root, self.log_text, log_file=process_log)
         config = _load_config()
 
         def on_done(sn_folder):
@@ -1025,8 +1067,6 @@ class EDMGUI:
 
         def on_error(msg):
             logger.log(f"ERROR: {msg}")
-            os.makedirs(output_base, exist_ok=True)
-            logger.write_file(os.path.join(output_base, "error.log"))
             self.root.after(0, lambda: self.process_btn.config(state="normal"))
             self.root.after(0, lambda: messagebox.showerror("Error", msg))
 
@@ -1150,7 +1190,7 @@ class EDMGUI:
 
     def _run_deep_verify_after_import(self, list_id: str, list_title: str, xlsx_path: str, logger):
         """Run deep field-by-field verify after formal import completes."""
-        save_dir = os.path.join(_SCRIPT_DIR, "listverify")
+        save_dir = _ensure_log_dir()
         now = datetime.now().strftime("%Y%m%d%H%M%S")
 
         safe_title = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in list_title)[:80]
@@ -1189,7 +1229,7 @@ class EDMGUI:
 
     def _run_verify_after_import(self, list_id: str, list_title: str, xlsx_path: str, logger, is_formal: bool):
         """Verify list contacts after import completes."""
-        save_dir = os.path.join(_SCRIPT_DIR, "listverify")
+        save_dir = _ensure_log_dir()
         log_type = "formal" if is_formal else "test"
         now = datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -1279,11 +1319,13 @@ class EDMGUI:
             if not test_emails:
                 logger.log("Error: no test_emails in config.json")
                 return
-            output_dir = os.path.dirname(xlsx_path)
             sn = self._find_sn(xlsx_path)
             if not sn:
                 logger.log("Error: no SN number found in xlsx path")
                 return
+            output_base = self.output_var.get().strip() or DEFAULT_OUTPUT_BASE
+            output_dir = os.path.join(output_base, sn, "ImportRAW")
+            os.makedirs(output_dir, exist_ok=True)
             xlsx_name = os.path.splitext(os.path.basename(xlsx_path))[0]
             now = datetime.now().strftime("%Y%m%d%H%M%S")
             list_title = f"test_{sn}_{xlsx_name}_{now}"
@@ -1313,11 +1355,13 @@ class EDMGUI:
 
     def _import_formal_list(self):
         def fn(xlsx_path, logger):
-            output_dir = os.path.dirname(xlsx_path)
             sn = self._find_sn(xlsx_path)
             if not sn:
                 logger.log("Error: no SN number found in xlsx path")
                 return
+            output_base = self.output_var.get().strip() or DEFAULT_OUTPUT_BASE
+            output_dir = os.path.join(output_base, sn, "ImportRAW")
+            os.makedirs(output_dir, exist_ok=True)
             xlsx_name = os.path.splitext(os.path.basename(xlsx_path))[0]
             now = datetime.now().strftime("%Y%m%d%H%M%S")
             list_title = f"formal_{sn}_{xlsx_name}_{now}"
@@ -1353,6 +1397,19 @@ class EDMGUI:
         self.verify_log_text.insert("end", message + "\n")
         self.verify_log_text.see("end")
         self.verify_log_text.config(state="disabled")
+
+    def _browse_verify_xlsx(self):
+        path = filedialog.askopenfilename(
+            title="Select XLSX File for Verification",
+            filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+        )
+        if path:
+            self.verify_xlsx_var.set(path)
+            # Auto-fill SN from path if not already set
+            if not self.verify_sn_var.get().strip():
+                sn = self._find_sn(path)
+                if sn:
+                    self.verify_sn_var.set(sn)
 
     def _verify_discover(self):
         """Extract SN from input, discover xlsx, then search lists by SN."""
@@ -1443,7 +1500,7 @@ class EDMGUI:
 
         self.verify_btn.config(state="disabled")
 
-        save_dir = os.path.join(_SCRIPT_DIR, "listverify")
+        save_dir = _ensure_log_dir()
         now = datetime.now().strftime("%Y%m%d%H%M%S")
         safe_title = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in list_title)[:60]
         log_name = f"log_verify_{list_id}_{now}.log"
@@ -1515,7 +1572,7 @@ class EDMGUI:
         self.verify_btn.config(state="disabled")
         self.deep_verify_btn.config(state="disabled")
 
-        save_dir = os.path.join(_SCRIPT_DIR, "listverify")
+        save_dir = _ensure_log_dir()
         now = datetime.now().strftime("%Y%m%d%H%M%S")
         safe_title = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in list_title)[:60]
         log_name = f"log_deepverify_{list_id}_{now}.log"
