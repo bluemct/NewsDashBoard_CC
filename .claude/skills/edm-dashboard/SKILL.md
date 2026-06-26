@@ -41,33 +41,65 @@ python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-
 
 > Windows 需要 `-X utf8` 以正确显示中文字符。
 
+## 看板页面结构
+
+页面采用 100vh flex 布局，分三个部分按 **1:2:3** 比例分配高度：
+
+### 第一部分（flex:1）— 概览卡片
+
+- 3 个可点击卡片：全部 / 进行中 / 已完成
+- 点击后跳转详情页（`/detail?filter=...`）
+- 完成判定 = emails 数量 ≥ 7
+
+### 第二部分（flex:2）— In Progress 列表
+
+- 显示所有未完成的 EDM 对话
+- 每行显示：SN 编号、邮件主题、7 段进度条、当前步骤
+- 内容超出时自动出现垂直滚动条（`overflow-y:auto`）
+- 每行样式：padding 10px，SN 字体 14px，主题 13px，进度条 6px 高度
+
+### 第三部分（flex:3）— 底部双栏
+
+- **左侧 Process Steps**: 7 步流程说明，flex-column 布局，7 行自动铺满面板高度，垂直居中
+- **右侧 Monthly Closed by Week**: 柱状图，按 Step 7 日期统计每周关闭数量，图表高度 170px
+
+## 详情页（/detail）
+
+- 完整列表：SN、Subject、Date、Status、Handler
+- 支持 `?filter=all|progress|done` 筛选
+- 客户端 CSV 导出按钮（`doExport`）
+
 ## 看板功能
 
 - 仅展示 subject 含 `[EDM test and distribution]` 的邮件对话
-- 自动屏蔽包含 sender `21V-WAPHYNET@oe.21vianet.com` 的整个 conversation
-- 顶部 3 个卡片可点击筛选：全部 / 进行中 / 已完成
+- 屏蔽 2026-05-26 之前的测试对话
 - 每行一个 conversation，显示 SN 编号、进度条、状态标签
-- 展开后可看 7 步流程：
-  - Step 1: EDM Request
-  - Step 2: Test Sent, Awaiting Approval
-  - Step 3: Peer Reviewed, Awaiting Nanbo Approval
-  - Step 4: Approved
-  - Step 5: Result Notified to PS
-  - Step 6: Formal EDM Sent
-  - Step 7: Confirmed, Closed
 - 原始 step > 7 的邮件合并到 step 7 显示
+
+## 7 步流程定义
+
+| Step | 名称 | 描述 |
+|------|------|------|
+| 1 | EDM Request | 初始 EDM 请求收到并记录 |
+| 2 | Test Sent, Awaiting Approval | 测试邮件已发送，等待内部审批 |
+| 3 | Peer Reviewed, Awaiting Nanbo Approval | Peer 审核完成，等待 Nanbo 审批 |
+| 4 | Approved | 所有审批人批准 |
+| 5 | Result Notified to PS | 审批结果通知 PS 团队 |
+| 6 | Formal EDM Sent | 正式 EDM 邮件发送给客户 |
+| 7 | Confirmed, Closed | 客户确认收到，工单关闭 |
 
 ## 身份验证
 
 - 打开看板即弹出登录框，使用 `bj-oe.21vianet.com` 域账号登录
 - 后端通过 `win32security.LogonUser` 验证域账号密码（`LOGON32_LOGON_NETWORK`）
 - 登录成功获得 1 小时有效期的 Bearer token
-- 所有 API 请求（`/api/data`、`/api/refresh`）需携带 token
+- 所有 API 请求（`/api/data`、`/api/refresh`、`/api/export`）需携带 token
+- 登录态保存在 localStorage，刷新页面自动恢复
 - 点击用户名可退出登录
 
 ## 手动刷新
 
-页面顶部蓝色"手动刷新"按钮，点击后从 GitHub 拉取最新数据：
+页面顶部"Refresh" 按钮，点击后从 GitHub 拉取最新数据：
 
 1. 优先 SSH 方式 `git@github.com:bluemct/docs.git`（无弹窗，依赖 SSH key）
 2. SSH 失败尝试 HTTPS 方式 `https://github.com/bluemct/docs.git`（`GIT_TERMINAL_PROMPT=0` 不弹窗）
@@ -98,6 +130,6 @@ python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-
 
 ## 文件
 
-- `edm_dashboard.py` — Python HTTP 看板服务
+- `edm_dashboard.py` — Python HTTP 看板服务（纯单文件，内嵌 HTML/JS/CSS）
 - `run_dashboard.vbs` — 后台启动脚本（自动检测路径）
 - `DEPLOY.md` — 部署文档
