@@ -163,3 +163,64 @@ python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-
 - `edm_dashboard.py` — Python HTTP 看板服务（纯单文件，内嵌 HTML/JS/CSS）
 - `run_dashboard.vbs` — 后台启动脚本（自动检测路径）
 - `DEPLOY.md` — 部署文档
+
+---
+
+## EDM 邮件分析脚本（数据源）
+
+看板的数据由 `edm_mail_analyzer.ps1` 脚本从 Outlook EDM 文件夹提取并推送到 GitHub。
+
+### 运行方式
+
+```powershell
+.\edm_mail_analyzer.ps1          # 增量模式（默认）
+.\edm_mail_analyzer.ps1 -Full     # 全量模式
+```
+
+### 脚本流程（6 步）
+
+| 步骤 | 操作 | 说明 |
+|------|------|------|
+| [0] | 获取现有 JSON | git clone SSH → HTTPS → HTTP 直连 → 代理 → 失败降级全量 |
+| [1] | 查找 EDM 文件夹 | EWS FindFolders, DisplayName = "EDM" |
+| [2] | 读取邮件 | 增量：`IsGreaterThan(lastDate)` 只读新邮件；全量：无过滤 |
+| [3] | 提取字段 | EWS Bind：date, subject, sender, conversation_id |
+| [4] | 合并 + 去重 + 排序 | 按 `date\|subject\|sender` 组合去重，按 date 升序排序 |
+| [5] | 分配步骤编号 | 按 conversation_id 分组顺序编号，回填 conversation_total |
+| [6] | 写 JSON + git push | 输出到 `C:\repos\repo\edmmailanalyzer.json`，自动 git add/commit/push |
+
+### JSON 输出格式
+
+```json
+{
+  "date": "2026-06-29 14:24:18",
+  "subject": "[EDM test...] SN-12345",
+  "sender": "xxx@oe.21vianet.com",
+  "conversation_id": "AAQkA...",
+  "conversation_step": 3,
+  "conversation_total": 7
+}
+```
+
+### 全量扫描触发条件
+
+1. 显式指定 `-Full` 参数
+2. 增量模式但无法获取现有数据（GitHub 全部失败）
+3. 首次运行（GitHub 没有 JSON 文件）
+
+### 依赖
+
+- EWS DLL（路径：`C:\Users\ma.chuntao\Desktop\Services\ews\lib\40\Microsoft.Exchange.WebServices.dll`）
+- Git
+- 日志输出到 `C:\repos\repo\edmmailanalyzer.log`
+
+### 性能
+
+| 模式 | 耗时 |
+|------|------|
+| 增量（1 封新邮件） | ~12 秒 |
+| 全量（445 封邮件） | ~60-120 秒 |
+
+### 去重机制
+
+按 `date + subject + sender` 组合键去重，解决同一秒多封邮件被重复读取的问题。新增邮件如果与现有记录组合键相同，会被跳过并计入 `duplicates dropped`。
