@@ -197,7 +197,6 @@ foreach ($item in $result.Items) {
     }
 
     $record = [Ordered]@{
-        id                 = $email.Id.ToString()
         date               = $email.DateTimeReceived.ToString("yyyy-MM-dd HH:mm:ss")
         subject            = $email.Subject
         sender             = $senderAddress
@@ -211,17 +210,16 @@ Write-LogInfo "[3/6] Extracted $($newEmails.Count) new email records"
 $EwsElapsed = (New-TimeSpan -Start $EwsStart -End (Get-Date)).TotalSeconds
 Write-LogInfo "  EWS read+extract done in ${EwsElapsed}s"
 
-# --- 4. Merge existing + new emails, dedup by ID, then sort ---
+# --- 4. Merge existing + new emails, dedup by date+subject+sender, then sort ---
 Write-LogInfo "[4/6] Merging emails..."
 $allEmails = @()
-$seenIds = @{}
+$seenKeys = @{}
 
 # Keep existing emails (strip step/total fields, will recompute)
 foreach ($e in $existingEmails) {
-    $eid = $e.id
-    if ($eid) { $seenIds[$eid] = $true }
+    $key = "$($e.date)|$($e.subject)|$($e.sender)"
+    $seenKeys[$key] = $true
     $record = [Ordered]@{
-        id                 = $eid
         date               = $e.date
         subject            = $e.subject
         sender             = $e.sender
@@ -230,11 +228,12 @@ foreach ($e in $existingEmails) {
     $allEmails += [PSCustomObject]$record
 }
 
-# Add new emails, skip duplicates by ID
+# Add new emails, skip duplicates by date+subject+sender
 $duplicates = 0
 foreach ($n in $newEmails) {
-    if ($seenIds.ContainsKey($n.id)) { $duplicates++; continue }
-    $seenIds[$n.id] = $true
+    $key = "$($n.date)|$($n.subject)|$($n.sender)"
+    if ($seenKeys.ContainsKey($key)) { $duplicates++; continue }
+    $seenKeys[$key] = $true
     $allEmails += $n
 }
 
@@ -254,7 +253,6 @@ foreach ($email in $allEmails) {
     }
 
     $record = [Ordered]@{
-        id                  = $email.id
         date                = $email.date
         subject             = $email.subject
         sender              = $email.sender
