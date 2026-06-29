@@ -3,8 +3,8 @@ using namespace System.Collections.Generic
 
 Import-Module -Name "C:\Users\ma.chuntao\Desktop\Services\ews\lib\40\Microsoft.Exchange.WebServices.dll"
 
-# --- Mode: default=incremental, -Full for full scan ---
-param([switch]$Full)
+# --- Mode: add -Full to use full scan, otherwise incremental ---
+$Full = ($args -contains "-Full") -or ($args -contains "-FullScan")
 
 $Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
 $exchService = New-Object Microsoft.Exchange.WebServices.Data.ExchangeService
@@ -56,7 +56,7 @@ $GitHubProxy   = "https://ghproxy.com/$GitHubRaw"
 $lastDate = $null  # null = full scan
 $existingEmails = @()
 
-if ($Full.IsPresent) {
+if ($Full) {
     Write-Host "Running in FULL SCAN mode" -ForegroundColor Cyan
 } else {
     $FetchStart = Get-Date
