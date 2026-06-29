@@ -8,6 +8,83 @@ $exchService = New-Object Microsoft.Exchange.WebServices.Data.ExchangeService
 $exchService.Credentials = $Credentials
 $exchService.url = 'https://mail.21vianet.com/EWS/Exchange.asmx'
 
+$LogFile = 'C:\repos\repo\edmmailanalyzer.log'
+function Write-Log {
+    param(
+        [Parameter(Mandatory=$true)][string]$Message,
+        [ValidateSet('Info','Warning','Error','Debug')][string]$Level = 'Info'
+    )
+
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $entry = "{0} [{1}] {2}" -f $timestamp, $Level.ToUpper(), $Message
+    Write-Host $entry
+
+    try {
+        $entry | Out-File -FilePath $LogFile -Encoding utf8 -Append
+    } catch {
+        $errorMessage = "Failed to write log to {0}: {1}" -f $LogFile, $_
+        Write-Host $errorMessage -ForegroundColor Yellow
+    }
+}
+
+function Write-LogInfo {
+    param([string]$Message)
+    Write-Log -Message $Message -Level Info
+}
+
+function Write-LogWarning {
+    param([string]$Message)
+    Write-Log -Message $Message -Level Warning
+}
+
+function Write-LogError {
+    param([string]$Message)
+    Write-Log -Message $Message -Level Error
+}
+
+# --- Config ---
+$RepoPath      = "C:\repos\repo"
+$OutputPath    = "$RepoPath\edmmailanalyzer.json"
+$GitHubRaw     = "https://raw.githubusercontent.com/bluemct/docs/master/edmmailanalyzer.json"
+$GitHubProxy   = "https://ghproxy.com/$GitHubRaw"
+
+# --- 0. Fetch existing JSON from GitHub (incremental base) ---
+$lastDate = $null  # null = full scan (first run)
+$existingEmails = @()
+
+Write-Host "[1/6] Fetching existing data from GitHub..."
+
+try {
+    $response = Invoke-WebRequest -Uri $GitHubRaw -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
+    $existingEmails = ($response.Content | ConvertFrom-Json)
+    if ($existingEmails -isnot [Array]) { $existingEmails = @($existingEmails) }
+    # Find the most recent date
+    $sorted = $existingEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) } -Descending
+    if ($sorted.Count -gt 0) {
+        $lastDate = [datetime]::ParseExact($sorted[0].date, "yyyy-MM-dd HH:mm:ss", $null)
+        Write-Host "  Found $($existingEmails.Count) existing emails, latest: $lastDate"
+        Write-Host "  Only fetching emails after this time (incremental update)"
+    }
+} catch {
+    Write-Host "  GitHub direct failed, trying proxy..." -ForegroundColor Yellow
+    try {
+        $response = Invoke-WebRequest -Uri $GitHubProxy -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
+        $existingEmails = ($response.Content | ConvertFrom-Json)
+        if ($existingEmails -isnot [Array]) { $existingEmails = @($existingEmails) }
+        $sorted = $existingEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) } -Descending
+        if ($sorted.Count -gt 0) {
+            $lastDate = [datetime]::ParseExact($sorted[0].date, "yyyy-MM-dd HH:mm:ss", $null)
+            Write-Host "  Proxy OK: $($existingEmails.Count) emails, latest: $lastDate"
+        }
+    } catch {
+        Write-Host "  Both failed - will do full scan" -ForegroundColor Yellow
+    }
+}
+
+if (-not $lastDate) {
+    Write-Host "  No existing data found - will do full scan"
+}
+
 # --- 1. Find EDM folder ---
 function Get-Folder {
     param([string]$Name)
@@ -28,20 +105,28 @@ function Get-Folder {
 
 $edmFolder = Get-Folder -Name "EDM"
 if (-not $edmFolder) {
-    Write-Host "Error: EDM folder not found." -ForegroundColor Red
+    Write-LogError "EDM folder not found."
     exit 1
 }
 
-# --- 2. Read ALL emails in EDM folder ---
-$ItemView = New-Object Microsoft.Exchange.WebServices.Data.ItemView(1000)
+# --- 2. Read new emails since lastDate (incremental) ---
+$ItemView = New-Object Microsoft.Exchange.WebServices.Data.ItemView(5000)
 $ItemView.PropertySet = [Microsoft.Exchange.WebServices.Data.BasePropertySet]::FirstClassProperties
 
-$result = $exchService.FindItems($edmFolder.Id, $ItemView)
-Write-Host "Folder: EDM"
-Write-Host "Total items found: $($result.Items.Count)"
+$searchFilter = $null
+if ($lastDate) {
+    $searchFilter = New-Object Microsoft.Exchange.WebServices.Data.SearchFilter+IsGreaterThan(
+        [Microsoft.Exchange.WebServices.Data.ItemSchema]::DateTimeReceived,
+        $lastDate
+    )
+}
 
-# --- 3. Extract date, subject, sender, conversation_id ---
-$allEmails = @()
+$result = $exchService.FindItems($edmFolder.Id, $searchFilter, $ItemView)
+Write-LogInfo "[2/6] Folder: EDM"
+Write-LogInfo "  New items since $lastDate : $($result.Items.Count)"
+
+# --- 3. Extract new email fields ---
+$newEmails = @()
 
 foreach ($item in $result.Items) {
     $email = [Microsoft.Exchange.WebServices.Data.EmailMessage]::Bind($exchService, $item.Id)
@@ -71,11 +156,31 @@ foreach ($item in $result.Items) {
         conversation_id    = $conversationId
     }
 
+    $newEmails += [PSCustomObject]$record
+}
+
+Write-LogInfo "[3/6] Extracted $($newEmails.Count) new email records"
+
+# --- 4. Merge existing + new emails, then sort ---
+Write-LogInfo "[4/6] Merging emails..."
+$allEmails = @()
+
+# Keep existing emails (strip step/total fields, will recompute)
+foreach ($e in $existingEmails) {
+    $record = [Ordered]@{
+        date               = $e.date
+        subject            = $e.subject
+        sender             = $e.sender
+        conversation_id    = $e.conversation_id
+    }
     $allEmails += [PSCustomObject]$record
 }
 
-# --- 4. Sort emails by date ASCENDING (oldest first) so step 1 = first email in conversation ---
+# Add new emails
+$allEmails += $newEmails
+
 $allEmails = $allEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) }
+Write-LogInfo "  Total: $($allEmails.Count) emails ($($existingEmails.Count) existing + $($newEmails.Count) new)"
 
 # --- 5. Assign sequential step number per conversation ---
 $convStep = @{}
@@ -106,15 +211,49 @@ foreach ($record in $outputRecords) {
 }
 
 # --- 6. Summary: list all conversations with counts ---
-Write-Host ""
-Write-Host "=== Conversations ($($convStep.Count) total) ==="
+Write-LogInfo "[5/6] Conversations ($($convStep.Count) total):"
 $convStep.GetEnumerator() | Sort-Object Value -Descending | ForEach-Object {
-    Write-Host "  [$($_.Value)] $($_.Key)"
+    Write-LogInfo "  [$($_.Value)] $($_.Key)"
 }
 
 # --- 7. Write to JSON ---
-$outputPath = "c:\temp\edmmailanalyzer.json"
+$outputPath = "C:\repos\repo\edmmailanalyzer.json"
 $outputRecords | ConvertTo-Json -Depth 3 | Out-File -FilePath $outputPath -Encoding utf8
 
-Write-Host ""
-Write-Host "Written $($outputRecords.Count) records to $outputPath"
+Write-LogInfo "[6/6] Written $($outputRecords.Count) records to $outputPath"
+Write-LogInfo "Changing location to $RepoPath"
+Set-Location $RepoPath
+
+Write-LogInfo "Staging JSON output for git"
+$gitAddOutput = git add . 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-LogError "git add failed: $gitAddOutput"
+    exit 1
+} else {
+    Write-LogInfo "git add completed successfully"
+    if ($gitAddOutput) { Write-LogInfo $gitAddOutput }
+}
+
+Write-LogInfo "Committing git changes"
+$gitCommitOutput = git commit -m "Update EDM mail analysis data" 2>&1
+if ($LASTEXITCODE -ne 0) {
+    if ($gitCommitOutput -match "nothing to commit") {
+        Write-LogInfo "git commit: nothing to commit"
+    } else {
+        Write-LogError "git commit failed: $gitCommitOutput"
+        exit 1
+    }
+} else {
+    Write-LogInfo "git commit completed successfully"
+    if ($gitCommitOutput) { Write-LogInfo $gitCommitOutput }
+}
+
+Write-LogInfo "Pushing git changes to origin/master"
+$gitPushOutput = git push origin master 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-LogError "git push failed: $gitPushOutput"
+    exit 1
+} else {
+    Write-LogInfo "git push succeeded"
+    if ($gitPushOutput) { Write-LogInfo $gitPushOutput }
+}
