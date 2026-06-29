@@ -254,6 +254,7 @@ foreach ($email in $allEmails) {
     }
 
     $record = [Ordered]@{
+        id                  = $email.id
         date                = $email.date
         subject             = $email.subject
         sender              = $email.sender
