@@ -442,14 +442,16 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;padding:12px 16px;heig
 h1{text-align:center;margin-bottom:2px;color:#1a1a2e;font-size:18px}
 .refresh-bar{text-align:center;margin-bottom:8px}
 .refresh-bar span{font-size:11px;color:#aaa}
-.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-shrink:0}
 .user-info{font-size:12px;color:#1890ff;cursor:pointer}
 .refresh-btn{padding:4px 16px;background:#1890ff;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500}
 .refresh-btn:disabled{background:#91d5ff}
 .refresh-status{font-size:11px;color:#999;text-align:center;min-height:14px;margin-bottom:6px}
+.top-header{flex-shrink:0}
+.content-wrapper{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 
 /* Section 1: Summary Cards */
-.summary-section{background:#fff;border-radius:8px;padding:12px 24px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:12px;flex:1;overflow:hidden}
+.summary-section{background:#fff;border-radius:8px;padding:12px 24px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:12px;flex:1 1 0}
 .summary-section h2{font-size:13px;color:#1a1a2e;margin-bottom:8px;font-weight:600}
 .summary-cards{display:flex;gap:12px}
 .summary-card{flex:1;background:#f8fafc;border-radius:6px;padding:10px 16px;text-align:center;cursor:pointer;transition:all .2s;border:2px solid transparent}
@@ -461,10 +463,10 @@ h1{text-align:center;margin-bottom:2px;color:#1a1a2e;font-size:18px}
 .num-green{color:#52c41a}
 
 /* Section 2: In Progress */
-.progress-section{background:#fff;border-radius:8px;padding:12px 24px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:12px;flex:2;display:flex;flex-direction:column;overflow:hidden}
+.progress-section{background:#fff;border-radius:8px;padding:12px 24px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:12px;flex:2 2 0;display:flex;flex-direction:column;overflow:hidden}
 .progress-section h2{font-size:13px;color:#1a1a2e;margin-bottom:8px;font-weight:600}
 .progress-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0;gap:12px}
-#progress-list{flex:1;overflow-y:auto;margin-top:4px}
+#progress-list{flex:1;overflow-y:auto;margin-top:4px;min-height:0}
 .progress-row:last-child{border-bottom:none}
 .progress-row .sn{font-weight:600;color:#1890ff;min-width:80px;font-size:14px}
 .progress-row .subject{flex:1;font-size:13px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -477,17 +479,20 @@ h1{text-align:center;margin-bottom:2px;color:#1a1a2e;font-size:18px}
 .no-data{text-align:center;color:#ccc;padding:16px;font-size:12px}
 
 /* Section 3: Bottom two columns */
-.bottom-section{display:flex;gap:16px;flex:3;min-height:0}
-.step-table-box{flex:1;background:#fff;border-radius:8px;padding:12px 20px;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;flex-direction:column}
-.chart-box{flex:1;background:#fff;border-radius:8px;padding:12px 20px;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;flex-direction:column}
-.step-table-box h2,.chart-box h2{font-size:13px;color:#1a1a2e;margin-bottom:8px;font-weight:600}
-.step-list-box{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.bottom-section{display:flex;gap:16px;flex:3 3 0;min-height:0}
+.step-table-box{flex:1;background:#fff;border-radius:8px;padding:12px 20px;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;flex-direction:column;min-height:0}
+.chart-box{flex:1;background:#fff;border-radius:8px;padding:12px 20px;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;flex-direction:column;min-height:0}
+.step-table-box h2,.chart-box h2{font-size:13px;color:#1a1a2e;margin-bottom:8px;font-weight:600;flex-shrink:0}
+.step-list-box{flex:1;display:flex;flex-direction:column;overflow-y:auto;min-height:0}
+.step-header{display:flex;align-items:center;padding:6px 0 4px;border-bottom:2px solid #e8e8e8;gap:8px;font-weight:600;font-size:11px;color:#888;flex-shrink:0}
+.step-header .step-num{min-width:40px}
+.step-header .step-name{min-width:160px}
 .step-row{flex:1;display:flex;align-items:center;padding:4px 0;border-bottom:1px solid #f5f5f5;gap:8px}
 .step-row:last-child{border-bottom:none}
 .step-row .step-num{font-weight:600;color:#1890ff;font-size:11px;min-width:40px}
 .step-row .step-name{color:#333;font-size:12px;min-width:160px}
 .step-row .step-desc{color:#888;font-size:11px}
-.chart-container{display:flex;align-items:flex-end;justify-content:space-around;flex:1;padding:8px 0}
+.chart-container{display:flex;align-items:flex-end;justify-content:space-around;flex:1;padding:8px 0;overflow-y:auto;min-height:0}
 .chart-bar-wrap{display:flex;flex-direction:column;align-items:center;flex:1;max-width:80px}
 .chart-bar{width:36px;background:linear-gradient(180deg,#1890ff,#69c0ff);border-radius:3px 3px 0 0;min-height:2px;transition:height .3s}
 .chart-bar-label{font-size:10px;color:#888;margin-top:4px;text-align:center}
@@ -516,6 +521,7 @@ h1{text-align:center;margin-bottom:2px;color:#1a1a2e;font-size:18px}
   </div>
 </div>
 
+<div class="top-header">
 <div class="top-bar">
   <div id="user-display" class="user-info" onclick="doLogout()"></div>
   <div>
@@ -524,7 +530,9 @@ h1{text-align:center;margin-bottom:2px;color:#1a1a2e;font-size:18px}
   </div>
 </div>
 <div class="refresh-bar"><span id="refresh-info"></span></div>
+</div>
 
+<div class="content-wrapper">
 <!-- Section 1: Summary Cards -->
 <div class="summary-section">
   <h2>Overview</h2>
@@ -547,6 +555,7 @@ h1{text-align:center;margin-bottom:2px;color:#1a1a2e;font-size:18px}
     <h2>Monthly Closed by Week (Step 7)</h2>
     <div class="chart-container" id="chart"></div>
   </div>
+</div>
 </div>
 
 <script>
@@ -726,6 +735,12 @@ function render() {
   // Section 3A: Step list
   var stepList = document.getElementById('step-list');
   stepList.innerHTML = '';
+  var hdr = document.createElement('div');
+  hdr.className = 'step-header';
+  hdr.innerHTML = '<span class="step-num">Step No.</span>' +
+    '<span class="step-name">Step Name</span>' +
+    '<span class="step-desc">Description</span>';
+  stepList.appendChild(hdr);
   for (var s = 1; s <= 7; s++) {
     var div = document.createElement('div');
     div.className = 'step-row';
