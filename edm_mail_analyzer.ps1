@@ -86,11 +86,11 @@ if ($Full) {
         }
     }
 
-    if ($gitOk -and $tmpDir) {
+    if ($gitOk -and $tmpDir -and (Test-Path $tmpDir -ErrorAction SilentlyContinue)) {
         $jsonPath = Join-Path $tmpDir "edmmailanalyzer.json"
         $existingEmails = Get-Content -Path $jsonPath -Raw | ConvertFrom-Json
         if ($existingEmails -isnot [Array]) { $existingEmails = @($existingEmails) }
-        Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
+        try { Remove-Item -Recurse -Force $tmpDir } catch {}
         $sorted = $existingEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) } -Descending
         if ($sorted.Count -gt 0) {
             $lastDate = [datetime]::ParseExact($sorted[0].date, "yyyy-MM-dd HH:mm:ss", $null)
@@ -308,5 +308,5 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $TotalElapsed = (New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds
-Write-LogInfo ""
+Write-LogInfo "Git push done"
 Write-LogInfo "===== Total elapsed: ${TotalElapsed}s ====="
