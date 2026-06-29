@@ -3,6 +3,9 @@ using namespace System.Collections.Generic
 
 Import-Module -Name "C:\Users\ma.chuntao\Desktop\Services\ews\lib\40\Microsoft.Exchange.WebServices.dll"
 
+# --- Mode: default=incremental, -Full for full scan ---
+param([switch]$Full)
+
 $Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
 $exchService = New-Object Microsoft.Exchange.WebServices.Data.ExchangeService
 $exchService.Credentials = $Credentials
@@ -49,46 +52,49 @@ $OutputPath    = "$RepoPath\edmmailanalyzer.json"
 $GitHubRaw     = "https://raw.githubusercontent.com/bluemct/docs/master/edmmailanalyzer.json"
 $GitHubProxy   = "https://ghproxy.com/$GitHubRaw"
 
-# --- 0. Fetch existing JSON from GitHub (incremental base) ---
-$lastDate = $null  # null = full scan (first run)
+# --- 0. Fetch existing JSON from GitHub (incremental mode only) ---
+$lastDate = $null  # null = full scan
 $existingEmails = @()
-$FetchStart = Get-Date
 
-Write-Host "[1/6] Fetching existing data from GitHub..."
+if ($Full.IsPresent) {
+    Write-Host "Running in FULL SCAN mode" -ForegroundColor Cyan
+} else {
+    $FetchStart = Get-Date
+    Write-Host "[1/6] Fetching existing data from GitHub..."
 
-try {
-    $response = Invoke-WebRequest -Uri $GitHubRaw -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
-    $existingEmails = ($response.Content | ConvertFrom-Json)
-    if ($existingEmails -isnot [Array]) { $existingEmails = @($existingEmails) }
-    # Find the most recent date
-    $sorted = $existingEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) } -Descending
-    if ($sorted.Count -gt 0) {
-        $lastDate = [datetime]::ParseExact($sorted[0].date, "yyyy-MM-dd HH:mm:ss", $null)
-        Write-Host "  Found $($existingEmails.Count) existing emails, latest: $lastDate"
-        Write-Host "  Only fetching emails after this time (incremental update)"
-    }
-} catch {
-    Write-Host "  GitHub direct failed, trying proxy..." -ForegroundColor Yellow
     try {
-        $response = Invoke-WebRequest -Uri $GitHubProxy -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
+        $response = Invoke-WebRequest -Uri $GitHubRaw -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
         $existingEmails = ($response.Content | ConvertFrom-Json)
         if ($existingEmails -isnot [Array]) { $existingEmails = @($existingEmails) }
         $sorted = $existingEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) } -Descending
         if ($sorted.Count -gt 0) {
             $lastDate = [datetime]::ParseExact($sorted[0].date, "yyyy-MM-dd HH:mm:ss", $null)
-            Write-Host "  Proxy OK: $($existingEmails.Count) emails, latest: $lastDate"
+            Write-Host "  Found $($existingEmails.Count) existing emails, latest: $lastDate"
+            Write-Host "  Incremental: only fetching emails after this time"
         }
     } catch {
-        Write-Host "  Both failed - will do full scan" -ForegroundColor Yellow
+        Write-Host "  GitHub direct failed, trying proxy..." -ForegroundColor Yellow
+        try {
+            $response = Invoke-WebRequest -Uri $GitHubProxy -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
+            $existingEmails = ($response.Content | ConvertFrom-Json)
+            if ($existingEmails -isnot [Array]) { $existingEmails = @($existingEmails) }
+            $sorted = $existingEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) } -Descending
+            if ($sorted.Count -gt 0) {
+                $lastDate = [datetime]::ParseExact($sorted[0].date, "yyyy-MM-dd HH:mm:ss", $null)
+                Write-Host "  Proxy OK: $($existingEmails.Count) emails, latest: $lastDate"
+            }
+        } catch {
+            Write-Host "  Both failed - falling back to full scan" -ForegroundColor Yellow
+        }
+    }
+
+    if (-not $lastDate) {
+        Write-Host "  No existing data found - falling back to full scan"
+    } else {
+        $FetchElapsed = (New-TimeSpan -Start $FetchStart -End (Get-Date)).TotalSeconds
+        Write-Host "  GitHub fetch done in ${FetchElapsed}s"
     }
 }
-
-if (-not $lastDate) {
-    Write-Host "  No existing data found - will do full scan"
-}
-
-$FetchElapsed = (New-TimeSpan -Start $FetchStart -End (Get-Date)).TotalSeconds
-Write-Host "  GitHub fetch done in ${FetchElapsed}s"
 
 # --- 1. Find EDM folder ---
 function Get-Folder {
@@ -114,7 +120,7 @@ if (-not $edmFolder) {
     exit 1
 }
 
-# --- 2. Read new emails since lastDate (incremental) ---
+# --- EWS: Read emails from EDM folder ---
 $EwsStart = Get-Date
 $ItemView = New-Object Microsoft.Exchange.WebServices.Data.ItemView(5000)
 $ItemView.PropertySet = [Microsoft.Exchange.WebServices.Data.BasePropertySet]::FirstClassProperties
@@ -125,11 +131,14 @@ if ($lastDate) {
         [Microsoft.Exchange.WebServices.Data.ItemSchema]::DateTimeReceived,
         $lastDate
     )
+    $modeLabel = "Incremental (since $lastDate)"
+} else {
+    $modeLabel = "Full scan"
 }
 
 $result = $exchService.FindItems($edmFolder.Id, $searchFilter, $ItemView)
-Write-LogInfo "[2/6] Folder: EDM"
-Write-LogInfo "  New items since $lastDate : $($result.Items.Count)"
+Write-LogInfo "[$modeLabel] Folder: EDM"
+Write-LogInfo "  Items found: $($result.Items.Count)"
 
 # --- 3. Extract new email fields ---
 $newEmails = @()
