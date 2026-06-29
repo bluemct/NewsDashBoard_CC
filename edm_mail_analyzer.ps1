@@ -197,6 +197,7 @@ foreach ($item in $result.Items) {
     }
 
     $record = [Ordered]@{
+        id                 = $email.Id.ToString()
         date               = $email.DateTimeReceived.ToString("yyyy-MM-dd HH:mm:ss")
         subject            = $email.Subject
         sender             = $senderAddress
@@ -210,13 +211,17 @@ Write-LogInfo "[3/6] Extracted $($newEmails.Count) new email records"
 $EwsElapsed = (New-TimeSpan -Start $EwsStart -End (Get-Date)).TotalSeconds
 Write-LogInfo "  EWS read+extract done in ${EwsElapsed}s"
 
-# --- 4. Merge existing + new emails, then sort ---
+# --- 4. Merge existing + new emails, dedup by ID, then sort ---
 Write-LogInfo "[4/6] Merging emails..."
 $allEmails = @()
+$seenIds = @{}
 
 # Keep existing emails (strip step/total fields, will recompute)
 foreach ($e in $existingEmails) {
+    $eid = $e.id
+    if ($eid) { $seenIds[$eid] = $true }
     $record = [Ordered]@{
+        id                 = $eid
         date               = $e.date
         subject            = $e.subject
         sender             = $e.sender
@@ -225,11 +230,16 @@ foreach ($e in $existingEmails) {
     $allEmails += [PSCustomObject]$record
 }
 
-# Add new emails
-$allEmails += $newEmails
+# Add new emails, skip duplicates by ID
+$duplicates = 0
+foreach ($n in $newEmails) {
+    if ($seenIds.ContainsKey($n.id)) { $duplicates++; continue }
+    $seenIds[$n.id] = $true
+    $allEmails += $n
+}
 
 $allEmails = $allEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) }
-Write-LogInfo "  Total: $($allEmails.Count) emails ($($existingEmails.Count) existing + $($newEmails.Count) new)"
+Write-LogInfo "  Total: $($allEmails.Count) emails ($($existingEmails.Count) existing + $($newEmails.Count) new, $duplicates duplicates dropped)"
 
 # --- 5. Assign sequential step number per conversation ---
 $convStep = @{}
