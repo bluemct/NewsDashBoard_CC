@@ -43,7 +43,12 @@ python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-
 
 ## 看板页面结构
 
-页面采用 100vh flex 布局，分三个部分按 **1:2:3** 比例分配高度：
+页面采用 100vh flex 布局，顶部固定 header + 内容区按 **1:2:3** 比例分配高度：
+
+### 顶部 Header（flex-shrink:0）— 固定不压缩
+
+- 标题 + 用户信息（点击退出）+ Refresh 按钮
+- 时间显示栏
 
 ### 第一部分（flex:1）— 概览卡片
 
@@ -60,8 +65,13 @@ python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-
 
 ### 第三部分（flex:3）— 底部双栏
 
-- **左侧 Process Steps**: 7 步流程说明，flex-column 布局，7 行自动铺满面板高度，垂直居中
+- **左侧 Process Steps**: 带表头 `Step No. | Step Name | Description`，7 行步骤 `flex:1` 自动铺满面板高度
 - **右侧 Monthly Closed by Week**: 柱状图，按 Step 7 日期统计每周关闭数量，图表高度 170px
+
+### 响应式行为
+
+- 窗口最大化 → 内容刚好铺满，无需滚动
+- 窗口变小 → 各部分按比例缩小，In Progress 列表和步骤列表内部自动滚动
 
 ## 详情页（/detail）
 
@@ -123,10 +133,30 @@ python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-
 
 ## 部署到其他电脑
 
-1. 复制 `edm_dashboard.py`、`edmmailanalyzer.json`、`run_dashboard.vbs` 到 `D:\EDM_Dashboard\`
+### 方式一：直接复制文件（推荐）
+
+1. 复制以下文件到目标机器（如 `D:\EDM_Dashboard\`）：
+   - `edm_dashboard.py`（主程序，单文件即可运行）
+   - `edmmailanalyzer.json`（本地数据备份，可选）
+   - `run_dashboard.vbs`（后台启动脚本，可选）
 2. 目标电脑安装 Python 3 + Git + `pip install pywin32`
 3. VBS 脚本自动检测自身所在目录，不硬编码路径
-4. 双击 `run_dashboard.vbs` 后台启动
+4. 双击 `run_dashboard.vbs` 后台启动，或命令行运行：
+   ```bash
+   python -X utf8 edm_dashboard.py --port 8765 --json-file edmmailanalyzer.json
+   ```
+
+### 方式二：从 GitHub 克隆
+
+```bash
+git clone https://github.com/bluemct/NewsDashBoard_CC.git
+cd NewsDashBoard_CC
+python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-file edmmailanalyzer.json
+```
+
+### 最小部署
+
+仅需 `edm_dashboard.py` 一个文件。看板会自动从 GitHub 拉取数据。
 
 ## 文件
 
