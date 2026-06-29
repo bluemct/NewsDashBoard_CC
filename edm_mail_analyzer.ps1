@@ -62,29 +62,61 @@ if ($Full) {
     $FetchStart = Get-Date
     Write-Host "[1/6] Fetching existing data from GitHub..."
 
-    try {
-        $response = Invoke-WebRequest -Uri $GitHubRaw -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
-        $existingEmails = ($response.Content | ConvertFrom-Json)
+    # Try git clone first (SSH then HTTPS), then HTTP fallback
+    $gitOk = $false
+    $tmpDir = $null
+    foreach ($repoUrl in @("git@github.com:bluemct/docs.git", "https://github.com/bluemct/docs.git")) {
+        if ($tmpDir -and (Test-Path $tmpDir)) { Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue }
+        try {
+            $tmpDir = Join-Path $env:TEMP ([System.IO.Path]::GetRandomFileName())
+            $env:GIT_TERMINAL_PROMPT = "0"
+            $env:GCM_INTERACTIVE = "never"
+            $cloneResult = git clone --depth 1 --filter=blob:none $repoUrl $tmpDir 2>&1
+            if ($LASTEXITCODE -eq 0) { $gitOk = $true; break }
+            Write-Host "  git clone failed: $($cloneResult -join ', ')" -ForegroundColor DarkGray
+        } catch {
+            Write-Host "  git clone failed: $_" -ForegroundColor DarkGray
+        } finally {
+            $env:GIT_TERMINAL_PROMPT = $null
+            $env:GCM_INTERACTIVE = $null
+            if ($tmpDir -and -not (Test-Path (Join-Path $tmpDir "edmmailanalyzer.json"))) {
+                Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
+                $tmpDir = $null
+            }
+        }
+    }
+
+    if ($gitOk -and $tmpDir) {
+        $jsonPath = Join-Path $tmpDir "edmmailanalyzer.json"
+        $existingEmails = Get-Content -Path $jsonPath -Raw | ConvertFrom-Json
         if ($existingEmails -isnot [Array]) { $existingEmails = @($existingEmails) }
+        Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
         $sorted = $existingEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) } -Descending
         if ($sorted.Count -gt 0) {
             $lastDate = [datetime]::ParseExact($sorted[0].date, "yyyy-MM-dd HH:mm:ss", $null)
-            Write-Host "  Found $($existingEmails.Count) existing emails, latest: $lastDate"
+            Write-Host "  git clone OK: $($existingEmails.Count) emails, latest: $lastDate"
             Write-Host "  Incremental: only fetching emails after this time"
         }
-    } catch {
-        Write-Host "  GitHub direct failed, trying proxy..." -ForegroundColor Yellow
-        try {
-            $response = Invoke-WebRequest -Uri $GitHubProxy -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
-            $existingEmails = ($response.Content | ConvertFrom-Json)
-            if ($existingEmails -isnot [Array]) { $existingEmails = @($existingEmails) }
-            $sorted = $existingEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) } -Descending
-            if ($sorted.Count -gt 0) {
-                $lastDate = [datetime]::ParseExact($sorted[0].date, "yyyy-MM-dd HH:mm:ss", $null)
-                Write-Host "  Proxy OK: $($existingEmails.Count) emails, latest: $lastDate"
-            }
-        } catch {
-            Write-Host "  Both failed - falling back to full scan" -ForegroundColor Yellow
+    } else {
+        Write-Host "  git clone failed, trying HTTP..." -ForegroundColor Yellow
+        $httpOk = $false
+        foreach ($url in @($GitHubRaw, $GitHubProxy)) {
+            try {
+                $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
+                $existingEmails = ($response.Content | ConvertFrom-Json)
+                if ($existingEmails -isnot [Array]) { $existingEmails = @($existingEmails) }
+                $sorted = $existingEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) } -Descending
+                if ($sorted.Count -gt 0) {
+                    $lastDate = [datetime]::ParseExact($sorted[0].date, "yyyy-MM-dd HH:mm:ss", $null)
+                    $label = if ($url -eq $GitHubRaw) { "HTTP direct" } else { "HTTP proxy" }
+                    Write-Host "  $($label) OK: $($existingEmails.Count) emails, latest: $lastDate"
+                    $httpOk = $true
+                    break
+                }
+            } catch {}
+        }
+        if (-not $httpOk) {
+            Write-Host "  All methods failed - falling back to full scan" -ForegroundColor Yellow
         }
     }
 
@@ -92,7 +124,7 @@ if ($Full) {
         Write-Host "  No existing data found - falling back to full scan"
     } else {
         $FetchElapsed = (New-TimeSpan -Start $FetchStart -End (Get-Date)).TotalSeconds
-        Write-Host "  GitHub fetch done in ${FetchElapsed}s"
+        Write-Host "  Fetch done in ${FetchElapsed}s"
     }
 }
 
