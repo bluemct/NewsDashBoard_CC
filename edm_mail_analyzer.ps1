@@ -9,6 +9,7 @@ $exchService.Credentials = $Credentials
 $exchService.url = 'https://mail.21vianet.com/EWS/Exchange.asmx'
 
 $LogFile = 'C:\repos\repo\edmmailanalyzer.log'
+$StartTime = Get-Date  # timer for total elapsed
 function Write-Log {
     param(
         [Parameter(Mandatory=$true)][string]$Message,
@@ -51,6 +52,7 @@ $GitHubProxy   = "https://ghproxy.com/$GitHubRaw"
 # --- 0. Fetch existing JSON from GitHub (incremental base) ---
 $lastDate = $null  # null = full scan (first run)
 $existingEmails = @()
+$FetchStart = Get-Date
 
 Write-Host "[1/6] Fetching existing data from GitHub..."
 
@@ -85,6 +87,9 @@ if (-not $lastDate) {
     Write-Host "  No existing data found - will do full scan"
 }
 
+$FetchElapsed = (New-TimeSpan -Start $FetchStart -End (Get-Date)).TotalSeconds
+Write-Host "  GitHub fetch done in ${FetchElapsed}s"
+
 # --- 1. Find EDM folder ---
 function Get-Folder {
     param([string]$Name)
@@ -110,6 +115,7 @@ if (-not $edmFolder) {
 }
 
 # --- 2. Read new emails since lastDate (incremental) ---
+$EwsStart = Get-Date
 $ItemView = New-Object Microsoft.Exchange.WebServices.Data.ItemView(5000)
 $ItemView.PropertySet = [Microsoft.Exchange.WebServices.Data.BasePropertySet]::FirstClassProperties
 
@@ -160,6 +166,8 @@ foreach ($item in $result.Items) {
 }
 
 Write-LogInfo "[3/6] Extracted $($newEmails.Count) new email records"
+$EwsElapsed = (New-TimeSpan -Start $EwsStart -End (Get-Date)).TotalSeconds
+Write-LogInfo "  EWS read+extract done in ${EwsElapsed}s"
 
 # --- 4. Merge existing + new emails, then sort ---
 Write-LogInfo "[4/6] Merging emails..."
@@ -257,3 +265,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-LogInfo "git push succeeded"
     if ($gitPushOutput) { Write-LogInfo $gitPushOutput }
 }
+
+$TotalElapsed = (New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds
+Write-LogInfo ""
+Write-LogInfo "===== Total elapsed: ${TotalElapsed}s ====="
