@@ -25,7 +25,7 @@ import win32security
 DOMAIN_NAME = "bj-oe.21vianet.com"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/bluemct/docs/master/edmmailanalyzer.json"
 GITHUB_PROXY_URL = "https://ghproxy.com/https://raw.githubusercontent.com/bluemct/docs/master/edmmailanalyzer.json"
-REFRESH_INTERVAL = 1800  # 30 minutes
+REFRESH_INTERVAL = 600  # 10 minutes
 
 STEP_LABELS = {
     1: "EDM Request",
@@ -52,6 +52,7 @@ _convs_json = "[]"
 _raw_data = []
 _weekly_stats = []
 _data_lock = threading.Lock()
+_handlers = set()
 
 
 def load_data(path):
@@ -65,6 +66,7 @@ def load_data(path):
 
 
 def build_conversations(raw):
+    handlers = _handlers
     raw = [r for r in raw if "[EDM test and distribution]" in r.get("subject", "")]
     convs = {}
     for r in raw:
@@ -97,7 +99,16 @@ def build_conversations(raw):
                 seen[s] = e
                 ordered.append(e)
 
-        firstSender = emails[0].get("sender", "").split("@")[0] if emails[0].get("sender") else ""
+        # Determine handler: first sender in the conversation whose username is in the handlers list
+        handler = ""
+        if handlers:
+            for e in emails:
+                sender = e.get("sender", "").split("@")[0].lower()
+                if sender in handlers:
+                    handler = e.get("sender", "").split("@")[0]  # keep original case
+                    break
+        if not handler:
+            handler = emails[0].get("sender", "").split("@")[0] if emails[0].get("sender") else ""
 
         result.append({
             "conversation_id": cid,
@@ -106,12 +117,22 @@ def build_conversations(raw):
             "subject": subject,
             "total_steps": len(ordered),
             "current_step": len(ordered),
-            "firstSender": firstSender,
+            "firstSender": handler,
             "emails": ordered,
         })
 
     result.sort(key=lambda x: x["emails"][0]["date"])
     return result
+
+
+def load_handlers(path):
+    """Load handler names from handlers.json. Returns a set of lowercase usernames."""
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            data = json.load(f)
+        return {h.lower() for h in data.get("handlers", [])}
+    except Exception:
+        return set()
 
 
 def compute_weekly_stats(raw):
@@ -684,7 +705,7 @@ function render() {
   var inProgress = totalConvs - completed;
 
   var ts = new Date(lastRefresh);
-  document.getElementById('refresh-info').textContent = 'Updated: ' + ts.toLocaleTimeString() + ' | Auto-refresh every 30min';
+  document.getElementById('refresh-info').textContent = 'Updated: ' + ts.toLocaleTimeString() + ' | Auto-refresh every 10min';
 
   // Section 1: Summary cards
   var summaryEl = document.getElementById('summary');
@@ -812,7 +833,7 @@ function manualRefresh() {
   setTimeout(function() { btn.textContent = 'Refresh'; btn.style.background = '#1890ff'; btn.disabled = false; status.textContent = ''; }, 4000);
 }
 
-setInterval(function() { if (authToken) fetchAndRender(); }, 1800000);
+setInterval(function() { if (authToken) fetchAndRender(); }, 600000);
 </script>
 </body>
 </html>"""
@@ -844,6 +865,10 @@ tr:hover td{background:#f5f7fa}
 .badge.progress{background:#faad14}
 .sn-link{color:#1890ff;font-weight:600}
 .subject-cell{max-width:400px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+.sortable:hover{color:#1890ff}
+.sort-icon{font-size:10px;margin-left:4px;opacity:.4}
+.sort-active .sort-icon{opacity:1;color:#1890ff}
 .login-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:999;justify-content:center;align-items:center}
 .login-box{background:#fff;padding:32px 40px;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.15);text-align:center;min-width:320px}
 .login-box h2{margin-bottom:20px;color:#1a1a2e;font-size:18px}
@@ -877,9 +902,9 @@ tr:hover td{background:#f5f7fa}
     <tr>
       <th>SN</th>
       <th>Subject</th>
-      <th>Date</th>
+      <th class="sortable sort-active" onclick="doSort('date')" id="sort-date">Date<span class="sort-icon">&#x25BC;</span></th>
       <th>Status</th>
-      <th>Handler</th>
+      <th class="sortable" onclick="doSort('handler')" id="sort-handler">Handler<span class="sort-icon">&#x25BC;</span></th>
     </tr>
   </thead>
   <tbody id="tbody"></tbody>
@@ -888,6 +913,8 @@ tr:hover td{background:#f5f7fa}
 <script>
 var authToken = null;
 var allData = [];
+var sortColumn = 'date';
+var sortAsc = false;  // false = newest first
 
 function getQueryParam(name) {
   var params = {};
@@ -965,6 +992,44 @@ document.onkeydown = function(e) {
   if ((key === 'Enter' || key === 13) && document.getElementById('login-overlay').style.display === 'flex') doLogin();
 };
 
+function doSort(col) {
+  if (sortColumn === col) {
+    sortAsc = !sortAsc;
+  } else {
+    sortColumn = col;
+    sortAsc = (col === 'handler');  // handler A→Z, date new→old
+  }
+  // Update header UI
+  var dateTh = document.getElementById('sort-date');
+  var handlerTh = document.getElementById('sort-handler');
+  if (sortColumn === 'date') {
+    dateTh.className = 'sortable sort-active';
+    dateTh.innerHTML = 'Date<span class="sort-icon">' + (sortAsc ? '▲' : '▼') + '</span>';
+    handlerTh.className = 'sortable';
+    handlerTh.innerHTML = 'Handler<span class="sort-icon">&#x25BC;</span>';
+  } else {
+    handlerTh.className = 'sortable sort-active';
+    handlerTh.innerHTML = 'Handler<span class="sort-icon">' + (sortAsc ? '▲' : '▼') + '</span>';
+    dateTh.className = 'sortable';
+    dateTh.innerHTML = 'Date<span class="sort-icon">&#x25BC;</span>';
+  }
+  render();
+}
+
+function compareItems(a, b) {
+  var aDate = a.emails[0].date.substring(0, 10);
+  var bDate = b.emails[0].date.substring(0, 10);
+  var aHandler = (a.firstSender || '-').toLowerCase();
+  var bHandler = (b.firstSender || '-').toLowerCase();
+  var val = 0;
+  if (sortColumn === 'date') {
+    val = aDate < bDate ? -1 : (aDate > bDate ? 1 : 0);
+  } else {
+    val = aHandler < bHandler ? -1 : (aHandler > bHandler ? 1 : 0);
+  }
+  return sortAsc ? val : -val;
+}
+
 function fetchData() {
   var authHeaders = {};
   if (authToken) authHeaders['Authorization'] = 'Bearer ' + authToken;
@@ -972,10 +1037,29 @@ function fetchData() {
     function(r) {
       if (r.status === 401) { showLogin(); return; }
       allData = r.json.conversations;
+      initSortHeaders();
       render();
     },
     function() { showLogin(); }
   );
+}
+
+function initSortHeaders() {
+  var dateTh = document.getElementById('sort-date');
+  var handlerTh = document.getElementById('sort-handler');
+  if (!dateTh || !handlerTh) return;
+  // Default: sort by date descending
+  if (sortColumn === 'date') {
+    dateTh.className = 'sortable sort-active';
+    dateTh.innerHTML = 'Date<span class="sort-icon">' + (sortAsc ? '▲' : '▼') + '</span>';
+    handlerTh.className = 'sortable';
+    handlerTh.innerHTML = 'Handler<span class="sort-icon">&#x25BC;</span>';
+  } else {
+    handlerTh.className = 'sortable sort-active';
+    handlerTh.innerHTML = 'Handler<span class="sort-icon">' + (sortAsc ? '▲' : '▼') + '</span>';
+    dateTh.className = 'sortable';
+    dateTh.innerHTML = 'Date<span class="sort-icon">&#x25BC;</span>';
+  }
 }
 
 function render() {
@@ -995,6 +1079,9 @@ function render() {
     }
     filterLabel = 'Completed';
   }
+
+  // Apply sorting
+  filtered.sort(compareItems);
 
   document.getElementById('filter-info').textContent = 'Filter: ' + filterLabel + ' (' + filtered.length + ' items)';
 
@@ -1067,17 +1154,32 @@ def main():
     parser = argparse.ArgumentParser(description="EDM Dashboard")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--json-file", default="edmmailanalyzer.json")
+    parser.add_argument("--handlers-file", default=None, help="Path to handlers.json (auto-detected if omitted)")
     args = parser.parse_args()
+
+    # Load handlers list
+    if args.handlers_file:
+        handlers_path = args.handlers_file
+    else:
+        handlers_path = str(pathlib.Path(__file__).parent / "handlers.json")
+    handlers = load_handlers(handlers_path)
+    if handlers:
+        print(f"Loaded {len(handlers)} handlers: {', '.join(sorted(handlers))}")
+    else:
+        print("No handlers config found, using first sender as handler")
 
     raw = load_data(args.json_file)
     if not raw:
         print("No data found.")
         return
 
+    # Set global handlers BEFORE build_conversations
+    global _convs_json, _raw_data, _weekly_stats, _handlers
+    _handlers = handlers
+
     convs = build_conversations(raw)
     weekly = compute_weekly_stats(raw)
 
-    global _convs_json, _raw_data, _weekly_stats
     _convs_json = json.dumps(convs, ensure_ascii=False)
     _raw_data = raw
     _weekly_stats = weekly

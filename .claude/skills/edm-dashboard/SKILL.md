@@ -29,7 +29,23 @@ model: sonnet
 }
 ```
 
-> 首次可直接用本地文件，看板启动后点击"Refresh" 按钮会从 GitHub 拉取最新数据。
+### 1.1. 准备 Handler 人员配置
+
+将 `handlers.json` 与 `edm_dashboard.py` 放在同一目录：
+
+```json
+{
+  "handlers": [
+    "ma.chuntao",
+    "qiao.jinxiu",
+    "liu.wenya"
+  ]
+}
+```
+
+> 详情页的 Handler 列会从整个 conversation 的邮件发件人中匹配第一个在名单里的人。未匹配到则回退到第一封邮件发件人。后续添加/修改人员只需编辑此 JSON 文件。
+
+> 首次可直接用本地数据文件，看板启动后点击"Refresh" 按钮会从 GitHub 拉取最新数据。
 
 ### 2. 启动看板
 
@@ -76,8 +92,11 @@ python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-
 ## 详情页（/detail）
 
 - 完整列表：SN、Subject、Date、Status、Handler
+- **默认按日期从新到旧排序**
+- **Date / Handler 列头可点击排序**：再次点击切换升序/降序
+- Handler 列：从整个 conversation 的邮件发件人中匹配 `handlers.json` 名单里的第一个人员
 - 支持 `?filter=all|progress|done` 筛选
-- 客户端 CSV 导出按钮（`doExport`）
+- 客户端 CSV 导出按钮（`doExport`），跟随当前排序输出
 
 ## 看板功能
 
@@ -117,7 +136,7 @@ python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-
 4. 全部失败则使用本地已有数据
 5. 成功后自动保存到本地 JSON 文件（`--json-file` 指定路径）
 6. 刷新状态栏分步显示：GitHub 拉取结果 → 本地保存结果 → 对话加载数量
-7. 30 分钟后台自动刷新（同逻辑）
+7. 每 10 分钟后台自动刷新（同逻辑）
 
 ## 数据源
 
@@ -137,6 +156,7 @@ python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-
 
 1. 复制以下文件到目标机器（如 `D:\EDM_Dashboard\`）：
    - `edm_dashboard.py`（主程序，单文件即可运行）
+   - `handlers.json`（Handler 人员配置，必须与主程序同目录）
    - `edmmailanalyzer.json`（本地数据备份，可选）
    - `run_dashboard.vbs`（后台启动脚本，可选）
 2. 目标电脑安装 Python 3 + Git + `pip install pywin32`
@@ -156,11 +176,12 @@ python -X utf8 .claude/skills/edm-dashboard/edm_dashboard.py --port 8765 --json-
 
 ### 最小部署
 
-仅需 `edm_dashboard.py` 一个文件。看板会自动从 GitHub 拉取数据。
+仅需 `edm_dashboard.py` + `handlers.json` 两个文件。看板会自动从 GitHub 拉取数据。
 
 ## 文件
 
 - `edm_dashboard.py` — Python HTTP 看板服务（纯单文件，内嵌 HTML/JS/CSS）
+- `handlers.json` — Handler 人员配置（JSON 数组，方便后续灵活添加）
 - `run_dashboard.vbs` — 后台启动脚本（自动检测路径）
 - `DEPLOY.md` — 部署文档
 
