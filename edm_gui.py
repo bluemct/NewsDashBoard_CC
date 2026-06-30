@@ -29,6 +29,7 @@ import re
 import shutil
 import sys
 import threading
+from urllib import parse as urllib_parse
 import tkinter as tk
 from datetime import datetime
 from tkinter import filedialog, messagebox, ttk
@@ -204,24 +205,73 @@ def _save_xlsx_search_dir(path: str) -> None:
         f.write("\n")
 
 
-def discover_xlsx(sn: str, search_dir: str) -> str | None:
+def extract_xlsx_filename_from_msg(msg_path: str) -> str | None:
+    """Read .msg body text, extract SharePoint URL, and return the xlsx filename.
+
+    Example URL:
+        https://microsoftapc.sharepoint.com/.../Token%201-13%20SN-56699.xlsx?d=...
+    Returns:
+        Token 1-13 SN-56699.xlsx
+    """
+    try:
+        from extract_msg import Message as MsgParser
+        msg = MsgParser(msg_path)
+        body = msg.body or ""
+        msg.close()
+    except Exception:
+        return None
+
+    # Find SharePoint-like URLs containing .xlsx
+    urls = re.findall(r'https?://[^\s<>"\']+\.xlsx[^\s<>"\']*', body)
+    if not urls:
+        return None
+
+    url = urls[0]
+    # Get the path portion: take text between last / and first ?
+    after_last_slash = url.rsplit("/", 1)[-1]
+    filename = after_last_slash.split("?")[0]
+    # URL-decode the filename
+    filename = urllib_parse.unquote(filename)
+    if not filename:
+        return None
+    return filename
+
+
+def discover_xlsx(sn: str, search_dir: str, filename_hint: str | None = None) -> str | None:
     """Recursively search search_dir for an .xlsx file inside a folder matching sn.
 
     Searches for folders whose name contains the SN (e.g. 'SN-53672' or 'SN 53672')
     and returns the first .xlsx found inside.
+
+    If *filename_hint* is provided, the function first does a full recursive scan
+    of search_dir for an exact (case-insensitive) filename match — regardless of
+    folder naming.  If that fails (or filename_hint is None), it falls back to
+    the SN-folder-based search.
     """
     if not os.path.isdir(search_dir):
         return None
 
+    # Priority 1: global filename exact match (ignores folder naming)
+    if filename_hint:
+        hint_lower = filename_hint.lower()
+        for root, dirs, files in os.walk(search_dir):
+            for f in files:
+                if f.lower() == hint_lower:
+                    return os.path.join(root, f)
+
+    # Priority 2: SN folder match (original logic) — skip if SN is a dummy
+    if sn is None or sn == "SN":
+        return None
     sn_no_dash = sn.replace("-", "")  # SN-53672 → SN53672
 
     for root, dirs, files in os.walk(search_dir):
         folder_name = os.path.basename(root).lower()
         # Match folder names like "SN-53672", "SN 53672", "SN53672", or any containing the digits
         if sn_no_dash.lower() in folder_name.replace("-", "") or sn.lower() in folder_name:
-            for f in files:
-                if f.lower().endswith(".xlsx"):
-                    return os.path.join(root, f)
+            xlsx_files = [f for f in files if f.lower().endswith(".xlsx")]
+            if not xlsx_files:
+                continue
+            return os.path.join(root, xlsx_files[0])
 
     return None
 
@@ -914,16 +964,23 @@ class EDMGUI:
         main = ttk.Frame(container)
         main.pack(fill="both", expand=True)
 
-        # SN input
-        sn_frame = ttk.LabelFrame(main, text="SN Number", padding=8)
+        # Search inputs — SN and/or Filename (either works)
+        sn_frame = ttk.LabelFrame(main, text="Search (SN or Filename)", padding=8)
         sn_frame.pack(fill="x", pady=(0, 10))
         sn_frame.columnconfigure(1, weight=1)
 
         self.verify_sn_var = tk.StringVar()
-        ttk.Label(sn_frame, text="SN:").grid(row=0, column=0, sticky="w", padx=(0, 8))
+        ttk.Label(sn_frame, text="SN:").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 4))
         sn_entry = ttk.Entry(sn_frame, textvariable=self.verify_sn_var, width=30)
-        sn_entry.grid(row=0, column=1, padx=(0, 6), sticky="ew")
-        ttk.Button(sn_frame, text="Discover", command=self._verify_discover).grid(row=0, column=2, sticky="e")
+        sn_entry.grid(row=0, column=1, padx=(0, 6), sticky="ew", pady=(0, 4))
+
+        self.verify_filename_var = tk.StringVar()
+        ttk.Label(sn_frame, text="Filename:").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 4))
+        fn_entry = ttk.Entry(sn_frame, textvariable=self.verify_filename_var, width=30)
+        fn_entry.grid(row=1, column=1, padx=(0, 6), sticky="ew", pady=(0, 4))
+
+        ttk.Button(sn_frame, text="Discover", command=self._verify_discover)\
+            .grid(row=0, column=2, rowspan=2, sticky="ns", padx=(0, 0))
 
         # XLSX path (discovered or manual browse)
         xlsx_frame = ttk.LabelFrame(main, text="XLSX File", padding=8)
@@ -1016,13 +1073,17 @@ class EDMGUI:
             messagebox.showinfo("Discover", "无法从 MSG 文件中提取 SN 号，请手动选择 XLSX 文件。")
             return
 
+        # Extract xlsx filename hint from MSG body (SharePoint URL)
+        filename_hint = extract_xlsx_filename_from_msg(msg_path)
+
         search_dir = _load_xlsx_search_dir()
-        result = discover_xlsx(sn, search_dir)
+        result = discover_xlsx(sn, search_dir, filename_hint=filename_hint)
 
         if result:
             self.xlsx_var.set(result)
             self._enable_import_buttons()
-            messagebox.showinfo("Discover", f"已找到 XLSX 文件：\n{result}")
+            hint_info = f"\n文件名匹配：{os.path.basename(result)}" if filename_hint else ""
+            messagebox.showinfo("Discover", f"已找到 XLSX 文件：\n{result}{hint_info}")
         else:
             messagebox.showinfo(
                 "Discover",
@@ -1412,44 +1473,69 @@ class EDMGUI:
                     self.verify_sn_var.set(sn)
 
     def _verify_discover(self):
-        """Extract SN from input, discover xlsx, then search lists by SN."""
+        """Discover xlsx by SN and/or filename, then search lists by SN."""
         sn = self.verify_sn_var.get().strip()
-        if not sn:
-            messagebox.showinfo("Verify", "请输入 SN 号码（如 SN-56287）")
+        filename_hint = self.verify_filename_var.get().strip()
+
+        if filename_hint and filename_hint != "*.xlsx":
+            if not filename_hint.lower().endswith(".xlsx"):
+                filename_hint = filename_hint + ".xlsx"
+        else:
+            filename_hint = None
+
+        # At least one search condition required
+        if not sn and not filename_hint:
+            messagebox.showinfo("Verify", "请输入 SN 号码和/或 XLSX 文件名")
             return
 
-        # Normalize SN — extract digits for fuzzy search
-        digits = "".join(c for c in sn if c.isdigit())
-        if not digits:
-            messagebox.showinfo("Verify", "请输入有效的 SN 号码（如 SN-56287 或 56287）")
-            return
-
-        # Discover xlsx file (use full SN format for directory search)
-        sn_normalized = sn if "-" in sn else f"SN-{sn}"
+        # Normalize SN if provided
+        if sn:
+            digits = "".join(c for c in sn if c.isdigit())
+            if not digits:
+                messagebox.showinfo("Verify", "SN 格式不正确（如 SN-56287 或 56287）")
+                return
+            sn_normalized = sn if "-" in sn else f"SN-{sn}"
+        else:
+            sn_normalized = None
+            digits = None
 
         # Discover xlsx file
         search_dir = _load_xlsx_search_dir()
-        result = discover_xlsx(sn_normalized, search_dir)
+        result = discover_xlsx(
+            sn_normalized,
+            search_dir,
+            filename_hint=filename_hint,
+        )
 
         if result:
             self.verify_xlsx_var.set(result)
             self._verify_log(f"[DISCOVER] Found xlsx: {result}")
         else:
-            self._verify_log(f"[DISCOVER] No xlsx found for SN {sn_normalized}")
+            parts = []
+            if sn_normalized:
+                parts.append(f"SN={sn_normalized}")
+            if filename_hint:
+                parts.append(f"filename={filename_hint}")
+            desc = ", ".join(parts)
+            self._verify_log(f"[DISCOVER] No xlsx found for {desc}")
             self._verify_log(f"[DISCOVER] Search directory: {search_dir}")
             messagebox.showinfo(
                 "Verify",
-                f"未找到匹配 {sn_normalized} 的 XLSX 文件。\n\n检索目录：\n{search_dir}"
+                f"未找到匹配的 XLSX 文件（{desc}）。\n\n检索目录：\n{search_dir}"
             )
             return
 
-        # Search lists by SN
+        # Search lists by SN (only if SN was provided)
         if not _HAS_VERIFY:
             messagebox.showerror("Verify", "verify_list_contacts module not loaded")
             return
 
-        self._verify_log(f"[DISCOVER] Searching lists for SN: {digits}")
-        lists = _verify_find_lists_by_sn(digits)
+        if digits:
+            self._verify_log(f"[DISCOVER] Searching lists for SN: {digits}")
+            lists = _verify_find_lists_by_sn(digits)
+        else:
+            self._verify_log("[DISCOVER] SN not provided — skipping list search")
+            lists = []
 
         # Populate formal lists in Listbox
         self._verify_lists = [(lid, t) for lid, t, ty in lists if ty == "formal"]

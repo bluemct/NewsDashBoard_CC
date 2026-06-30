@@ -56,7 +56,9 @@ python .claude/skills/edm-process/edm_process.py
 
 GUI 桌面应用（tkinter），支持通过界面选择文件并处理。额外功能：
 
-- **Discover 按钮** — 根据 MSG 邮件中的 SN 号，自动在配置目录下检索 XLSX 文件
+- **Discover 按钮** — 根据 MSG 邮件中的 SN 号自动检索 XLSX 文件；支持文件名精确匹配（Process tab 自动从 MSG 正文 SharePoint 链接提取文件名，Verify tab 手动输入）
+- **`extract_xlsx_filename_from_msg()`** — 读取 MSG 正文，正则提取含 `.xlsx` 的 SharePoint 链接，URL 解码后返回文件名（如 `Token 1-13 SN-56699.xlsx`）
+- **`discover_xlsx(sn, search_dir, filename_hint=None)`** — 搜索优先级：① `filename_hint` 精确文件名全局递归搜索（不依赖文件夹命名）→ ② SN 文件夹匹配 + 第一个 xlsx 兜底
 - **检索目录配置** — `xlsx_search_dir.json` 文件，可编辑 `search_directory` 字段修改检索路径
 - **Import Test/Formal List** — 直接通过 Unimarketing API 导入联系人列表
 - **PyInstaller 打包** — `edm_gui.spec` 生成 `EDM Email Processor.exe`
@@ -70,6 +72,8 @@ python edm_gui.py
 | Function | Description |
 |----------|-------------|
 | `extract_sn(text)` | Extract SN-12345 from text |
+| `extract_xlsx_filename_from_msg(msg_path)` | Read MSG body, extract .xlsx filename from SharePoint URL |
+| `discover_xlsx(sn, search_dir, filename_hint=None)` | Search for xlsx by filename (exact) or SN folder (fallback) |
 | `find_target_attachment_idx(msg_path)` | Find nested .msg (0 recipients) index via olefile |
 | `save_target_attachment(att, save_dir)` | Save attachment to disk |
 | `convert_xlsx_to_csv(xlsx_path)` | Convert xlsx to CSV (subprocess to xlsx_to_csv skill) |

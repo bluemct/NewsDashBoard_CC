@@ -30,7 +30,6 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        'tkinter',  # GUI framework — bootloader handles it
         'pygments',
         'rich',
         'lxml.isoschematron',
