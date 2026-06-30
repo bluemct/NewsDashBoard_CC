@@ -131,7 +131,12 @@ if ($gitOk -and $tmpDir -and (Test-Path $tmpDir -ErrorAction SilentlyContinue)) 
 }
 
 if ($existingEmails.Count -eq 0) {
-    Write-Host "  No existing data found from GitHub" -ForegroundColor Yellow
+    if (-not $Full) {
+        Write-Host "  FATAL: Incremental mode requires existing GitHub data. Aborting." -ForegroundColor Red
+        exit 1
+    } else {
+        Write-Host "  No existing data found from GitHub (full scan: OK to proceed)" -ForegroundColor Yellow
+    }
 }
 
 $FetchElapsed = (New-TimeSpan -Start $FetchStart -End (Get-Date)).TotalSeconds
