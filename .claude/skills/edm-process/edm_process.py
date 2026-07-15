@@ -7,13 +7,23 @@ EDM Email Processor — full workflow:
 5. Convert nested .msg to HTML via win32com
 
 Usage:
-    python edm_process.py
+    python edm_process.py [--temp-dir DIR] [--edm-dir DIR]
 """
+import argparse
 import ctypes
 import os
 import re
 import shutil
 import sys
+
+# Force UTF-8 stdout so filenames with special characters (œ, etc.) don't crash print()
+if sys.stdout.encoding and sys.stdout.encoding.upper() != "UTF-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except AttributeError:
+        # Python < 3.7 fallback
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 try:
     from extract_msg import Message as MsgParser
@@ -29,10 +39,29 @@ def _get_short_path(long_path):
     return buf.value
 
 
-BASE_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "EDM"
-)
-TEMP_DIR = os.path.join(BASE_DIR, "Temp")
+def _default_base_dir():
+    """Default EDM output directory (4 levels up from this script + EDM)."""
+    return os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "EDM"
+    )
+
+
+def _parse_args():
+    """Parse CLI arguments. Returns (temp_dir, edm_dir)."""
+    parser = argparse.ArgumentParser(description="EDM Email Processor")
+    parser.add_argument("--temp-dir", default=None,
+                        help="Directory containing input .msg and .xlsx files")
+    parser.add_argument("--edm-dir", default=_default_base_dir(),
+                        help="Base directory for SN output folders (default: project/EDM)")
+    args = parser.parse_args()
+
+    if args.temp_dir is None:
+        args.temp_dir = os.path.join(args.edm_dir, "Temp")
+    return args.temp_dir, args.edm_dir
+
+
+# Resolve paths from CLI or defaults
+TEMP_DIR, BASE_DIR = _parse_args()
 
 
 def extract_sn(text):

@@ -43,7 +43,7 @@ model: sonnet
 }
 ```
 
-> 详情页的 Handler 列会从整个 conversation 的邮件发件人中匹配第一个在名单里的人。未匹配到则回退到第一封邮件发件人。后续添加/修改人员只需编辑此 JSON 文件。
+> 详情页的 Handler 列会从整个 conversation 的邮件发件人中匹配第一个在名单里的人。**注意：handlers.json 中的用户名必须与邮箱 `@` 前的用户名完全一致**（如 `qiao.jinxiu3` 不是 `qiao.jinxiu`）。未匹配到则回退到第一封邮件发件人。后续添加/修改人员只需编辑此 JSON 文件。
 
 > 首次可直接用本地数据文件，看板启动后点击"Refresh" 按钮会从 GitHub 拉取最新数据。
 
