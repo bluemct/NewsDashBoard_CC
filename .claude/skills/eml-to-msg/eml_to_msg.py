@@ -170,7 +170,10 @@ def _convert(eml_path, outlook, tempfile, shutil):
         # ---- Build outer mail ----
 
         mail = outlook.CreateItem(0)
-        mail.Subject = emsg.get("Subject", "")
+        outer_subject = decode_subject(emsg.get("Subject", ""))
+        outer_subject = re.sub(r"[\x00-\x1f]", " ", outer_subject)
+        outer_subject = re.sub(r"\s+", " ", outer_subject).strip()
+        mail.Subject = outer_subject
         mail.To = emsg.get("To", "")
         mail.CC = emsg.get("Cc", "")
         if html_body:

@@ -17,8 +17,10 @@ description: Convert .eml email files to .msg format — only top-level RFC822 p
 
 ### 编码处理
 
-HTML 正文按 MIME 声明的 `Content-Type: charset` 解码，回退顺序：
-`charset → utf-8 → gb18030 → latin-1`
+- **Subject 解码**：支持 RFC 2047 base64/quoted-printable 编码（`=?utf-8?B?...?=`）
+- **折叠头展开**：EML 中 `Subject` 可能跨多行（`\r\n + space`），需清理控制字符 `\x00-\x1f` 并合并空白，避免 Outlook `.Subject` 截断
+- **HTML 正文**按 MIME 声明的 `Content-Type: charset` 解码，回退顺序：
+  `charset → utf-8 → gb18030 → latin-1`
 
 ### 输出
 
