@@ -2,7 +2,8 @@
 EML to MSG Converter — Convert .eml to .msg preserving nested RFC822 attachments.
 
 Uses win32com to create Outlook MailItems and SaveAs .msg.
-Nested message/rfc822 parts are converted to individual .msg attachments.
+Only top-level parts are processed: HTML body, file attachments, and
+message/rfc822 (forwarded emails). Nested RFC822 chains are NOT walked into.
 
 Usage:
     python eml_to_msg.py <path/to/email.eml>
@@ -11,8 +12,6 @@ Usage:
 import os
 import re
 import sys
-import tempfile
-import shutil
 import email as email_lib
 
 
@@ -29,31 +28,6 @@ def decode_subject(raw_subject):
         return "".join(parts)
     except Exception:
         return raw_subject or "unnamed"
-
-
-def eml_to_msg(eml_path):
-    """Convert an .eml file to .msg, preserving nested RFC822 messages as .msg attachments.
-
-    Args:
-        eml_path: Path to the .eml file.
-
-    Returns:
-        Path to the created .msg file, or None on failure.
-    """
-    import pythoncom
-    import win32com.client
-
-    pythoncom.CoInitialize()
-    try:
-        outlook = win32com.client.Dispatch("Outlook.Application")
-        msg_path = _convert(eml_path, outlook)
-    except Exception as e:
-        print(f"[ERROR] {e}", file=sys.stderr)
-        return None
-    finally:
-        pythoncom.CoUninitialize()
-
-    return msg_path
 
 
 def _decode_payload(part):
@@ -74,30 +48,84 @@ def _decode_payload(part):
     return payload.decode("utf-8", errors="replace")
 
 
-def _convert(eml_path, outlook):
+def _top_level_parts(msg):
+    """Yield top-level MIME parts without descending into message/rfc822.
+
+    Recurses into multipart containers (mixed, related, alternative) but
+    yields message/rfc822 as a leaf — does not walk into them.
+    """
+    if msg.is_multipart():
+        for sub in msg.get_payload() or []:
+            if isinstance(sub, email_lib.message.Message):
+                ct = sub.get_content_type()
+                if ct == "message/rfc822":
+                    yield sub
+                else:
+                    yield from _top_level_parts(sub)
+            else:
+                yield sub
+    else:
+        yield msg
+
+
+def eml_to_msg(eml_path):
+    """Convert an .eml file to .msg, preserving nested RFC822 messages as .msg attachments.
+
+    Args:
+        eml_path: Path to the .eml file.
+
+    Returns:
+        Path to the created .msg file, or None on failure.
+    """
+    import pythoncom
+    import win32com.client
+    import tempfile
+    import shutil
+
+    pythoncom.CoInitialize()
+    try:
+        outlook = win32com.client.Dispatch("Outlook.Application")
+        msg_path = _convert(eml_path, outlook, tempfile, shutil)
+    except Exception as e:
+        print(f"[ERROR] {e}", file=sys.stderr)
+        return None
+    finally:
+        pythoncom.CoUninitialize()
+
+    return msg_path
+
+
+def _convert(eml_path, outlook, tempfile, shutil):
     """Do the actual conversion given an Outlook.Application object."""
     with open(eml_path, "rb") as f:
         mime = f.read()
     emsg = email_lib.message_from_bytes(mime)
 
-    # Extract outer HTML body
+    # ---- Collect top-level parts only (no RFC822 descent) ----
+
+    # HTML body: first text/html without filename
     html_body = ""
-    for part in emsg.walk():
+    # RFC822 parts (forwarded/attached emails)
+    rfc822_parts = []
+    # File attachments (e.g. inline images — already in HTML via cid, skip)
+
+    for part in _top_level_parts(emsg):
         ct = part.get_content_type()
         if ct == "text/html" and not part.get_filename():
-            html_body = _decode_payload(part)
-            break
+            if not html_body:
+                html_body = _decode_payload(part)
+        elif ct == "message/rfc822":
+            rfc822_parts.append(part)
 
-    # Extract nested RFC822 messages and convert each to .msg
+    # ---- Convert each RFC822 to a .msg attachment ----
+
     temp_dir = tempfile.mkdtemp(prefix="eml2msg_")
     nested_data = []
 
     try:
-        for i, part in enumerate(emsg.walk()):
-            if part.get_content_type() != "message/rfc822":
-                continue
-
-            payload = part.get_payload(decode=False)
+        for sub_msg in rfc822_parts:
+            # The RFC822 part's payload is the raw sub-email
+            payload = sub_msg.get_payload(decode=False)
             if isinstance(payload, list):
                 sub = payload[0] if payload else None
             else:
@@ -112,12 +140,13 @@ def _convert(eml_path, outlook):
             clean = re.sub(r"[\x00-\x1f]", " ", decoded)
             clean = re.sub(r"\s+", " ", clean).strip()
 
-            # Get HTML body of nested email
+            # Get HTML body of nested email (also top-level only)
             sub_html = ""
-            for sp in sub.walk():
+            for sp in _top_level_parts(sub):
                 sct = sp.get_content_type()
                 if sct == "text/html" and not sp.get_filename():
-                    sub_html = _decode_payload(sp)
+                    if not sub_html:
+                        sub_html = _decode_payload(sp)
 
             # Create .msg for this nested email
             sub_mail = outlook.CreateItem(0)
@@ -138,7 +167,8 @@ def _convert(eml_path, outlook):
             nested_data.append((clean, msg_fn))
             print(f"[EML2MSG] nested: {safe}.msg ({os.path.getsize(msg_fn) / 1024:.0f} KB)")
 
-        # Build outer mail with nested .msg attachments
+        # ---- Build outer mail ----
+
         mail = outlook.CreateItem(0)
         mail.Subject = emsg.get("Subject", "")
         mail.To = emsg.get("To", "")
