@@ -801,7 +801,7 @@ class EDMExecutor:
 
         try:
             result = subprocess.run(
-                [sys.executable, import_skill, xlsx_path],
+                [sys.executable, import_skill, "--xlsx", xlsx_path],
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
@@ -813,6 +813,10 @@ class EDMExecutor:
             if result.stdout:
                 for line in result.stdout.strip().split("\n"):
                     logger.info(f"  [Import] {line}")
+
+            if result.stderr:
+                for line in result.stderr.strip().split("\n"):
+                    logger.warning(f"  [Import-ERR] {line}")
 
             success = result.returncode == 0
 
