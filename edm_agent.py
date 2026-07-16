@@ -523,7 +523,8 @@ class EmailFetcher:
             logger.error("No MIME content from EWS")
             return None
 
-        safe_subject = re.sub(r'[\x00-\x1f\\/:*?"<>|]', '_', subject[:80])
+        safe_subject = re.sub(r'[\x00-\x1f\\/:*?"<>|]', '_', subject)
+        safe_subject = re.sub(r'\s+', ' ', safe_subject).strip()
         safe_subject = safe_subject.rstrip('.').strip() or "EDM_email"
         eml_path = os.path.join(TEMP_DIR, safe_subject + ".eml")
 
@@ -561,15 +562,35 @@ class EmailFetcher:
 
             # eml_to_msg writes .msg beside the .eml (same directory, same name)
             msg_path = eml_path.rsplit(".", 1)[0] + ".msg"
-            if os.path.isfile(msg_path):
-                size_kb = os.path.getsize(msg_path) / 1024
-                logger.info(f"  Saved: {os.path.basename(msg_path)} ({size_kb:.1f} KB)")
-                # Clean up .eml
-                os.remove(eml_path)
-                return msg_path
-            else:
+            if not os.path.isfile(msg_path):
                 logger.error(f"eml-to-msg did not produce .msg file: {msg_path}")
                 return None
+
+            # Read correct subject from .msg (extract-msg decodes UTF-16LE properly)
+            # and rename the file to fix mojibake from EWS
+            try:
+                from extract_msg import Message as MsgParser
+                parsed = MsgParser(msg_path)
+                correct_subject = parsed.subject or ""
+                parsed.close()
+            except Exception:
+                correct_subject = None
+
+            if correct_subject:
+                safe_name = re.sub(r'[\x00-\x1f\\/:*?"<>|]', '_', correct_subject)
+                safe_name = safe_name.rstrip('.').strip() or "EDM_email"
+                renamed_path = os.path.join(TEMP_DIR, safe_name + ".msg")
+                if renamed_path != msg_path:
+                    if os.path.isfile(renamed_path):
+                        renamed_path = os.path.join(TEMP_DIR, f"{safe_name}_{item_id[:8]}.msg")
+                    os.rename(msg_path, renamed_path)
+                    msg_path = renamed_path
+                    logger.info(f"  Renamed to: {os.path.basename(msg_path)}")
+
+            size_kb = os.path.getsize(msg_path) / 1024
+            logger.info(f"  Saved: {os.path.basename(msg_path)} ({size_kb:.1f} KB)")
+            os.remove(eml_path)
+            return msg_path
 
         except subprocess.TimeoutExpired:
             logger.error("eml-to-msg timed out (>30s)")
@@ -1106,22 +1127,40 @@ def discover_xlsx(sn: str | None, search_dir: str, filename_hint: str | None = N
 
 
 def extract_xlsx_filename_from_msg(msg_path: str) -> str | None:
-    """Extract xlsx filename from MSG body SharePoint URL."""
+    """Extract xlsx filename from MSG body SharePoint URL.
+
+    Checks both htmlBody (bytes) and plain body (text) for SharePoint URLs.
+    """
     try:
         from extract_msg import Message as MsgParser
         from urllib import parse as urllib_parse
 
         msg = MsgParser(msg_path)
+
+        # Try htmlBody first (more reliable — Outlook stores HTML)
+        html = msg.htmlBody or b""
+        if isinstance(html, bytes):
+            html_str = html.decode("utf-8", errors="replace")
+        else:
+            html_str = html
+        urls = re.findall(r'https?://[^\s<>"\']+\.xlsx[^\s<>"\']*', html_str)
+        if urls:
+            after_last_slash = urls[0].rsplit("/", 1)[-1]
+            filename = urllib_parse.unquote(after_last_slash.split("?")[0])
+            msg.close()
+            if filename:
+                return filename
+
+        # Fallback: plain body text
         body = msg.body or ""
-        msg.close()
-
         urls = re.findall(r'https?://[^\s<>"\']+\.xlsx[^\s<>"\']*', body)
-        if not urls:
-            return None
+        msg.close()
+        if urls:
+            after_last_slash = urls[0].rsplit("/", 1)[-1]
+            filename = urllib_parse.unquote(after_last_slash.split("?")[0])
+            return filename if filename else None
 
-        after_last_slash = urls[0].rsplit("/", 1)[-1]
-        filename = urllib_parse.unquote(after_last_slash.split("?")[0])
-        return filename if filename else None
+        return None
     except Exception:
         return None
 
@@ -1368,106 +1407,21 @@ class EDMAgent:
             logger.error(f"Failed to connect to EWS: {e}")
             return False
 
-    def scan_and_process(self) -> list[dict]:
-        """Scan for new emails, filter, analyze with LLM, and process after confirmation."""
-        if not self.folder_id:
-            return []
-
-        since = self.tracker.get_last_seen_time()
-        logger.info(f"Scanning for new emails since {since.isoformat()}")
-        logger.info(f"Filter rules: {self.filter_engine.describe()}")
-
-        new_items = self.ews.find_items_since(self.folder_id, since)
-        logger.info(f"Found {len(new_items)} new item(s) with attachments")
-
-        results = []
-
-        for item in new_items:
-            item_id = item["item_id"]
-            if not item_id:
-                continue
-
-            if self.tracker.is_seen(item_id):
-                logger.info(f"Skipping already processed: {item_id}")
-                continue
-
-            if item_id in self._processing:
-                logger.info(f"Skipping currently processing: {item_id}")
-                continue
-
-            # Quick filter check (sender + subject — no body yet)
-            sender = item.get("sender", "")
-            subject = item.get("subject", "")
-            if not self.filter_engine.matches(sender, subject):
-                logger.info(f"Filter SKIP: [{subject}] from {sender}")
-                # Mark as seen so we don't re-check it
-                self.tracker.mark_seen(item_id, {"action": "filtered", "success": True})
-                continue
-
-            logger.info(f"Processing: [{subject}] from {sender}")
-            self._processing.add(item_id)
-
-            # Step 1: Fetch email body for analysis
-            info = self.fetcher.fetch_info(item_id)
-
-            # Re-check filter with body text included
-            body_text = info.get("body", "")
-            if not self.filter_engine.matches(sender, subject, body_text):
-                logger.info(f"Filter SKIP (body check): [{subject}] from {sender}")
-                self.tracker.mark_seen(item_id, {"action": "filtered", "success": True})
-                self._processing.discard(item_id)
-                continue
-
-            # Step 2: Analyze with LLM
-            # Use the subject from FindItem (always available) and body from GetItem
-            analysis_subject = subject or info.get("subject", "")
-            analysis = self.analyzer.analyze(
-                analysis_subject,
-                body_text,
-            )
-
-            action_result = {
-                "item_id": item_id,
-                "subject": item["subject"],
-                "sender": item["sender"],
-                "received": item["received"],
-                "action": analysis["action"],
-                "confidence": analysis.get("confidence", 0),
-                "reason": analysis.get("reason", ""),
-                "sn": analysis.get("sn"),
-                "success": False,
-            }
-
-            # Step 3: Ask user for confirmation before executing
-            if analysis["action"] == "edm_process":
-                logger.info(f"LLM suggests EDM process — requesting user confirmation...")
-
-                confirmed = self.request_confirmation(
-                    analysis_subject, analysis, info.get("body", "")
-                )
-
-                if not confirmed:
-                    logger.info(f"User skipped: [{analysis_subject}]")
-                    action_result["action"] = "skipped_by_user"
-                    action_result["success"] = True
-                else:
-                    logger.info(f"User confirmed — executing EDM process pipeline...")
-                    self._execute_edm_pipeline(item_id, info, analysis, action_result)
-
-            # Track and save
-            self.tracker.mark_seen(item_id, action_result)
-            self._processing.discard(item_id)
-            save_result(action_result)
-            self._history.append(action_result)
-            results.append(action_result)
-
-            logger.info(f"Completed: [{action_result['action']}] {action_result['subject'][:40]}...")
-
-        return results
-
     def _cleanup_temp(self):
-        """No-op: Temp files (.eml/.msg) are kept for debugging."""
-        pass
+        """Clean up Temp directory after EDM process completes.
+
+        All files needed for traceability are copied to the SN folder by
+        edm_process.py (.msg, .xlsx, nested .msg, EDM_template.html, CSVs).
+        Temp/ is only for transit — remove stale files after processing.
+        """
+        for fname in os.listdir(TEMP_DIR):
+            fpath = os.path.join(TEMP_DIR, fname)
+            if os.path.isfile(fpath):
+                try:
+                    os.remove(fpath)
+                    logger.info(f"  Cleaned Temp/: {fname}")
+                except OSError as e:
+                    logger.warning(f"  Failed to clean Temp/{fname}: {e}")
 
     def _execute_edm_pipeline(self, item_id: str, info: dict, analysis: dict, action_result: dict):
         """Execute EDM Process + Import Test List pipeline.
@@ -1516,6 +1470,14 @@ class EDMAgent:
             return
 
         # Step 3: Copy xlsx to Temp/ so edm_process.py finds it
+        # Clean up stale .xlsx files first — edm_process.py picks ALL .xlsx in Temp/
+        for stale in os.listdir(TEMP_DIR):
+            if stale.lower().endswith(".xlsx"):
+                stale_path = os.path.join(TEMP_DIR, stale)
+                if os.path.isfile(stale_path):
+                    os.remove(stale_path)
+                    logger.info(f"Cleaned stale xlsx from Temp/: {stale}")
+
         xlsx_in_temp = os.path.join(TEMP_DIR, os.path.basename(xlsx_path))
         shutil.copy2(xlsx_path, xlsx_in_temp)
         logger.info(f"Copied xlsx to Temp/: {os.path.basename(xlsx_path)}")
@@ -1714,30 +1676,26 @@ class EDMAgent:
     def run_loop(self, interval: int = None):
         """Main monitoring loop using EWS Streaming Notifications.
 
-        Falls back to polling if streaming script not available or streaming dies.
-        When streaming dies (max reconnects exhausted), automatically restarts
-        streaming up to 3 times before falling back to polling.
+        Automatically restarts streaming up to 3 times when it dies.
+        If all restarts fail, logs an error and stops.
         """
-        if interval is None:
-            interval = POLL_INTERVAL
-
         self.running = True
 
-        # Try streaming first
+        max_streaming_restarts = 3
         streaming_available = os.path.isfile(self.ews_streaming_script)
-        if streaming_available:
-            max_streaming_restarts = 3
-            for restart in range(max_streaming_restarts):
-                logger.info(f"Starting EWS Streaming Notifications (attempt {restart + 1})...")
-                self._streaming_monitor = EWSStreamingMonitor(
-                    self.ews, self.ews_streaming_script, self._on_new_mail_streaming
-                )
-                if not self._streaming_monitor.start():
-                    logger.warning("Streaming start failed")
-                    break
+        if not streaming_available:
+            logger.error("Streaming script not found, cannot start monitoring")
+            return
 
+        for restart in range(max_streaming_restarts + 1):
+            logger.info(f"Starting EWS Streaming Notifications (attempt {restart + 1})...")
+            self._streaming_monitor = EWSStreamingMonitor(
+                self.ews, self.ews_streaming_script, self._on_new_mail_streaming
+            )
+            if not self._streaming_monitor.start():
+                logger.warning("Streaming start failed")
+            else:
                 logger.info("Streaming monitor active, waiting for events...")
-                # Wait until stop() is called or streaming process dies
                 while self.running:
                     if not self._streaming_monitor.is_running():
                         logger.warning(
@@ -1746,39 +1704,21 @@ class EDMAgent:
                         break
                     time.sleep(2)
 
-                if self._streaming_monitor is not None:
-                    self._streaming_monitor.stop()
+            if self._streaming_monitor is not None:
+                self._streaming_monitor.stop()
 
-                if not self.running:
-                    return  # User stopped
+            if not self.running:
+                return  # User stopped
 
-                if restart + 1 >= max_streaming_restarts:
-                    logger.warning(
-                        "Streaming died after %d restarts, falling back to polling",
-                        max_streaming_restarts,
-                    )
-                    break
-                else:
-                    logger.info("Restarting streaming in 10s...")
-                    time.sleep(10)
+            if restart + 1 >= max_streaming_restarts:
+                logger.error(
+                    "Streaming died after %d restarts, giving up",
+                    max_streaming_restarts,
+                )
+                break
 
-        # Fallback: polling loop
-        logger.info(f"Starting polling loop (interval={interval}s)")
-        while self.running:
-            try:
-                results = self.scan_and_process()
-                if results:
-                    logger.info(f"Processed {len(results)} email(s) this round")
-                else:
-                    logger.debug("No new emails")
-
-                if hasattr(self, "_on_scan_complete"):
-                    self._on_scan_complete(results)
-
-            except Exception as e:
-                logger.error(f"Error in scan loop: {e}", exc_info=True)
-
-            time.sleep(interval)
+            logger.info("Restarting streaming in 10s...")
+            time.sleep(10)
 
     def stop(self):
         self.running = False
@@ -2064,6 +2004,11 @@ class AgentGUI:
         self.history_tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
+        # Tooltip on hover for full subject
+        self._tooltip_text = tk.StringVar()
+        self._tooltip_win = None
+        self.history_tree.bind("<Motion>", self._on_tree_motion)
+
         # Tab 2: Log
         log_tab = ttk.Frame(notebook, padding=8)
         notebook.add(log_tab, text="  Log  ")
@@ -2136,6 +2081,16 @@ class AgentGUI:
         self.temp_dir_var = tk.StringVar(value=TEMP_DIR)
         ttk.Entry(temp_dir_frame, textvariable=self.temp_dir_var, width=60).pack(side="left", padx=(0, 8))
         ttk.Button(temp_dir_frame, text="浏览...", command=self._browse_temp_dir).pack(side="left")
+
+        # XLSX Search Directory
+        xlsx_dir_frame = ttk.Frame(settings_tab)
+        xlsx_dir_frame.pack(fill="x", pady=(0, 12))
+        ttk.Label(xlsx_dir_frame, text="XLSX 检索目录:").pack(side="left", padx=(0, 8))
+        self.xlsx_dir_var = tk.StringVar(value=load_xlsx_search_dir())
+        ttk.Entry(xlsx_dir_frame, textvariable=self.xlsx_dir_var, width=60).pack(side="left", padx=(0, 8))
+        ttk.Button(xlsx_dir_frame, text="浏览...", command=self._browse_xlsx_dir).pack(side="left")
+        ttk.Label(xlsx_dir_frame, text="搜索 xlsx 联系人列表", foreground="#888",
+                  font=("Microsoft YaHei UI", 8)).pack(side="left")
 
         # ── Monitor Filter Rules ──
         ttk.Separator(settings_tab, orient="horizontal").pack(fill="x", padx=8, pady=12)
@@ -2321,10 +2276,16 @@ class AgentGUI:
         if folder:
             self.temp_dir_var.set(folder)
 
+    def _browse_xlsx_dir(self):
+        folder = filedialog.askdirectory(title="选择 XLSX 检索目录")
+        if folder:
+            self.xlsx_dir_var.set(folder)
+
     def _save_settings(self):
-        """Save EDM output dir, temp dir, and filter rules to config file."""
+        """Save EDM output dir, temp dir, xlsx search dir, and filter rules."""
         edm_dir = self.edm_dir_var.get().strip()
         temp_dir = self.temp_dir_var.get().strip()
+        xlsx_dir = self.xlsx_dir_var.get().strip()
 
         if not edm_dir:
             messagebox.showwarning("警告", "EDM 输出目录不能为空")
@@ -2361,16 +2322,24 @@ class AgentGUI:
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
 
+        # Save xlsx search directory
+        if xlsx_dir:
+            xlsx_cfg_path = os.path.join(BASE_DIR, "xlsx_search_dir.json")
+            with open(xlsx_cfg_path, "w", encoding="utf-8") as f:
+                json.dump({"search_directory": xlsx_dir}, f, ensure_ascii=False, indent=2)
+
         # Update the agent's filter engine in-memory
         self.agent.filter_engine = FilterEngine(cfg["filter_rules"])
         self.filter_desc_var.set(f"当前规则: {self.agent.filter_engine.describe()}")
 
         self._gui_log("系统", f"设置已保存: EDM输出={edm_dir}, Temp={temp_dir}")
+        self._gui_log("系统", f"XLSX 检索目录: {xlsx_dir}")
         self._gui_log("系统", f"过滤规则: {self.agent.filter_engine.describe()}")
         messagebox.showinfo("成功",
             f"设置已保存\n\n"
             f"EDM 输出目录: {edm_dir}\n"
-            f"Temp 目录: {temp_dir}\n\n"
+            f"Temp 目录: {temp_dir}\n"
+            f"XLSX 检索目录: {xlsx_dir}\n\n"
             f"监听过滤规则:\n"
             f"  发件人: {sender_text or '(无限制)'}\n"
             f"  主题关键字: {subject_kw_text or '(无限制)'}\n"
@@ -2403,6 +2372,36 @@ class AgentGUI:
                 ))
 
         self.root.after(0, _update)
+
+    def _on_tree_motion(self, event):
+        """Show full subject in a tooltip when hovering over a tree item."""
+        item = self.history_tree.identify_row(event.y)
+        inarea = self.history_tree.identify_region(event.x, event.y)
+        column = self.history_tree.identify_column(event.x)
+
+        if inarea == "cell" and column == "#2" and item:  # Subject column
+            values = self.history_tree.item(item, "values")
+            if values and len(values) > 1 and values[1]:
+                text = values[1]
+                self._show_tooltip(text)
+        else:
+            self._hide_tooltip()
+
+    def _show_tooltip(self, text):
+        if self._tooltip_win is not None:
+            return  # already showing
+        self._tooltip_win = tw = tk.Toplevel(self.root)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{self.root.winfo_rootx() + 200}+{self.root.winfo_rooty() + 100}")
+        tw.label = tk.Label(tw, text=text, justify="left",
+                            background="#ffffee", relief="solid", borderwidth=1,
+                            font=("Microsoft YaHei UI", 9), wraplength=400)
+        tw.label.pack(ipadx=4, ipady=2)
+
+    def _hide_tooltip(self):
+        if self._tooltip_win is not None:
+            self._tooltip_win.destroy()
+            self._tooltip_win = None
 
     def run(self):
         self.root.mainloop()

@@ -9,15 +9,18 @@ description: Process EDM email — extract SN, create folder, convert xlsx to CS
 
 ## Workflow
 
-1. 将原始邮件 `.msg` 和 `.xlsx` 联系人列表放在 `EDM/Temp/` 目录下
+1. 将原始邮件 `.msg` 和 `.xlsx` 联系人列表放在 `EDM/Temp/` 目录下（Agent 自动完成，手动处理需自行放置）
 2. 从原始邮件主题提取 SN 编号（如 `SN-12345`）
 3. 在 `EDM/` 下创建 `SN-12345/` 文件夹
-4. 将 `.xlsx` 复制到 SN 文件夹并转换为 CSV（GB18030 编码）
-5. 生成 `formal_*.csv`（全部行）和 `test_*.csv`（N 行，每行配对测试邮箱）
-6. 从原始邮件提取嵌套 EDM 模板 `.msg`（无收件人的那个），保存到 SN 文件夹
-7. 通过 win32com 读取嵌套 .msg 的 HTMLBody，在 `<body>` 后插入主题行
-8. 自动替换 `%%TokenN%%` / `%%SubIdN%%` 占位符（支持跨 `<span>` 拆分，从 `Tokenmapping.json` 读取映射）
-9. 保存为 `EDM_template.html`
+4. 清理 SN 文件夹旧文件（避免跨轮次残留）
+5. 从原始邮件提取嵌套 EDM 模板 `.msg`（无收件人的那个），保存到 SN 文件夹
+6. 通过 win32com 读取嵌套 .msg 的 HTMLBody，在 `<body>` 后插入主题行
+7. 自动替换 `%%TokenN%%` / `%%SubIdN%%` 占位符（支持跨 `<span>` 拆分，从 `Tokenmapping.json` 读取映射）
+8. 保存为 `EDM_template.html`
+9. 将 `.xlsx` 复制到 SN 文件夹并转换为 CSV（GB18030 编码）
+10. 生成 `formal_*.csv`（全部行）和 `test_*.csv`（N 行，每行配对测试邮箱）
+11. 拷贝原始 `.msg` 到 SN 文件夹（流程追溯，在 `msg.close()` 后执行）
+12. EDM Agent 流程结束后清理 `Temp/` 目录（Temp 仅作中转，追溯文件均在 SN 文件夹）
 
 ## Token 占位符替换
 
@@ -44,6 +47,7 @@ python .claude/skills/edm-process/edm_process.py
 ## Output
 
 `EDM/SN-xxxxx/` 目录下生成：
+- `<原始邮件>.msg` — 外层 .msg 副本（流程追溯）
 - `Token1-3 SN-xxxxx.xlsx` — 原始联系人列表
 - `Token1-3 SN-xxxxx.csv` — GB18030 编码 CSV（单元格验证通过，CLI 保留，GUI 删除）
 - `formal_Token1-3 SN-xxxxx.csv` — 正式 CSV（保留原信息全部行）
@@ -97,3 +101,5 @@ python edm_gui.py
 - 脚本只保存无收件人的 EDM 模板邮件
 - `EDM_template.html` 在 `<body>` 后插入主题行，并按 `Tokenmapping.json` 替换跨 `<span>` 占位符
 - xlsx 文件复制（不移动）到 SN 文件夹，Temp/ 保留原始文件
+- `save_target_attachment()` 修复 `extract-msg` 的 `PR_ATTACH_LONG_FILENAME` 编码问题 — 检测 Latin-1 解码的 mojibake 并还原为 UTF-16LE，正确处理中文附件名；如果编码修复失败（字符超出 Latin-1 范围），则用 extract-msg 读取 .msg 内部正确的 subject 重命名文件
+- `extract_xlsx_filename_from_msg()` 优先读 `msg.htmlBody`（bytes，需 decode）提取 SharePoint URL，fallback 到 `msg.body`（纯文本有 mojibake 风险）

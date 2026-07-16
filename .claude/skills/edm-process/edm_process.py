@@ -111,14 +111,22 @@ def save_target_attachment(att, save_dir):
 
     # extract-msg may decode PR_ATTACH_LONG_FILENAME (UTF-16LE) as Latin-1,
     # producing mojibake for Chinese characters. If the name contains no
-    # CJK but has high-byte Latin chars (U+0080..U+00FF), re-decode the
-    # Latin-1 bytes as UTF-16LE to recover the original filename.
+    # CJK but has non-ASCII characters, try re-decoding the original bytes
+    # as UTF-16LE to recover the correct filename.
     try:
-        # Heuristic: if fn contains Latin-1 high bytes but no CJK, try fix
-        has_high = any('\x80' <= c <= '\xff' for c in fn)
         has_cjk = any('一' <= c <= '鿿' for c in fn)
-        if has_high and not has_cjk:
-            fn = fn.encode('latin-1').decode('utf-16-le', errors='ignore')
+        has_nonascii = any(ord(c) > 127 for c in fn)
+        if has_nonascii and not has_cjk:
+            # Try Latin-1 round-trip (works for U+0080..U+00FF)
+            try:
+                raw = fn.encode("latin-1")
+                fixed = raw.decode("utf-16-le", errors="ignore")
+                if any('一' <= ch <= '鿿' for ch in fixed):
+                    fn = fixed
+            except UnicodeEncodeError:
+                # Characters like œ (U+0153) can't encode as Latin-1.
+                # Fall back: read the correct subject from the .msg file itself.
+                pass
     except (UnicodeEncodeError, UnicodeDecodeError):
         pass
 
@@ -134,6 +142,37 @@ def save_target_attachment(att, save_dir):
 
     sz = os.path.getsize(save_path)
     print(f"[ATTACH] saved: {safe_fn} ({sz / 1024:.1f} KB)")
+
+    # Fix mojibake: use win32com (Outlook) to read correct subject from .msg
+    # extract-msg returns mojibake for nested attachments — Outlook handles UTF-16LE properly
+    try:
+        import pythoncom
+        import win32com.client
+        pythoncom.CoInitialize()
+        outlook = win32com.client.Dispatch("Outlook.Application")
+        namespace = outlook.GetNamespace("MAPI")
+        short_path = _get_short_path(save_path)
+        outlook_msg = namespace.OpenSharedItem(short_path)
+        correct_subject = (outlook_msg.Subject or "")[:100]
+        try:
+            outlook_msg.Close(0)
+        except Exception:
+            pass
+        pythoncom.CoUninitialize()
+        if correct_subject and any('一' <= c <= '鿿' for c in correct_subject):
+            new_name = re.sub(r'[/\\:*?"<>|]', '_', correct_subject)
+            new_name = re.sub(r'\s+', ' ', new_name)
+            new_name = new_name.rstrip('.').strip() or "EDM_template"
+            new_path = os.path.join(save_dir, new_name + ".msg")
+            if os.path.isfile(new_path):
+                new_path = os.path.join(save_dir, f"{new_name}_nested.msg")
+            elif new_path != save_path:
+                os.rename(save_path, new_path)
+                save_path = new_path
+                print(f"[ATTACH] renamed to: {os.path.basename(new_path)}")
+    except Exception as e:
+        print(f"[ATTACH] rename skipped (no Outlook or error): {e}", file=sys.stderr)
+
     return save_path
 
 
@@ -415,16 +454,14 @@ def process_edm():
     os.makedirs(sn_folder, exist_ok=True)
     print(f"[FOLDER] {sn_folder}")
 
-    # Copy .xlsx to SN folder and convert to CSV
-    for xlsx_file in xlsx_files:
-        src = os.path.join(TEMP_DIR, xlsx_file)
-        dst = os.path.join(sn_folder, xlsx_file)
-        shutil.copy2(src, dst)
-        print(f"[COPY] {xlsx_file} -> {sn}/")
-        convert_xlsx_to_csv(dst)
-        generate_formal_test_csv(dst)
+    # --- Clean previous round's output ---
+    for fname in os.listdir(sn_folder):
+        fpath = os.path.join(sn_folder, fname)
+        if os.path.isfile(fpath):
+            os.remove(fpath)
+            print(f"[CLEANUP] removed stale: {fname}")
 
-    # Extract nested EDM template .msg (no-recipients one)
+    # --- Extract nested EDM template .msg ---
     target_idx = find_target_attachment_idx(msg_path)
     attach_path = None
     if target_idx is not None and target_idx < len(msg.attachments):
@@ -435,10 +472,24 @@ def process_edm():
 
     msg.close()
 
-    # Convert nested .msg to HTML via win32com
+    # --- Copy original .msg to SN folder (after msg.close to release file handle) ---
+    msg_dst = os.path.join(sn_folder, msg_file)
+    shutil.copy2(msg_path, msg_dst)
+    print(f"[COPY] {msg_file} -> {sn}/ (original email)")
+
+    # --- Convert nested .msg to HTML via win32com ---
     if attach_path:
         html_path = os.path.join(sn_folder, "EDM_template.html")
         convert_msg_to_html(attach_path, html_path)
+
+    # --- Copy .xlsx to SN folder and convert to CSV ---
+    for xlsx_file in xlsx_files:
+        src = os.path.join(TEMP_DIR, xlsx_file)
+        dst = os.path.join(sn_folder, xlsx_file)
+        shutil.copy2(src, dst)
+        print(f"[COPY] {xlsx_file} -> {sn}/")
+        convert_xlsx_to_csv(dst)
+        generate_formal_test_csv(dst)
 
     print(f"\nDone — SN folder: {sn_folder}")
 
