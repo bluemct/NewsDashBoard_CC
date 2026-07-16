@@ -2019,11 +2019,14 @@ class AgentGUI:
         # Notification toggle (default off)
         self.notify_var = tk.BooleanVar(value=False)
         self.agent.notify_enabled = False
-        tk.Checkbutton(
+        self._notify_cb = tk.Checkbutton(
             btn_frame, text="处理完成邮件通知",
             variable=self.notify_var,
             command=self._on_notify_toggle,
-        ).pack(side="left", padx=(16, 0))
+            highlightthickness=0,
+            bg="#d9d9d9",
+        )
+        self._notify_cb.pack(side="left", padx=(16, 0))
 
         ttk.Button(
             btn_frame, text="测试通知",
