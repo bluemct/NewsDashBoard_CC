@@ -1463,22 +1463,11 @@ class EDMAgent:
 
             logger.info(f"Completed: [{action_result['action']}] {action_result['subject'][:40]}...")
 
-        # Clean up Temp directory
-        self._cleanup_temp()
-
         return results
 
     def _cleanup_temp(self):
-        """Remove files from Temp directory after processing."""
-        if os.path.isdir(TEMP_DIR):
-            for f in os.listdir(TEMP_DIR):
-                fp = os.path.join(TEMP_DIR, f)
-                try:
-                    if os.path.isfile(fp):
-                        os.remove(fp)
-                        logger.debug(f"Cleaned: {f}")
-                except OSError:
-                    pass
+        """No-op: Temp files (.eml/.msg) are kept for debugging."""
+        pass
 
     def _execute_edm_pipeline(self, item_id: str, info: dict, analysis: dict, action_result: dict):
         """Execute EDM Process + Import Test List pipeline.
@@ -1545,10 +1534,22 @@ class EDMAgent:
                 self.gui_log("处理", f"✗ EDM Process 失败 (返回码: {process_result.get('return_code', '?')})")
 
         if process_result["success"]:
-            # Step 5: Import test list
+            # Step 5: Import test list (use SN folder xlsx so skill finds edm_process CSV)
+            sn_folder_val = process_result.get("sn_folder")
+            if sn_folder_val:
+                # Find the xlsx in the SN folder (copied by edm_process)
+                sn_folder_xlsx = None
+                for f in os.listdir(sn_folder_val):
+                    if f.lower().endswith(".xlsx"):
+                        sn_folder_xlsx = os.path.join(sn_folder_val, f)
+                        break
+                xlsx_for_import = sn_folder_xlsx or xlsx_path
+            else:
+                xlsx_for_import = xlsx_path
+
             self.gui_log("导入", "正在导入测试列表到 Unimarketing...")
             sn_val = process_result.get("sn") or sn or ""
-            import_result = self.executor.import_test_list(xlsx_path, sn_val)
+            import_result = self.executor.import_test_list(xlsx_for_import, sn_val)
             action_result["import"] = import_result
             action_result["import_success"] = import_result.get("success", False)
             if import_result.get("success"):
@@ -1616,8 +1617,8 @@ class EDMAgent:
         sender = event.get("from", event.get("sender", ""))
         has_attachments = event.get("has_attachments", False)
 
-        logger.info(f"Processing streaming event: [{subject[:50]}] from {sender}")
-        self.gui_log("监听", f"收到新邮件: {subject[:60]}")
+        logger.info(f"Processing streaming event: [{subject}] from {sender}")
+        self.gui_log("监听", f"收到新邮件: {subject}")
 
         # Skip if already processed
         if self.tracker.is_seen(item_id):
@@ -1626,8 +1627,8 @@ class EDMAgent:
 
         # Quick skip: no attachments
         if not has_attachments:
-            logger.info(f"SKIP (no attachments): [{subject[:50]}]")
-            self.gui_log("过滤", f"✗ 无附件，跳过: {subject[:60]}")
+            logger.info(f"SKIP (no attachments): [{subject}]")
+            self.gui_log("过滤", f"✗ 无附件，跳过: {subject}")
             self.tracker.mark_seen(item_id, {"action": "filtered", "success": True})
             return
 
@@ -1636,12 +1637,12 @@ class EDMAgent:
         # Quick filter check (sender + subject — no body yet)
         if not self.filter_engine.matches(sender, subject):
             logger.info(f"Filter SKIP: [{subject}] from {sender}")
-            self.gui_log("过滤", f"✗ 规则不匹配: {subject[:60]} (发件人: {sender})")
+            self.gui_log("过滤", f"✗ 规则不匹配: {subject} (发件人: {sender})")
             self.tracker.mark_seen(item_id, {"action": "filtered", "success": True})
             self._processing.discard(item_id)
             return
 
-        self.gui_log("过滤", f"✓ 规则匹配，进入分析 → {subject[:50]}")
+        self.gui_log("过滤", f"✓ 规则匹配，进入分析 → {subject}")
         logger.info(f"Processing: [{subject}] from {sender}")
 
         # Step 1: Fetch email body for analysis
@@ -1652,7 +1653,7 @@ class EDMAgent:
         # Re-check filter with body text included
         if not self.filter_engine.matches(sender, subject, body_text):
             logger.info(f"Filter SKIP (body check): [{subject}] from {sender}")
-            self.gui_log("过滤", f"✗ 正文过滤不通过: {subject[:60]}")
+            self.gui_log("过滤", f"✗ 正文过滤不通过: {subject}")
             self.tracker.mark_seen(item_id, {"action": "filtered", "success": True})
             self._processing.discard(item_id)
             return
@@ -1700,7 +1701,7 @@ class EDMAgent:
         save_result(action_result)
         self._history.append(action_result)
 
-        self.gui_log("完成", f"处理完成 [{action_result['action']}]: {subject[:60]}")
+        self.gui_log("完成", f"处理完成 [{action_result['action']}]: {subject}")
         logger.info(f"Completed: [{action_result['action']}] {action_result['subject'][:40]}...")
 
         # Notify GUI
@@ -1823,7 +1824,7 @@ class AgentGUI:
         if len(body_preview.strip()) > 1500:
             preview_text += "\n...（已截断）"
 
-        self._log(f"等待确认: [{subject}]")
+        self._gui_log("确认", f"等待确认: [{subject}]")
         self._update_status("等待确认...", "黄色")
 
         # Build custom dialog
@@ -1963,10 +1964,10 @@ class AgentGUI:
         self.root.wait_window(win)
 
         if result[0]:
-            self._log(f"用户确认: [{subject}]")
+            self._gui_log("确认", f"用户确认: [{subject}]")
             self._update_status("处理中...", "蓝色")
         else:
-            self._log(f"用户跳过: [{subject}]")
+            self._gui_log("确认", f"用户跳过: [{subject}]")
             self._update_status("监听中", "绿色")
 
         self.agent.set_confirmation(bool(result[0]))
@@ -2015,20 +2016,16 @@ class AgentGUI:
         )
         self.stop_btn.pack(side="left", padx=(0, 8))
 
-        # Poll interval (fallback only)
-        ttk.Label(btn_frame, text="Interval (s):").pack(side="left", padx=(20, 4))
-        self.interval_var = tk.StringVar(value=str(POLL_INTERVAL))
-        interval_entry = ttk.Entry(btn_frame, textvariable=self.interval_var, width=6)
-        interval_entry.pack(side="left", padx=(0, 16))
-        interval_entry.config(state="disabled")
-
-        # Notification toggle
-        self.notify_var = tk.BooleanVar(value=self.agent.notify_enabled)
-        ttk.Checkbutton(
-            btn_frame, text="处理完成邮件通知",
-            variable=self.notify_var,
-            command=self._on_notify_toggle,
-        ).pack(side="left", padx=(16, 0))
+        # Notification toggle (default off)
+        self.notify_var = tk.BooleanVar(value=False)
+        self.agent.notify_enabled = False
+        self._notify_text = tk.StringVar(value="  处理完成邮件通知")
+        self._notify_label = ttk.Label(
+            btn_frame, textvariable=self._notify_text,
+            font=("Microsoft YaHei UI", 9), cursor="hand2",
+        )
+        self._notify_label.pack(side="left", padx=(16, 0))
+        self._notify_label.bind("<Button-1>", lambda e: self._on_notify_toggle())
 
         ttk.Button(
             btn_frame, text="测试通知",
@@ -2054,7 +2051,7 @@ class AgentGUI:
         self.history_tree.heading("Status", text="Status")
 
         self.history_tree.column("Time", width=150)
-        self.history_tree.column("Subject", width=300)
+        self.history_tree.column("Subject", width=420)
         self.history_tree.column("Sender", width=180)
         self.history_tree.column("SN", width=80)
         self.history_tree.column("Action", width=120)
@@ -2092,7 +2089,25 @@ class AgentGUI:
         self.log_text.tag_configure("step_import", foreground="#f59e0b", font=("Consolas", 9, "bold"))
         self.log_text.tag_configure("step_notify", foreground="#6366f1", font=("Consolas", 9, "bold"))
         self.log_text.tag_configure("step_complete", foreground="#22c55e", font=("Consolas", 9, "bold"))
+        self.log_text.tag_configure("step_system", foreground="#9ca3af", font=("Consolas", 9, "bold"))
         self.log_text.tag_configure("step_tag_msg", foreground="#d4d4d4", font=("Consolas", 9))
+        # Non-bold variants for message body (same color)
+        self.log_text.tag_configure("msg_listen", foreground="#3b82f6", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_filter", foreground="#eab308", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_fetch", foreground="#a855f7", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_analyze", foreground="#06b6d4", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_confirm", foreground="#f97316", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_save", foreground="#ec4899", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_discover", foreground="#84cc16", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_process", foreground="#22c55e", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_import", foreground="#f59e0b", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_notify", foreground="#6366f1", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_complete", foreground="#22c55e", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_system",  foreground="#9ca3af", font=("Consolas", 9))
+        self.log_text.tag_configure("msg_tag_msg", foreground="#d4d4d4", font=("Consolas", 9))
+        self.log_text.tag_configure("log_success", foreground="#22c55e", font=("Consolas", 9))
+        self.log_text.tag_configure("log_error",   foreground="#ef4444", font=("Consolas", 9))
+        self.log_text.tag_configure("log_warning", foreground="#eab308", font=("Consolas", 9))
 
         # Wire up the GUI log callback
         self.agent._gui_log_callback = self._gui_log
@@ -2206,6 +2221,7 @@ class AgentGUI:
             "导入": "step_import",
             "通知": "step_notify",
             "完成": "step_complete",
+            "系统": "step_system",
         }
         tag_name = STEP_TAG_MAP.get(step, "step_tag_msg")
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -2214,21 +2230,37 @@ class AgentGUI:
         self.root.after(0, self._gui_log_append, line, tag_name)
 
     def _gui_log_append(self, line: str, tag_name: str):
-        """Thread-safe append to log Text widget."""
+        """Thread-safe append to log Text widget with full-line coloring.
+
+        Uses insert(index, text, *tags) to avoid +Nc offset calculations.
+        Rules:
+          - Lines with ✓ → entire line green (success)
+          - Lines with ✗ → entire line red  (error)
+          - Otherwise → timestamp default, step label bold colored, message normal colored
+        """
         self.log_text.config(state="normal")
-        before = self.log_text.index("end")
-        self.log_text.insert("end", line)
-        # Color the [Step] portion using +Nc offset from insert point
-        step_start = line.find("[", 13)  # skip timestamp
-        if step_start >= 0:
-            step_end = line.find("]", step_start)
-            if step_end > step_start:
-                tag_start = f"{before}+{step_start}c"
-                tag_end = f"{before}+{step_end + 1}c"
-                try:
-                    self.log_text.tag_add(tag_name, tag_start, tag_end)
-                except tk.TclError:
-                    pass
+
+        has_success = "✓" in line
+        has_error = "✗" in line
+
+        if has_success:
+            self.log_text.insert("end", line, "log_success")
+        elif has_error:
+            self.log_text.insert("end", line, "log_error")
+        else:
+            step_start = line.find("[", 11)
+            if step_start >= 0:
+                step_end = line.find("]", step_start)
+                if step_end > step_start:
+                    self.log_text.insert("end", line[:step_start])
+                    self.log_text.insert("end", line[step_start:step_end + 1], tag_name)
+                    msg_tag = tag_name.replace("step_", "msg_", 1)
+                    self.log_text.insert("end", line[step_end + 1:], msg_tag)
+                else:
+                    self.log_text.insert("end", line)
+            else:
+                self.log_text.insert("end", line)
+
         self.log_text.see("end")
         self.log_text.config(state="disabled")
 
@@ -2241,11 +2273,10 @@ class AgentGUI:
         self.start_btn.config(state="disabled")
         self.stop_btn.config(state="normal")
         self._update_status("Running", "绿色")
-        self._log("Agent started, listening to EDM folder...")
+        self._gui_log("系统", "Agent started, listening to EDM folder...")
 
-        interval = int(self.interval_var.get() or POLL_INTERVAL)
         thread = threading.Thread(
-            target=self.agent.run_loop, args=(interval,), daemon=True
+            target=self.agent.run_loop, daemon=True
         )
         thread.start()
 
@@ -2254,15 +2285,18 @@ class AgentGUI:
         self.start_btn.config(state="normal")
         self.stop_btn.config(state="disabled")
         self._update_status("Stopped", "灰色")
-        self._log("Agent stopped")
+        self._gui_log("系统", "Agent stopped")
 
     def _on_notify_toggle(self):
-        self.agent.notify_enabled = self.notify_var.get()
-        self._log(f"邮件通知 {'已开启' if self.agent.notify_enabled else '已关闭'}")
+        self.agent.notify_enabled = not self.agent.notify_enabled
+        self.notify_var.set(self.agent.notify_enabled)
+        icon = "✓" if self.agent.notify_enabled else " "
+        self._notify_text.set(f"{icon} 处理完成邮件通知")
+        self._gui_log("通知", f"邮件通知 {'已开启 ✓' if self.agent.notify_enabled else '已关闭'}")
 
     def _test_notification(self):
         """Send a test notification email."""
-        self._log("发送测试通知...")
+        self._gui_log("通知", "发送测试通知...")
         test_subject = "[EDM Agent] 测试通知"
         test_body = "<html><body style='font-family:Microsoft YaHei UI, monospace; padding:20px;'>"
         test_body += "<h2 style='color:#22c55e;'>测试通知 — EDM Agent 邮件发送正常</h2>"
@@ -2272,8 +2306,8 @@ class AgentGUI:
 
         def _do():
             ok = self.agent.notifier.send(test_subject, test_body)
-            self.root.after(0, lambda: self._log(
-                "测试通知发送成功 ✓" if ok else "测试通知发送失败 ✗"
+            self.root.after(0, lambda: self._gui_log("通知",
+                "✓ 测试通知发送成功" if ok else "✗ 测试通知发送失败"
             ))
 
         thread = threading.Thread(target=_do, daemon=True)
@@ -2333,8 +2367,8 @@ class AgentGUI:
         self.agent.filter_engine = FilterEngine(cfg["filter_rules"])
         self.filter_desc_var.set(f"当前规则: {self.agent.filter_engine.describe()}")
 
-        self._log(f"设置已保存: EDM输出={edm_dir}, Temp={temp_dir}")
-        self._log(f"过滤规则: {self.agent.filter_engine.describe()}")
+        self._gui_log("系统", f"设置已保存: EDM输出={edm_dir}, Temp={temp_dir}")
+        self._gui_log("系统", f"过滤规则: {self.agent.filter_engine.describe()}")
         messagebox.showinfo("成功",
             f"设置已保存\n\n"
             f"EDM 输出目录: {edm_dir}\n"
@@ -2358,7 +2392,7 @@ class AgentGUI:
                     except (ValueError, TypeError):
                         pass
 
-                subject = (r.get("subject", "") or "")[:50]
+                subject = r.get("subject", "") or ""
                 sender = (r.get("sender", "") or "")[:30]
                 sn = r.get("sn", "") or ""
                 action = r.get("action", "")

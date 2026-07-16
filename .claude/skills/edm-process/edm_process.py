@@ -109,6 +109,19 @@ def save_target_attachment(att, save_dir):
     if not fn:
         fn = "attached.msg"
 
+    # extract-msg may decode PR_ATTACH_LONG_FILENAME (UTF-16LE) as Latin-1,
+    # producing mojibake for Chinese characters. If the name contains no
+    # CJK but has high-byte Latin chars (U+0080..U+00FF), re-decode the
+    # Latin-1 bytes as UTF-16LE to recover the original filename.
+    try:
+        # Heuristic: if fn contains Latin-1 high bytes but no CJK, try fix
+        has_high = any('\x80' <= c <= '\xff' for c in fn)
+        has_cjk = any('一' <= c <= '鿿' for c in fn)
+        if has_high and not has_cjk:
+            fn = fn.encode('latin-1').decode('utf-16-le', errors='ignore')
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        pass
+
     safe_fn = re.sub(r'[/\\:*?"<>|]', '_', fn)
     safe_fn = re.sub(r'\s+', ' ', safe_fn)
 
