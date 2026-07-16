@@ -2019,13 +2019,11 @@ class AgentGUI:
         # Notification toggle (default off)
         self.notify_var = tk.BooleanVar(value=False)
         self.agent.notify_enabled = False
-        self._notify_text = tk.StringVar(value="  处理完成邮件通知")
-        self._notify_label = ttk.Label(
-            btn_frame, textvariable=self._notify_text,
-            font=("Microsoft YaHei UI", 9), cursor="hand2",
-        )
-        self._notify_label.pack(side="left", padx=(16, 0))
-        self._notify_label.bind("<Button-1>", lambda e: self._on_notify_toggle())
+        tk.Checkbutton(
+            btn_frame, text="处理完成邮件通知",
+            variable=self.notify_var,
+            command=self._on_notify_toggle,
+        ).pack(side="left", padx=(16, 0))
 
         ttk.Button(
             btn_frame, text="测试通知",
@@ -2288,10 +2286,7 @@ class AgentGUI:
         self._gui_log("系统", "Agent stopped")
 
     def _on_notify_toggle(self):
-        self.agent.notify_enabled = not self.agent.notify_enabled
-        self.notify_var.set(self.agent.notify_enabled)
-        icon = "✓" if self.agent.notify_enabled else " "
-        self._notify_text.set(f"{icon} 处理完成邮件通知")
+        self.agent.notify_enabled = self.notify_var.get()
         self._gui_log("通知", f"邮件通知 {'已开启 ✓' if self.agent.notify_enabled else '已关闭'}")
 
     def _test_notification(self):
