@@ -59,6 +59,50 @@ def find_current_session_id():
     return None
 
 
+def get_session_name(session_id):
+    """Read first user message from jsonl and return a short readable name."""
+    if not session_id:
+        return None
+    project_dir = Path.home() / ".claude" / "projects"
+    for pattern in ["C--Users-SI-Agent-AgentProject", "c--Users-SI-Agent-AgentProject"]:
+        d = project_dir / pattern
+        if not d.exists():
+            continue
+        jsonl = d / f"{session_id}.jsonl"
+        if not jsonl.exists():
+            continue
+        import json, re
+        try:
+            with open(jsonl, encoding="utf-8-sig", errors="replace") as fh:
+                for line in fh:
+                    obj = json.loads(line)
+                    if obj.get("type") != "user":
+                        continue
+                    content = obj.get("message", {}).get("content", [])
+                    for item in content:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            text = item["text"]
+                            # Strip IDE tags and system noise
+                            text = re.sub(r"<[^>]+>", " ", text)
+                            text = text.strip()
+                            if text and not text.startswith("continuing") and len(text) > 2:
+                                return text[:30]
+                    # fallback: use whatever text we found
+                    if content:
+                        parts = []
+                        for item in content:
+                            if isinstance(item, dict):
+                                t = item.get("text", "")
+                                if t:
+                                    parts.append(t)
+                        text = " ".join(parts)[:30]
+                        if text:
+                            return text
+        except Exception:
+            pass
+    return session_id[:8]
+
+
 def query_latest(session_id=None):
     if not DB_PATH.exists():
         return []
@@ -109,7 +153,7 @@ class UsageMonitor:
     def __init__(self, interval=5, limit=262144):
         self.interval = interval
         self.limit = limit
-        self.session_id = find_current_session_id()
+        self.session_id = None  # lazy-refresh each poll
         self._last_size = (0, 0)
 
         self.root = tk.Tk()
@@ -168,6 +212,9 @@ class UsageMonitor:
             time.sleep(self.interval)
 
     def _update(self):
+        # Refresh session_id on every poll so a new session is picked up
+        self.session_id = find_current_session_id()
+
         for lbl in self._labels:
             lbl.destroy()
         self._labels = []
@@ -227,7 +274,8 @@ class UsageMonitor:
             y_pos += 40
 
         total_width = padding + 64 + bar_width + 56
-        total_height = y_pos + 18
+        session_height = 24 if self.session_id else 0
+        total_height = y_pos + 18 + session_height
 
         # Set window geometry so it matches content
         self.root.geometry(f"{total_width}x{total_height}")
@@ -239,6 +287,14 @@ class UsageMonitor:
         self._labels.append(title)
 
         self._close_btn.place(x=total_width - 22, y=4)
+
+        # Session name at the bottom (readable, from first user message)
+        if self.session_id:
+            session_name = get_session_name(self.session_id) or self.session_id[:8]
+            session_lbl = tk.Label(self.root, text=f"📌 {session_name}",
+                                   font=("Microsoft YaHei UI", 7), bg=BG, fg="#6c7086")
+            session_lbl.place(x=padding, y=y_pos + 10)
+            self._labels.append(session_lbl)
 
         # Re-apply corners after geometry change
         self.root.after(50, self._apply_rounded_corners)
