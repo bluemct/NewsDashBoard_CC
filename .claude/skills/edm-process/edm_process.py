@@ -17,7 +17,7 @@ import shutil
 import sys
 
 # Force UTF-8 stdout so filenames with special characters (œ, etc.) don't crash print()
-if sys.stdout.encoding and sys.stdout.encoding.upper() != "UTF-8":
+if sys.stdout is not None and sys.stdout.encoding and sys.stdout.encoding.upper() != "UTF-8":
     try:
         sys.stdout.reconfigure(encoding="utf-8")
     except AttributeError:
