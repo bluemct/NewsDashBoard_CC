@@ -1,0 +1,174 @@
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-284941548
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=302257249
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1207688477
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-2130436634
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=772020985
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1560014968
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1040458371
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1291574564
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-805035272
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-201060837
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=2130977505
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-737926485
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1979440456
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1845764895
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1207688411
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-905698826
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1761340083
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=923018021
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1526455644
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1157357043
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1644438364
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-368830692
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1023143812
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1006904128
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1593564340
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1459888955
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-956030116
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1123806271
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1090248183
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1828445524
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=671356588
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1325131015
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-805040014
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1090789685
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1274797484
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=369369643
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-788263400
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1358684379
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-352050892
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1174133911
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=738466160
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1459346608
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-788257979
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-503049227
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1006901020
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1443111625
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=2030309145
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1845764948
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=419695977
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1208230470
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-888921634
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1358683492
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-620485757
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1157898899
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=1610883875
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=872686477
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-1677450453
+[Corners] SetWindowRgn result=1
+[Corners] hwnd=4398720 w=200 h=200 radius=12
+[Corners] hrgn=-2012997901
+[Corners] SetWindowRgn result=1
