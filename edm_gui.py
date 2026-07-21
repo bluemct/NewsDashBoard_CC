@@ -206,7 +206,7 @@ def _save_xlsx_search_dir(path: str) -> None:
 
 
 def extract_xlsx_filename_from_msg(msg_path: str) -> str | None:
-    """Read .msg body text, extract SharePoint URL, and return the xlsx filename.
+    """Read .msg body/HTML, extract SharePoint URL, and return the xlsx filename.
 
     Example URL:
         https://microsoftapc.sharepoint.com/.../Token%201-13%20SN-56699.xlsx?d=...
@@ -216,12 +216,28 @@ def extract_xlsx_filename_from_msg(msg_path: str) -> str | None:
     try:
         from extract_msg import Message as MsgParser
         msg = MsgParser(msg_path)
-        body = msg.body or ""
-        msg.close()
     except Exception:
         return None
 
-    # Find SharePoint-like URLs containing .xlsx
+    # Priority 1: htmlBody (bytes, needs decode) — more reliable
+    html = msg.htmlBody or b""
+    if isinstance(html, bytes):
+        html_str = html.decode("utf-8", errors="replace")
+    else:
+        html_str = html
+    urls = re.findall(r'https?://[^\s<>"\']+\.xlsx[^\s<>"\']*', html_str)
+    if urls:
+        msg.close()
+        url = urls[0]
+        after_last_slash = url.rsplit("/", 1)[-1]
+        filename = after_last_slash.split("?")[0]
+        from urllib import parse as urllib_parse
+        filename = urllib_parse.unquote(filename)
+        return filename if filename else None
+
+    # Fallback: plain body text
+    body = msg.body or ""
+    msg.close()
     urls = re.findall(r'https?://[^\s<>"\']+\.xlsx[^\s<>"\']*', body)
     if not urls:
         return None
@@ -230,11 +246,9 @@ def extract_xlsx_filename_from_msg(msg_path: str) -> str | None:
     # Get the path portion: take text between last / and first ?
     after_last_slash = url.rsplit("/", 1)[-1]
     filename = after_last_slash.split("?")[0]
-    # URL-decode the filename
+    from urllib import parse as urllib_parse
     filename = urllib_parse.unquote(filename)
-    if not filename:
-        return None
-    return filename
+    return filename if filename else None
 
 
 def discover_xlsx(sn: str, search_dir: str, filename_hint: str | None = None) -> str | None:
@@ -343,7 +357,10 @@ class ProcessLogger:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         line = f"[{timestamp}] {message}"
         self.lines.append(line)
-        self.root.after(0, self._append_gui, line)
+        try:
+            self.root.after(0, self._append_gui, line)
+        except (tk.TclError, RuntimeError):
+            pass  # GUI shutting down or not ready
         # Also write to log file immediately
         if self.log_file:
             try:
@@ -488,7 +505,10 @@ def _convert_msg_to_html(
     token_mapping: dict | None,
     logger: ProcessLogger,
 ) -> bool:
-    """Convert .msg to HTML via win32com, with token replacement."""
+    """Convert .msg to HTML via win32com, with token replacement.
+
+    All win32com calls are wrapped in try/except with detailed logging.
+    """
     import pythoncom
     import win32com.client
 
@@ -505,12 +525,25 @@ def _convert_msg_to_html(
     try:
         msg = namespace.OpenSharedItem(short_path)
     except Exception as e:
+        import traceback
         logger.log(f"[HTML] could not open .msg: {e}")
+        logger.log(traceback.format_exc())
         pythoncom.CoUninitialize()
         return False
 
-    html_body = msg.HTMLBody or ""
-    subject = msg.Subject or ""
+    try:
+        html_body = msg.HTMLBody or ""
+        subject = msg.Subject or ""
+    except Exception as e:
+        import traceback
+        logger.log(f"[HTML] failed to read HTMLBody/Subject: {e}")
+        logger.log(traceback.format_exc())
+        try:
+            msg.Close(0)
+        except Exception:
+            pass
+        pythoncom.CoUninitialize()
+        return False
 
     try:
         msg.Close(0)
@@ -557,12 +590,18 @@ def _convert_msg_to_html(
         'meta http-equiv=Content-Type content="text/html; charset=utf-8"',
     )
 
-    with open(output_html, "wb") as f:
-        f.write(html_body.encode("utf-8"))
+    try:
+        with open(output_html, "wb") as f:
+            f.write(html_body.encode("utf-8"))
 
-    size_kb = os.path.getsize(output_html) / 1024
-    logger.log(f"[HTML] saved: {os.path.basename(output_html)} ({size_kb:.1f} KB)")
-    return True
+        size_kb = os.path.getsize(output_html) / 1024
+        logger.log(f"[HTML] saved: {os.path.basename(output_html)} ({size_kb:.1f} KB)")
+        return True
+    except Exception as e:
+        import traceback
+        logger.log(f"[HTML] failed to write HTML file: {e}")
+        logger.log(traceback.format_exc())
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -571,6 +610,25 @@ def _convert_msg_to_html(
 
 
 def _process(
+    logger: ProcessLogger,
+    msg_path: str,
+    xlsx_path: str,
+    output_base: str,
+    config: dict,
+    on_done: callable,
+    on_error: callable,
+):
+    try:
+        _process_inner(logger, msg_path, xlsx_path, output_base, config, on_done, on_error)
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        logger.log(f"[FATAL ERROR] Processing failed: {e}")
+        logger.log(f"[FATAL ERROR] {tb}")
+        on_error(f"{e}\n\n{tb}")
+
+
+def _process_inner(
     logger: ProcessLogger,
     msg_path: str,
     xlsx_path: str,
@@ -590,8 +648,12 @@ def _process(
     logger.log(f"XLSX file: {xlsx_path}")
 
     # Step 1: Extract SN
-    msg = MsgParser(msg_path)
-    subject = msg.subject or ""
+    try:
+        msg = MsgParser(msg_path)
+        subject = msg.subject or ""
+    except Exception as e:
+        on_error(f"Failed to open .msg file: {e}")
+        return
     logger.log(f"Subject: {subject}")
 
     sn = extract_sn(subject)
@@ -619,15 +681,24 @@ def _process(
     _generate_formal_test_csv(xlsx_dst, config, logger)
 
     # Step 5: Extract nested .msg
-    target_idx = find_target_attachment_idx(msg_path)
-    attach_path = None
-    if target_idx is not None and target_idx < len(msg.attachments):
-        matched_att = msg.attachments[target_idx]
-        attach_path = save_target_attachment(matched_att, sn_folder)
-        logger.log(f"[ATTACH] saved nested .msg")
-    else:
-        logger.log("[ATTACH] no nested .msg found, skipping HTML conversion")
-    msg.close()
+    try:
+        target_idx = find_target_attachment_idx(msg_path)
+        attach_path = None
+        if target_idx is not None and target_idx < len(msg.attachments):
+            matched_att = msg.attachments[target_idx]
+            attach_path = save_target_attachment(matched_att, sn_folder)
+            logger.log(f"[ATTACH] saved nested .msg")
+        else:
+            logger.log("[ATTACH] no nested .msg found, skipping HTML conversion")
+    except Exception as e:
+        import traceback
+        logger.log(f"[ATTACH] ERROR: {e}")
+        logger.log(traceback.format_exc())
+    finally:
+        try:
+            msg.close()
+        except Exception:
+            pass
 
     # Step 6: Convert to HTML
     if attach_path:
@@ -1121,15 +1192,24 @@ class EDMGUI:
         config = _load_config()
 
         def on_done(sn_folder):
-            self.last_sn_folder = sn_folder
-            self.root.after(0, lambda: self.process_btn.config(state="normal"))
-            self.root.after(0, self._enable_menu_open_folder)
-            self.root.after(0, lambda: self._show_done_dialog(sn_folder))
+            try:
+                self.last_sn_folder = sn_folder
+                self.root.after(0, lambda: self.process_btn.config(state="normal"))
+                self.root.after(0, self._enable_menu_open_folder)
+                self.root.after(0, lambda: self._show_done_dialog(sn_folder))
+            except Exception as e:
+                logger.log(f"[GUI ERROR] on_done callback failed: {e}")
 
         def on_error(msg):
-            logger.log(f"ERROR: {msg}")
-            self.root.after(0, lambda: self.process_btn.config(state="normal"))
-            self.root.after(0, lambda: messagebox.showerror("Error", msg))
+            try:
+                logger.log(f"[ERROR] {msg}")
+                self.root.after(0, lambda: self.process_btn.config(state="normal"))
+                try:
+                    self.root.after(0, lambda: messagebox.showerror("Error", str(msg)))
+                except (tk.TclError, RuntimeError) as e2:
+                    logger.log(f"[GUI ERROR] Could not show messagebox: {e2}")
+            except Exception as e:
+                logger.log(f"[GUI ERROR] on_error callback failed: {e}")
 
         thread = threading.Thread(
             target=_process,
@@ -1228,6 +1308,15 @@ class EDMGUI:
         self._last_import_result = None
 
         def _do_import():
+            try:
+                self._import_worker(import_fn, is_formal, xlsx_path, logger)
+            except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                logger.log(f"[FATAL ERROR] Import failed: {e}")
+                logger.log(f"[FATAL ERROR] {tb}")
+
+        def _import_worker(import_fn, is_formal, xlsx_path, logger):
             logger.log("=== Import Started ===")
             try:
                 import_result = import_fn(xlsx_path, logger)
@@ -1241,10 +1330,15 @@ class EDMGUI:
             except SystemExit as e:
                 logger.log(f"ERROR: Import exited with code {e.code}")
             except Exception as e:
+                import traceback
                 logger.log(f"ERROR: {e}")
+                logger.log(traceback.format_exc())
             logger.log("")
             logger.log("=== Import Done ===")
-            self.root.after(0, self._enable_import_buttons)
+            try:
+                self.root.after(0, self._enable_import_buttons)
+            except (tk.TclError, RuntimeError):
+                pass
 
         thread = threading.Thread(target=_do_import, daemon=True)
         thread.start()

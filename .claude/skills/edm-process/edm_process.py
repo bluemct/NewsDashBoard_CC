@@ -136,7 +136,11 @@ def save_target_attachment(att, save_dir):
     save_path = os.path.join(save_dir, safe_fn)
 
     nested = att.data
-    raw = nested.exportBytes()
+    # extract-msg may return raw bytes (direct blob) or a Message object
+    if isinstance(nested, bytes):
+        raw = nested
+    else:
+        raw = nested.exportBytes()
     with open(save_path, "wb") as f:
         f.write(raw)
 
