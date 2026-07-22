@@ -66,12 +66,8 @@ def find_current_session_id():
 
 
 def get_session_name(session_id):
-    """Get session display name.
-
-    Priority:
-    1. /rename command in jsonl (extracted from <command-args>)
-    2. First user message text (first 30 chars)
-    3. Short session ID
+    """Get session display name from /rename command in jsonl.
+    Returns None if no rename found (caller falls back to session_id).
     """
     if not session_id:
         return None
@@ -90,32 +86,13 @@ def get_session_name(session_id):
                     if obj.get("type") != "user":
                         continue
                     content = obj.get("message", {}).get("content", "")
-                    # /rename command stores content as a string (not a list)
-                    # containing: <command-args>name</command-args>
                     if isinstance(content, str) and "/rename" in content:
                         m = re.search(r"<command-args>(.+?)</command-args>", content)
                         if m:
                             return m.group(1).strip()
-                    # Fallback: first meaningful text from user message
-                    if isinstance(content, list):
-                        for item in content:
-                            if isinstance(item, dict) and item.get("type") == "text":
-                                text = re.sub(r"<[^>]+>", " ", item["text"]).strip()
-                                if text and not text.startswith("continuing") and len(text) > 2:
-                                    return text[:30]
-                        if content:
-                            parts = []
-                            for item in content:
-                                if isinstance(item, dict):
-                                    t = item.get("text", "")
-                                    if t:
-                                        parts.append(t)
-                            text = " ".join(parts)[:30]
-                            if text:
-                                return text
         except Exception:
             pass
-    return session_id[:8]
+    return None
 
 
 def query_latest(session_id=None):
