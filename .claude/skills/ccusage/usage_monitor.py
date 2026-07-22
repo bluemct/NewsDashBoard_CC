@@ -198,7 +198,7 @@ class ModelBar:
 
 
 class UsageMonitor:
-    CORNER_RADIUS = 12
+    CORNER_RADIUS = 20
 
     def __init__(self, interval=5, limit=262144):
         self.interval = interval
