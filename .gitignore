@@ -22,3 +22,6 @@ SN-*/
 # Temp files
 *.msg
 *.checksum
+
+# ICM credentials (contains token and cookie)
+icm_config.json
