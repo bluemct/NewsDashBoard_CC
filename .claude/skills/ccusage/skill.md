@@ -75,3 +75,16 @@ python .claude/skills/ccusage/usage_monitor.py --limit 1000000  # 1M context (Op
 - 窗口置顶，支持拖拽移动（`winfo_pointerx/y` + `_dragging` 锁防止拖拽期间位置重置）
 - 模型数据按名称匹配（Opus/Sonnet/Haiku），不再依赖数据库返回顺序
 - 进度条颜色：`<60%` 绿色 → `60-80%` 黄色 → `≥80%` 红色
+
+### 自动启动
+
+通过 `SessionStart` hook 配置，每次打开 VSCode 加载 Claude Code session 时自动弹出悬浮窗。
+
+**实现原理：**
+- `settings.json` 配置 `SessionStart` hook 调用 `usage_monitor_start.py`
+- `usage_monitor_start.py` 用 `pythonw` 后台启动悬浮窗（无控制台窗口）
+- `usage_monitor.py` 用 **Windows 命名互斥量（Named Mutex）** 做单实例检测：
+  - 第一个实例持有 Mutex → 正常启动
+  - 第二个实例检测到 Mutex 已存在 → 直接退出
+  - 进程退出时 Windows 自动释放 Mutex，无需 PID 文件或锁文件
+- 无论多少个 session 同时启动，只有一个悬浮窗运行

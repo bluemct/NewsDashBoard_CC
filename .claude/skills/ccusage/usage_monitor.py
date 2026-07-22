@@ -327,6 +327,12 @@ class UsageMonitor:
 
 def main():
     import argparse
+
+    # Single-instance via Windows named mutex
+    _mutex = ctypes.windll.kernel32.CreateMutexW(None, True, "Local\\CCUsageMonitor_4a8f2c1d")
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        return
+
     parser = argparse.ArgumentParser(description="CC Usage floating monitor")
     parser.add_argument("--interval", type=int, default=5, help="Poll interval in seconds")
     parser.add_argument("--limit", type=int, default=198000, help="Context limit in tokens (default 198K = 262K - 64K max_tokens)")

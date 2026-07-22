@@ -567,7 +567,63 @@
       "Bash(findstr /i \"56619\")",
       "Bash(findstr /i \"SN-56619\")",
       "Bash(python -m py_compile c:/Users/SI-Agent/AgentProject/edm_agent.py)",
-      "Bash(python -m py_compile c:/Users/SI-Agent/AgentProject/.claude/skills/edm-process/edm_process.py)"
+      "Bash(python -m py_compile c:/Users/SI-Agent/AgentProject/.claude/skills/edm-process/edm_process.py)",
+      "Bash(git commit -m 'feat: add EDM Auto Agent — EWS streaming/polling + LLM analysis + human confirm + Skill chain *)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('edm_agent.py', doraise=True\\)\")",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(git commit -m 'fix\\(edm-agent\\): notification toggle, log colors, temp retention, filename encoding, import xlsx path *)",
+      "Read(//c/Users/SI-Agent/.claude/skills/eml-to-msg/**)",
+      "Read(//c/Users/SI-Agent/.claude/skills/unimarketing-contactimport2list/**)",
+      "Read(//c/Users/SI-Agent/.claude/skills/edm-process/**)",
+      "Bash(python -m py_compile edm_gui.py)",
+      "Bash(ls -la \"C:/Users/SI-Agent/Desktop/EDM/SN-56619/\" 2>/dev/null)",
+      "Read(//c/Users/SI-Agent/Desktop/EDM/SN-56619/**)",
+      "Bash(find \"C:/Users/SI-Agent/Desktop/EDM/SN-56619\" -name \"*.msg\" 2>/dev/null)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl -s \"http://localhost:8080/?range=today&models=Qwen3.5-27B\")",
+      "Bash(curl -s \"http://localhost:8080/api/usage?range=today&models=Qwen3.5-27B\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(tasklist.exe)",
+      "Bash(findstr \"3412\")",
+      "Bash(findstr \"python\")",
+      "Bash(nohup python cli.py dashboard)",
+      "Bash(find /c/Users -maxdepth 5 -name \"cli.py\" 2>/dev/null | grep -i -E \"usage|token|dashboard|claude\" | head -10)",
+      "Bash(ls \"c:/claude-usage/claude-usage/\")",
+      "Read(//c/claude-usage/claude-usage/**)",
+      "Bash(python cli.py dashboard --help)",
+      "Bash(echo 'Set WshShell = CreateObject\\(\"WScript.Shell\"\\) *)",
+      "Bash(copy /tmp/dashboard-start.vbs \"C:/Users/SI-Agent/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/dashboard-start.vbs\")",
+      "Bash(cp \"/tmp/dashboard-start.vbs\" \"C:/Users/SI-Agent/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/dashboard-start.vbs\")",
+      "Bash(nohup python /c/claude-usage/claude-usage/cli.py dashboard)",
+      "Bash(taskkill //PID 3412 //F)",
+      "Bash(taskkill //PID 26096 //F)",
+      "Bash(taskkill //PID 8072 //F)",
+      "Bash(taskkill //PID 6412 //F)",
+      "Bash(mkdir -p \"/c/Users/SI-Agent/AgentProject/.claude/skills/usage\")",
+      "Edit(/.claude/skills/usage/**)",
+      "Bash(ls -la ~/.claude/usage.db 2>&1)",
+      "Read(//c/Users/SI-Agent/.claude/**)",
+      "Bash(python .claude/skills/usage/usage.py --n 5)",
+      "Bash(python .claude/skills/usage/usage.py)",
+      "Bash(python .claude/skills/usage/usage.py --n 1)",
+      "Bash(curl -s \"http://localhost:8080/api/rescan\")",
+      "Bash(python /c/claude-usage/claude-usage/scanner.py)",
+      "Bash(sqlite3 -header -column ~/.claude/usage.db \".tables\")",
+      "Bash(python3 -c \"print\\('hello'\\)\")",
+      "Bash(find /c/Users/SI-Agent -maxdepth 4 -iname \"*.db\" -o -iname \"cc*switch*\" -o -iname \"*cc-switch*\" 2>/dev/null | head -20)",
+      "Read(//c/Users/SI-Agent/AppData/**)",
+      "Bash(ls ~/.cc-switch/cc-switch.db && ls .claude/skills/usage/)",
+      "Read(//c/Users/SI-Agent/.cc-switch/**)",
+      "Edit(/.claude/skills/ccusage/**)",
+      "Bash(python .claude/skills/ccusage/ccusage.py)",
+      "Bash(python .claude/skills/ccusage/ccusage.py --n 30)",
+      "Bash(python .claude/skills/ccusage/ccusage.py --model haiku)",
+      "Bash(python .claude/skills/ccusage/ccusage.py --n 100)",
+      "Bash(grep -n \"hook\" ~/.claude/settings.json 2>/dev/null | head -20; echo \"---\"; grep -n \"hook\" .claude/settings.json 2>/dev/null | head -20)",
+      "Bash(python .claude/skills/ccusage/context_guard.py --status)",
+      "Bash(python .claude/skills/ccusage/context_guard.py --warn 90 --check)",
+      "Bash(python c:/Users/SI-Agent/AgentProject/.claude/skills/ccusage/usage_monitor.py --interval 3)"
     ],
     "additionalDirectories": [
       "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills",
@@ -586,7 +642,37 @@
       "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills\\skill-sync",
       "C:\\Users\\SI-Agent\\AppData\\Local\\Temp",
       "C:\\Users\\SI-Agent\\AgentProject\\edm_email_dump\\edm_email_dump",
-      "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills\\edm-agent-download\\.claude"
+      "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills\\edm-agent-download\\.claude",
+      "C:\\Users\\SI-Agent\\.claude",
+      "C:\\claude-usage\\claude-usage"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:/Users/SI-Agent/AgentProject/.claude/skills/ccusage/usage_monitor_start.py",
+            "timeout": 5,
+            "statusMessage": "Starting CC Usage Monitor..."
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:/Users/SI-Agent/AgentProject/.claude/skills/ccusage/session_sync.py",
+            "timeout": 30,
+            "statusMessage": "Syncing session changes..."
+          }
+        ]
+      }
     ]
   }
 }
