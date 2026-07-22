@@ -210,7 +210,7 @@ class UsageMonitor:
         self.root = tk.Tk()
         self.root.title("CC Usage")
         self.root.attributes("-topmost", True)
-        self.root.attributes("-alpha", 0.6)
+        self.root.attributes("-alpha", 0.8)
         self.root.overrideredirect(True)
         self.root.configure(bg=BG)
 
