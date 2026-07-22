@@ -226,8 +226,8 @@ class UsageMonitor:
 
         # Session label
         self._session_lbl = tk.Label(self.root, text="",
-                                      font=("Microsoft YaHei UI", 7),
-                                      bg=BG, fg="#6c7086")
+                                      font=("Microsoft YaHei UI", 8, "bold"),
+                                      bg=BG, fg="#cdd6f4")
 
         # Model bars — pre-create 3 (max models)
         self._bars = [ModelBar(self.root, MODELS[i], 34 + i * 40) for i in range(3)]
@@ -290,9 +290,13 @@ class UsageMonitor:
 
         y_pos = 34
 
+        # Build a dict from rows for name-based lookup
+        data_by_name = {row[0]: row for row in rows}
+
         for i, bar in enumerate(self._bars):
-            if i < len(rows):
-                model_short, inp, outp = rows[i]
+            model_name = MODELS[i]
+            if model_name in data_by_name:
+                _, inp, outp = data_by_name[model_name]
                 bar.update(inp, outp, self.limit)
                 y_pos += 40
             else:
@@ -311,7 +315,7 @@ class UsageMonitor:
         # Session name at bottom
         if self.session_id:
             session_name = get_session_name(self.session_id) or self.session_id[:8]
-            self._session_lbl.config(text=f"\U0001f4cd {session_name}")
+            self._session_lbl.config(text=f"\U0001f4cd {session_name}", fg="#cdd6f4")
             self._session_lbl.place(x=PADDING, y=y_pos + 10)
         else:
             self._session_lbl.place_forget()
