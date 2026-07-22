@@ -192,7 +192,7 @@ class ModelBar:
 class UsageMonitor:
     CORNER_RADIUS = 20
 
-    def __init__(self, interval=5, limit=262144):
+    def __init__(self, interval=5, limit=198000):
         self.interval = interval
         self.limit = limit
         self.session_id = None
@@ -329,7 +329,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="CC Usage floating monitor")
     parser.add_argument("--interval", type=int, default=5, help="Poll interval in seconds")
-    parser.add_argument("--limit", type=int, default=262144, help="Context limit in tokens (default 262K)")
+    parser.add_argument("--limit", type=int, default=198000, help="Context limit in tokens (default 198K = 262K - 64K max_tokens)")
     args = parser.parse_args()
 
     monitor = UsageMonitor(interval=args.interval, limit=args.limit)
