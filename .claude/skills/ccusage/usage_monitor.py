@@ -67,8 +67,7 @@ def find_current_session_id():
 
 def get_session_name(session_id):
     """Get session display name from /rename command in jsonl.
-    Returns None if no rename found (caller falls back to session_id).
-    """
+    Returns the LAST /rename if there are multiple. None if no rename found."""
     if not session_id:
         return None
     project_dir = Path.home() / ".claude" / "projects"
@@ -80,6 +79,7 @@ def get_session_name(session_id):
         if not jsonl_path.exists():
             continue
         try:
+            last_rename = None
             with open(jsonl_path, encoding="utf-8-sig", errors="replace") as fh:
                 for line in fh:
                     obj = json.loads(line)
@@ -89,7 +89,8 @@ def get_session_name(session_id):
                     if isinstance(content, str) and "/rename" in content:
                         m = re.search(r"<command-args>(.+?)</command-args>", content)
                         if m:
-                            return m.group(1).strip()
+                            last_rename = m.group(1).strip()
+            return last_rename
         except Exception:
             pass
     return None

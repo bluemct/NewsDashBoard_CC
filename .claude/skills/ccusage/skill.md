@@ -70,6 +70,8 @@ python .claude/skills/ccusage/usage_monitor.py --limit 1000000  # 1M context (Op
 
 **功能：**
 - 每 5 秒自动刷新 session（自动检测最新活跃 session，无需手动重开窗口）
-- 底部显示 session 名称（从首条用户消息提取前 30 字符）
-- 窗口置顶，半透明，支持拖拽移动
+- 底部显示 `Session: <name>`（优先读取 `/rename` 后的名称，取最新一次 rename；无 rename 则显示 session ID 前 8 位）
+- 无边框圆角（半径 20）、暗色主题、80% 不透明（alpha 0.8）
+- 窗口置顶，支持拖拽移动（`winfo_pointerx/y` + `_dragging` 锁防止拖拽期间位置重置）
+- 模型数据按名称匹配（Opus/Sonnet/Haiku），不再依赖数据库返回顺序
 - 进度条颜色：`<60%` 绿色 → `60-80%` 黄色 → `≥80%` 红色
