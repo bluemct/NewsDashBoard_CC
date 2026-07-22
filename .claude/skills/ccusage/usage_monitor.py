@@ -315,7 +315,7 @@ class UsageMonitor:
         # Session name at bottom
         if self.session_id:
             session_name = get_session_name(self.session_id) or self.session_id[:8]
-            self._session_lbl.config(text=f"\U0001f4cd {session_name}", fg="#cdd6f4")
+            self._session_lbl.config(text=f"Session: {session_name}", fg="#cdd6f4")
             self._session_lbl.place(x=PADDING, y=y_pos + 10)
         else:
             self._session_lbl.place_forget()
