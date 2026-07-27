@@ -1,0 +1,19 @@
+[2026-06-24 17:17:14] [VERIFY] Fetching list info...
+[2026-06-24 17:17:14] [VERIFY] List: newformal_Token1-15 SN-53672 (id=350033)
+[2026-06-24 17:17:14] [VERIFY] Fetching list contacts...
+[2026-06-24 17:17:23] [VERIFY] Fetched 368 list contacts
+[2026-06-24 17:17:33] [VERIFY] Saved to: c:\Users\SI-Agent\AgentProject\listverify\newformal_Token1-15 SN-53672_emails.txt
+[2026-06-24 17:17:33] [VERIFY] Reading xlsx emails...
+[2026-06-24 17:17:33] [VERIFY] XLSX emails: 368 total
+[2026-06-24 17:17:33] 
+[2026-06-24 17:17:33] [VERIFY] ===========================================================
+[2026-06-24 17:17:33] [VERIFY]   newformal_Token1-15 SN-53672
+[2026-06-24 17:17:33] [VERIFY] ===========================================================
+[2026-06-24 17:17:33] [VERIFY]   List total     : 368
+[2026-06-24 17:17:33] [VERIFY]   Fetched emails : 367 unique
+[2026-06-24 17:17:33] [VERIFY]   XLSX emails    : 368 unique
+[2026-06-24 17:17:33] [VERIFY]   Matched        : 367
+[2026-06-24 17:17:33] [VERIFY]   MISSING (1):
+[2026-06-24 17:17:33] [VERIFY]     - devops@mocking-j.com
+[2026-06-24 17:17:33] [VERIFY]   RESULT: FAIL
+[2026-06-24 17:17:33] [VERIFY] ===========================================================

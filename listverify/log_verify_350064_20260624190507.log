@@ -1,0 +1,19 @@
+[2026-06-24 19:05:07] [VERIFY] Fetching list info...
+[2026-06-24 19:05:07] [VERIFY] List: formal_SN-53673_Token1-11 - SN-53673 Mooncake Functions_20260624175046 (id=350064)
+[2026-06-24 19:05:07] [VERIFY] Reading xlsx emails...
+[2026-06-24 19:05:07] [VERIFY] XLSX emails: 175
+[2026-06-24 19:05:07] [VERIFY] Checking emails in list (parallel)...
+[2026-06-24 19:05:09] [VERIFY] Checked 175 emails in 2.5s
+[2026-06-24 19:05:09] [VERIFY] Found in list: 175
+[2026-06-24 19:05:09] [VERIFY] Missing: 0
+[2026-06-24 19:05:09] [VERIFY] Saved to: C:\Users\SI-Agent\AgentProject\listverify\formal_SN-53673_Token1-11 - SN-53673 Mooncake Functions_20260624175046_emails.txt
+[2026-06-24 19:05:09] 
+[2026-06-24 19:05:09] [VERIFY] ===========================================================
+[2026-06-24 19:05:09] [VERIFY]   formal_SN-53673_Token1-11 - SN-53673 Mooncake Functions_20260624175046
+[2026-06-24 19:05:09] [VERIFY] ===========================================================
+[2026-06-24 19:05:09] [VERIFY]   List total     : 175
+[2026-06-24 19:05:09] [VERIFY]   XLSX emails    : 175
+[2026-06-24 19:05:09] [VERIFY]   In list        : 175
+[2026-06-24 19:05:09] [VERIFY]   Matched        : 175
+[2026-06-24 19:05:09] [VERIFY]   RESULT: PASS
+[2026-06-24 19:05:09] [VERIFY] ===========================================================

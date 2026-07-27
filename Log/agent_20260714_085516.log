@@ -1,0 +1,48 @@
+2026-07-14 08:55:16 [INFO] ============================================================
+2026-07-14 08:55:16 [INFO] EDM Auto Agent 启动
+2026-07-14 08:55:16 [INFO] Config: C:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-14 08:55:16 [INFO] LLM Config: C:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-14 08:55:16 [INFO] LLM Model: openai/WanWu/MiniMax-M3 (timeout=30s)
+2026-07-14 08:55:16 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-14 08:55:16 [INFO] Folder: EDM
+2026-07-14 08:55:16 [INFO] Log: C:\Users\SI-Agent\AgentProject\Log\agent_20260714_085516.log
+2026-07-14 08:55:16 [INFO] ============================================================
+2026-07-14 08:55:16 [INFO] Initializing EDM Agent...
+2026-07-14 08:55:16 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-14 08:55:16 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-14 08:55:18 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-14 08:55:26 [INFO] Starting polling loop (interval=30s)
+2026-07-14 08:55:26 [INFO] Scanning for new emails since 2026-07-14T06:55:26.549712
+2026-07-14 08:55:26 [INFO] Found 0 new item(s) with attachments
+2026-07-14 08:55:56 [INFO] Scanning for new emails since 2026-07-14T06:55:56.686003
+2026-07-14 08:55:56 [INFO] Found 0 new item(s) with attachments
+2026-07-14 08:56:26 [INFO] Scanning for new emails since 2026-07-14T06:56:26.795876
+2026-07-14 08:56:26 [INFO] Found 0 new item(s) with attachments
+2026-07-14 08:56:56 [INFO] Scanning for new emails since 2026-07-14T06:56:56.905516
+2026-07-14 08:56:57 [INFO] Found 0 new item(s) with attachments
+2026-07-14 08:57:27 [INFO] Scanning for new emails since 2026-07-14T06:57:27.011910
+2026-07-14 08:57:27 [INFO] Found 1 new item(s) with attachments
+2026-07-14 08:57:27 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-14 08:57:34 [WARNING] LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: _ssl.c:1015: The handshake operation timed out. Falling back to local backup.
+2026-07-14 08:57:47 [INFO] 
+LiteLLM completion() model= WanWu/MiniMax-M3; provider = openai
+2026-07-14 08:58:14 [INFO] Retrying request to /chat/completions in 0.375193 seconds
+2026-07-14 08:58:24 [INFO] Scanning for new emails since 2026-07-14T06:58:24.537049
+2026-07-14 08:58:24 [INFO] Found 1 new item(s) with attachments
+2026-07-14 08:58:24 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-14 08:58:24 [INFO] 
+LiteLLM completion() model= WanWu/MiniMax-M3; provider = openai
+2026-07-14 08:58:36 [INFO] Retrying request to /chat/completions in 0.913427 seconds
+2026-07-14 08:58:45 [INFO] Retrying request to /chat/completions in 0.432848 seconds
+2026-07-14 08:58:58 [WARNING] LLM 分析失败 (openai/WanWu/MiniMax-M3): litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.，降级为规则匹配
+2026-07-14 08:58:58 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260714_085858.json
+2026-07-14 08:58:58 [INFO] Completed: [ignore] FW: [EDM test and distribution] Incident...
+2026-07-14 08:58:58 [INFO] Processed 1 email(s) this round
+2026-07-14 08:59:07 [INFO] Retrying request to /chat/completions in 0.838490 seconds
+2026-07-14 08:59:28 [INFO] Scanning for new emails since 2026-07-14T08:58:58.840084
+2026-07-14 08:59:28 [INFO] Found 0 new item(s) with attachments
+2026-07-14 08:59:29 [WARNING] LLM 分析失败 (openai/WanWu/MiniMax-M3): litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.，降级为规则匹配
+2026-07-14 08:59:29 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260714_085929.json
+2026-07-14 08:59:29 [INFO] Completed: [ignore] FW: [EDM test and distribution] Incident...
+2026-07-14 08:59:58 [INFO] Scanning for new emails since 2026-07-14T08:59:29.298015
+2026-07-14 08:59:59 [INFO] Found 0 new item(s) with attachments

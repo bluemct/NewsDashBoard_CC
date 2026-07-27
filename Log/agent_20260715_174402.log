@@ -1,0 +1,32 @@
+2026-07-15 17:44:02 [INFO] ============================================================
+2026-07-15 17:44:02 [INFO] EDM Auto Agent 启动
+2026-07-15 17:44:02 [INFO] Config: C:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-15 17:44:02 [INFO] LLM Config: C:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-15 17:44:02 [INFO] LLM Model: openai/Qwen3.5-27B (timeout=10s)
+2026-07-15 17:44:02 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-15 17:44:02 [INFO] Folder: EDM
+2026-07-15 17:44:02 [INFO] Log: C:\Users\SI-Agent\AgentProject\Log\agent_20260715_174402.log
+2026-07-15 17:44:02 [INFO] ============================================================
+2026-07-15 17:44:02 [INFO] Initializing EDM Agent...
+2026-07-15 17:44:02 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-15 17:44:02 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-15 17:44:03 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-15 17:44:12 [INFO] Starting EWS Streaming Notifications (attempt 1)...
+2026-07-15 17:44:12 [INFO] Starting EWS Streaming Monitor: C:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-15 17:44:12 [INFO] Streaming monitor started
+2026-07-15 17:44:12 [INFO] Streaming monitor active, waiting for events...
+2026-07-15 17:44:13 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAACMgp06J4aTQYjhnyF/RLRPxnMToVXi3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==
+2026-07-15 17:45:25 [INFO] Scanning for new emails since 2026-07-15T15:45:25.357956
+2026-07-15 17:45:25 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 17:45:25 [INFO] Found 0 new item(s) with attachments
+2026-07-15 17:45:58 [ERROR] Streaming error: Max reconnect attempts ($maxReconnectAttempts) reached
+2026-07-15 17:45:58 [WARNING] Streaming disconnected
+2026-07-15 17:45:58 [WARNING] Streaming process died (restart 1/3)
+2026-07-15 17:45:58 [INFO] Stopping EWS Streaming Monitor...
+2026-07-15 17:45:58 [INFO] Streaming monitor stopped
+2026-07-15 17:45:58 [INFO] Restarting streaming in 10s...
+2026-07-15 17:46:08 [INFO] Starting EWS Streaming Notifications (attempt 2)...
+2026-07-15 17:46:08 [INFO] Starting EWS Streaming Monitor: C:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-15 17:46:08 [INFO] Streaming monitor started
+2026-07-15 17:46:08 [INFO] Streaming monitor active, waiting for events...
+2026-07-15 17:46:10 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAACybyaSqdlRRKYAx7Nua5I6eOeh5lXi3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==

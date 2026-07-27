@@ -1,0 +1,20 @@
+{
+  "item_id": "AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+zAAA=",
+  "subject": "FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 2)",
+  "sender": "ma.chuntao@oe.21vianet.com",
+  "received": "2026-07-16T14:59:22.0000000+08:00",
+  "action": "edm_process",
+  "confidence": 100,
+  "reason": "邮件包含SN号码(SN-56619)，明确提及EDM、Token和模板，且为EDM测试与分发请求。",
+  "sn": "SN-56619",
+  "success": false,
+  "process": {
+    "success": false,
+    "sn": "SN-56619",
+    "sn_folder": "C:\\Users\\SI-Agent\\Desktop\\EDM\\SN-56619",
+    "return_code": 1,
+    "error": "PermissionError: [WinError 32] ��һ����������ʹ�ô��ļ��������޷����ʡ�: 'C:\\\\Users\\\\SI-Agent\\\\Desktop\\\\EDM\\\\SN-56619\\\\\\u0153\\u0161\\xd2��\\xb2\\xc9\\xc8\\xa1\\xb5\\xc4\\xd0\\xd0\\xb6\\xaf\\xa3\\xbaAzure Databricks \\xd0\\xc2\\u0153\\u0161\\xb9\\u20ac����\\xc7\\xf8\\u0153\\xab\\u0153\\xf6\\xd6��\\xb3\\xd6 Unity Catalog - Action recommended_ Unity Catalog-only workspaces for new Azure Databricks deployments.msg'"
+  },
+  "import_success": false,
+  "process_success": false
+}

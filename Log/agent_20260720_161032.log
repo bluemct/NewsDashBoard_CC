@@ -1,0 +1,62 @@
+2026-07-20 16:10:32 [INFO] ============================================================
+2026-07-20 16:10:32 [INFO] EDM Auto Agent 启动
+2026-07-20 16:10:32 [INFO] Config: C:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-20 16:10:32 [INFO] LLM Config: C:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-20 16:10:32 [INFO] LLM Model: openai/Qwen3.5-27B (timeout=10s)
+2026-07-20 16:10:32 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-20 16:10:32 [INFO] Folder: EDM
+2026-07-20 16:10:32 [INFO] Log: C:\Users\SI-Agent\AgentProject\Log\agent_20260720_161032.log
+2026-07-20 16:10:32 [INFO] ============================================================
+2026-07-20 16:10:32 [INFO] Initializing EDM Agent...
+2026-07-20 16:10:32 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-20 16:10:32 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-20 16:10:33 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-20 16:10:39 [INFO] Starting EWS Streaming Notifications (attempt 1)...
+2026-07-20 16:10:39 [INFO] Starting EWS Streaming Monitor: C:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-20 16:10:39 [INFO] Streaming monitor started
+2026-07-20 16:10:39 [INFO] Streaming monitor active, waiting for events...
+2026-07-20 16:10:41 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAABVik+B0uz9TqMct9KRRZkn+TXZYzbm3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==
+2026-07-20 16:11:38 [INFO] New mail event: FW: [EDM test and distribution] Incident 795642121 - SN-55247 [SN Email] 6 months Reminder: [SN Email] Reminder - Upcoming End of Life for Databricks Runtimes 10.4 LTS and earlier
+2026-07-20 16:11:38 [INFO] Streaming event: new mail AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni...
+2026-07-20 16:11:38 [INFO] Processing streaming event: [FW: [EDM test and distribution] Incident 795642121 - SN-55247 [SN Email] 6 months Reminder: [SN Email] Reminder - Upcoming End of Life for Databricks Runtimes 10.4 LTS and earlier] from ma.chuntao@oe.21vianet.com
+2026-07-20 16:11:38 [INFO] Processing: [FW: [EDM test and distribution] Incident 795642121 - SN-55247 [SN Email] 6 months Reminder: [SN Email] Reminder - Upcoming End of Life for Databricks Runtimes 10.4 LTS and earlier] from ma.chuntao@oe.21vianet.com
+2026-07-20 16:11:38 [WARNING] get_entry_id failed for AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S/bAAA=, skipping (21Vianet EWS limitation)
+2026-07-20 16:11:54 [WARNING] LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: The read operation timed out. Falling back to local backup.
+2026-07-20 16:12:11 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-20 16:12:17 [INFO] Wrapper: Completed Call, calling success_handler
+2026-07-20 16:12:17 [INFO] LLM 分析结果 (openai/Qwen3.5-27B): action=edm_process, confidence=100
+2026-07-20 16:12:17 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-20 16:18:51 [INFO] User skipped: [FW: [EDM test and distribution] Incident 795642121 - SN-55247 [SN Email] 6 months Reminder: [SN Email] Reminder - Upcoming End of Life for Databricks Runtimes 10.4 LTS and earlier]
+2026-07-20 16:18:51 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260720_161851.json
+2026-07-20 16:18:51 [INFO] Completed: [skipped_by_user] FW: [EDM test and distribution] Incident...
+2026-07-20 16:27:47 [INFO] New mail event: RE: [EDM test and distribution] Incident 833895437 : [SN-56372] Support for Node.js 22 ends on 30 April 2027��upgrade your apps to Node.js 24
+2026-07-20 16:27:47 [INFO] Streaming event: new mail AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni...
+2026-07-20 16:27:47 [INFO] Processing streaming event: [RE: [EDM test and distribution] Incident 833895437 : [SN-56372] Support for Node.js 22 ends on 30 April 2027��upgrade your apps to Node.js 24] from feng.huan@oe.21vianet.com
+2026-07-20 16:27:47 [INFO] SKIP (no attachments): [RE: [EDM test and distribution] Incident 833895437 : [SN-56372] Support for Node.js 22 ends on 30 April 2027��upgrade your apps to Node.js 24]
+2026-07-20 16:40:50 [WARNING] Streaming process died (restart 1/3)
+2026-07-20 16:40:50 [INFO] Stopping EWS Streaming Monitor...
+2026-07-20 16:40:50 [INFO] Streaming monitor stopped
+2026-07-20 16:40:50 [INFO] Restarting streaming in 10s...
+2026-07-20 16:41:00 [INFO] Starting EWS Streaming Notifications (attempt 2)...
+2026-07-20 16:41:00 [INFO] Starting EWS Streaming Monitor: C:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-20 16:41:00 [INFO] Streaming monitor started
+2026-07-20 16:41:00 [INFO] Streaming monitor active, waiting for events...
+2026-07-20 16:41:02 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAACj3Hn09UbRQ715KjgBUVBog3AHoTrm3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==
+2026-07-20 16:42:19 [INFO] New mail event: RE: [EDM test and distribution] Incident 795642121 - SN-55247 [SN Email] 6 months Reminder: [SN Email] Reminder - Upcoming End of Life for Databricks Runtimes 10.4 LTS and earlier
+2026-07-20 16:42:19 [INFO] Streaming event: new mail AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni...
+2026-07-20 16:42:19 [INFO] Processing streaming event: [RE: [EDM test and distribution] Incident 795642121 - SN-55247 [SN Email] 6 months Reminder: [SN Email] Reminder - Upcoming End of Life for Databricks Runtimes 10.4 LTS and earlier] from feng.huan@oe.21vianet.com
+2026-07-20 16:42:19 [INFO] SKIP (no attachments): [RE: [EDM test and distribution] Incident 795642121 - SN-55247 [SN Email] 6 months Reminder: [SN Email] Reminder - Upcoming End of Life for Databricks Runtimes 10.4 LTS and earlier]
+2026-07-20 17:11:08 [WARNING] Streaming process died (restart 2/3)
+2026-07-20 17:11:08 [INFO] Stopping EWS Streaming Monitor...
+2026-07-20 17:11:08 [INFO] Streaming monitor stopped
+2026-07-20 17:11:08 [INFO] Restarting streaming in 10s...
+2026-07-20 17:11:18 [INFO] Starting EWS Streaming Notifications (attempt 3)...
+2026-07-20 17:11:18 [INFO] Starting EWS Streaming Monitor: C:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-20 17:11:18 [INFO] Streaming monitor started
+2026-07-20 17:11:18 [INFO] Streaming monitor active, waiting for events...
+2026-07-20 17:11:21 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAACtjUyjPrn6Rbk/PJX5GSMK5eIi3T7m3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==
+2026-07-20 17:41:27 [WARNING] Streaming process died (restart 3/3)
+2026-07-20 17:41:27 [INFO] Stopping EWS Streaming Monitor...
+2026-07-20 17:41:27 [INFO] Streaming monitor stopped
+2026-07-20 17:41:27 [ERROR] Streaming died after 3 restarts, giving up

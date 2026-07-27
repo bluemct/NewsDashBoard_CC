@@ -1,0 +1,19 @@
+[2026-07-23 14:29:42] [VERIFY] Fetching list info...
+[2026-07-23 14:29:42] [VERIFY] List: formal_SN-55247_Token1-12 SN-55247_20260720141416 (id=350686)
+[2026-07-23 14:29:42] [VERIFY] Reading xlsx emails...
+[2026-07-23 14:29:42] [VERIFY] XLSX emails: 44
+[2026-07-23 14:29:42] [VERIFY] Checking emails in list (parallel)...
+[2026-07-23 14:29:45] [VERIFY] Checked 44 emails in 2.7s
+[2026-07-23 14:29:45] [VERIFY] Found in list: 44
+[2026-07-23 14:29:45] [VERIFY] Missing: 0
+[2026-07-23 14:29:45] [VERIFY] Saved to: C:\Users\SI-Agent\AgentProject\Log\formal_SN-55247_Token1-12 SN-55247_20260720141416_emails.txt
+[2026-07-23 14:29:45] 
+[2026-07-23 14:29:45] [VERIFY] ===========================================================
+[2026-07-23 14:29:45] [VERIFY]   formal_SN-55247_Token1-12 SN-55247_20260720141416
+[2026-07-23 14:29:45] [VERIFY] ===========================================================
+[2026-07-23 14:29:45] [VERIFY]   List total     : 44
+[2026-07-23 14:29:45] [VERIFY]   XLSX emails    : 44
+[2026-07-23 14:29:45] [VERIFY]   In list        : 44
+[2026-07-23 14:29:45] [VERIFY]   Matched        : 44
+[2026-07-23 14:29:45] [VERIFY]   RESULT: PASS
+[2026-07-23 14:29:45] [VERIFY] ===========================================================

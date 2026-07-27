@@ -1,0 +1,21 @@
+[2026-06-24 18:03:04] [VERIFY] Fetching list info...
+[2026-06-24 18:03:04] [VERIFY] List: newformal_Token1-15 SN-53672 (id=350033)
+[2026-06-24 18:03:04] [VERIFY] Fetching list contacts...
+[2026-06-24 18:03:13] [VERIFY] Fetched 368 list contacts
+[2026-06-24 18:03:13] [VERIFY] WARNING: 1 duplicate email(s) in list:
+[2026-06-24 18:03:13] [VERIFY]   shiweiquan@ricard.cn: appears 2 times
+[2026-06-24 18:03:13] [VERIFY] Saved to: c:\Users\SI-Agent\AgentProject\listverify\newformal_Token1-15 SN-53672_emails.txt
+[2026-06-24 18:03:13] [VERIFY] Reading xlsx emails...
+[2026-06-24 18:03:13] [VERIFY] XLSX emails: 368 total
+[2026-06-24 18:03:13] 
+[2026-06-24 18:03:13] [VERIFY] ===========================================================
+[2026-06-24 18:03:13] [VERIFY]   newformal_Token1-15 SN-53672
+[2026-06-24 18:03:13] [VERIFY] ===========================================================
+[2026-06-24 18:03:13] [VERIFY]   List total     : 368
+[2026-06-24 18:03:13] [VERIFY]   Fetched emails : 367 unique
+[2026-06-24 18:03:13] [VERIFY]   XLSX emails    : 368 unique
+[2026-06-24 18:03:13] [VERIFY]   Matched        : 367
+[2026-06-24 18:03:13] [VERIFY]   MISSING (1):
+[2026-06-24 18:03:13] [VERIFY]     - zhipeng.cheng@azenta.com
+[2026-06-24 18:03:13] [VERIFY]   RESULT: FAIL
+[2026-06-24 18:03:13] [VERIFY] ===========================================================

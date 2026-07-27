@@ -126,8 +126,8 @@ class IcmClient:
         return resp.status_code == 200
 
     def add_discussion(self, incident_id, description):
-        url = f"{BASE_URL}/api2/incidentapi/incidents/{incident_id}/discussion"
-        resp = requests.post(url, json={"Description": description}, headers=self._headers(), timeout=30)
+        url = f"{BASE_URL}/api2/incidentapi/incidents({incident_id})"
+        resp = requests.patch(url, json={"Id": incident_id, "Description": description}, headers=self._headers(), timeout=30)
         resp.raise_for_status()
         return resp.status_code == 200
 

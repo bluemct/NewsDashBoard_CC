@@ -1,0 +1,22 @@
+2026-07-16 11:16:44 [INFO] ============================================================
+2026-07-16 11:16:44 [INFO] EDM Auto Agent 启动
+2026-07-16 11:16:44 [INFO] Config: c:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-16 11:16:44 [INFO] LLM Config: c:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-16 11:16:44 [INFO] LLM Model: openai/Qwen3.5-27B (timeout=10s)
+2026-07-16 11:16:44 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-16 11:16:44 [INFO] Folder: EDM
+2026-07-16 11:16:44 [INFO] Log: c:\Users\SI-Agent\AgentProject\Log\agent_20260716_111644.log
+2026-07-16 11:16:44 [INFO] ============================================================
+2026-07-16 11:16:44 [INFO] Initializing EDM Agent...
+2026-07-16 11:16:44 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-16 11:16:44 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-16 11:16:46 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-16 11:17:04 [INFO] Starting EWS Streaming Notifications (attempt 1)...
+2026-07-16 11:17:04 [INFO] Starting EWS Streaming Monitor: c:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-16 11:17:04 [INFO] Streaming monitor started
+2026-07-16 11:17:04 [INFO] Streaming monitor active, waiting for events...
+2026-07-16 11:17:07 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAACcVoaeBVuHTLOdcK84eZbJSMIvt+ji3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==
+2026-07-16 11:20:29 [INFO] New mail event: FW: edm mail te
+2026-07-16 11:20:29 [INFO] Streaming event: new mail AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni...
+2026-07-16 11:20:29 [INFO] Processing streaming event: [FW: edm mail te] from ma.chuntao@oe.21vianet.com
+2026-07-16 11:20:29 [INFO] SKIP (no attachments): [FW: edm mail te]

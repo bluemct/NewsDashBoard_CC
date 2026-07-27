@@ -1,0 +1,21 @@
+[2026-06-24 17:07:01] [VERIFY] Fetching list info...
+[2026-06-24 17:07:01] [VERIFY] List: newformal_Token1-15 SN-53672 (id=350033)
+[2026-06-24 17:07:01] [VERIFY] Fetching list contacts...
+[2026-06-24 17:07:11] [VERIFY] Fetched 368 list contacts
+[2026-06-24 17:07:21] [VERIFY] Saved to: C:\Users\SI-Agent\AgentProject\listverify\newformal_Token1-15 SN-53672_emails.txt
+[2026-06-24 17:07:21] [VERIFY] Reading xlsx emails...
+[2026-06-24 17:07:21] [VERIFY] XLSX emails: 368 total
+[2026-06-24 17:07:21] 
+[2026-06-24 17:07:21] [VERIFY] ===========================================================
+[2026-06-24 17:07:21] [VERIFY]   newformal_Token1-15 SN-53672
+[2026-06-24 17:07:21] [VERIFY] ===========================================================
+[2026-06-24 17:07:21] [VERIFY]   List total     : 368
+[2026-06-24 17:07:21] [VERIFY]   Fetched emails : 365 unique
+[2026-06-24 17:07:21] [VERIFY]   XLSX emails    : 368 unique
+[2026-06-24 17:07:21] [VERIFY]   Matched        : 365
+[2026-06-24 17:07:21] [VERIFY]   MISSING (3):
+[2026-06-24 17:07:21] [VERIFY]     - azure@percher.com.cn
+[2026-06-24 17:07:21] [VERIFY]     - jwysoft@hotmail.com
+[2026-06-24 17:07:21] [VERIFY]     - zhipeng.cheng@azenta.com
+[2026-06-24 17:07:21] [VERIFY]   RESULT: FAIL
+[2026-06-24 17:07:21] [VERIFY] ===========================================================

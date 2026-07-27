@@ -1,0 +1,9 @@
+2026-07-13 17:59:23 [INFO] Downloading attachments for item AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+AAAA=
+2026-07-13 17:59:24 [INFO]   Saved: image001.png (11.8 KB)
+2026-07-13 17:59:24 [INFO] Downloaded 0 .msg + 0 .xlsx
+2026-07-13 17:59:32 [WARNING] LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: _ssl.c:1015: The handshake operation timed out. Falling back to local backup.
+2026-07-13 17:59:46 [INFO] 
+LiteLLM completion() model= WanWu/MiniMax-M3; provider = openai
+2026-07-13 18:00:12 [INFO] Retrying request to /chat/completions in 0.426937 seconds
+2026-07-13 18:00:34 [INFO] Retrying request to /chat/completions in 0.881483 seconds
+2026-07-13 18:00:58 [WARNING] LLM 分析失败 (openai/WanWu/MiniMax-M3): litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.，降级为规则匹配

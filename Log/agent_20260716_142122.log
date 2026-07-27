@@ -1,0 +1,13 @@
+2026-07-16 14:21:22 [INFO] ============================================================
+2026-07-16 14:21:22 [INFO] EDM Auto Agent 启动
+2026-07-16 14:21:22 [INFO] Config: C:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-16 14:21:22 [INFO] LLM Config: C:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-16 14:21:22 [INFO] LLM Model: openai/Qwen3.5-27B (timeout=10s)
+2026-07-16 14:21:22 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-16 14:21:22 [INFO] Folder: EDM
+2026-07-16 14:21:22 [INFO] Log: C:\Users\SI-Agent\AgentProject\Log\agent_20260716_142122.log
+2026-07-16 14:21:22 [INFO] ============================================================
+2026-07-16 14:21:22 [INFO] Initializing EDM Agent...
+2026-07-16 14:21:22 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-16 14:21:22 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-16 14:21:23 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=

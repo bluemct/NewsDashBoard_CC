@@ -1,0 +1,27 @@
+[2026-06-24 17:05:31] [DEEP] Reading xlsx...
+[2026-06-24 17:05:31] [DEEP] XLSX: 219 contacts, columns: ['Email', 'Token1', 'Token2', 'Token3', 'Token4', 'Token5', 'Token6', 'Token7', 'Token8', 'Token9']
+[2026-06-24 17:05:31] [DEEP] Fetching list contacts...
+[2026-06-24 17:05:31] [DEEP] List: formal_SN-56287_Token1-9 SN-56287 MC_20260623171835 (219 contacts)
+[2026-06-24 17:05:31] [DEEP] Fetching 5 pages (workers=10)...
+[2026-06-24 17:05:33] [DEEP] Fetched 219 contacts in 1.6s
+[2026-06-24 17:05:33] [DEEP] Saving contacts to CSV...
+[2026-06-24 17:05:33] [DEEP] Saved CSV: ContactInfo_exported_SN-56287_20260624_170533.csv
+[2026-06-24 17:05:33] [DEEP] CSV: 219 contacts, columns: ['email', 'Token1', 'Token2', 'Token3', 'Token4', 'Token5', 'Token6', 'Token7', 'Token8', 'Token9', 'Token10', 'Token11', 'Token12', 'SubId1', 'SubId2', 'SubId3', 'SubId4', 'SubId5', 'SubId6', 'SubId7', 'SubId8', 'SubId9', 'SubId10', 'SubId11', 'SubId12', 'SubId13', 'SubId14', 'SubId15', 'Token13', 'Token14', 'Token15', 'ServiceId', 'ServiceIdT', 'ServiceIdH', 'HostedServiceName', 'website', 'ResourceGName', 'HostedServiceNameT', 'HostedServiceNameH', 'ResourceGNameT', 'ResourceGNameH', 'clusterName', 'clusterNameTwo', 'clusterNameThree', 'ServiceIdF', 'ServiceIdI', 'ServiceIdS', 'VMName', 'VMNameT', 'VMNameH', 'VMNameF', 'VMNameI', 'ResourceGNameF', 'ResourceGNameI', 'clusterNameFour', 'clusterNameFive', 'Customer', 'EnrollmentNumber', 'ClusterResourceGName', 'ClusterResourceGNameT', 'ClusterResourceGNameH', 'ClusterResourceGNameF', 'ClusterResourceGNameI', 'ClusterResourceGNameS', 'BAStandardSUCN', 'SQLDataGA', 'VMNameS', 'SubId16', 'SubId17', 'SubId18', 'SubId19', 'SubId20', 'VMNameE', 'VMNameG', 'VMNameN', 'VMNameTEN', 'VMNameL', 'VMNameW', 'VMNameR', 'VMNameO', 'VMNameV', 'clusterID', 'clusterIDTWO', 'clusterIDThree', 'clusterIDFour', 'Resourcename', 'ResourcenameT', 'ResourcenameH', 'ResourcenameF', 'SubscriptionName', 'SubscriptionNameT', 'SubscriptionNameH', 'MSStandEncoderCN', 'SoneMRUnitsCN', 'StwoMRUnitsCN', 'SthrMRUniteCN', 'ICPID', 'DeploymentId', 'DeploymentIdT', 'DeploymentIdH', 'SernameOne', 'SernameTwo', 'SernameThr', 'Sernamefou', 'Sernamefiv', 'APPOne', 'APPT', 'APPH', 'APPF', 'APPI', 'ServiceIdE', 'ResourceGNameS', 'ResourceGNameE', 'ResourceGNameG', 'ResourceGNameN']
+[2026-06-24 17:05:33] [DEEP] Comparing field by field...
+[2026-06-24 17:05:33] 
+[2026-06-24 17:05:33] ============================================================
+[2026-06-24 17:05:33]   DEEP VERIFY: SN-56287
+[2026-06-24 17:05:33] ============================================================
+[2026-06-24 17:05:33]   XLSX contacts   : 219
+[2026-06-24 17:05:33]   List contacts   : 219
+[2026-06-24 17:05:33]   Email matched   : 219
+[2026-06-24 17:05:33]   Email count check: PASS
+[2026-06-24 17:05:33] 
+[2026-06-24 17:05:33] ------------------------------------------------------------
+[2026-06-24 17:05:33]   Fields compared : 1971
+[2026-06-24 17:05:34]   Fields matched  : 1971
+[2026-06-24 17:05:34]   Field match     : PASS
+[2026-06-24 17:05:34] 
+[2026-06-24 17:05:34] ============================================================
+[2026-06-24 17:05:34]   RESULT: PASS
+[2026-06-24 17:05:34] ============================================================

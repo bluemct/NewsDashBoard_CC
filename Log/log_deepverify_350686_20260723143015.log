@@ -1,0 +1,99 @@
+[2026-07-23 14:30:15] [DEEP] Reading xlsx...
+[2026-07-23 14:30:15] [DEEP] XLSX: 44 emails
+[2026-07-23 14:30:15] [DEEP] Querying 44 emails via API (workers=10)...
+[2026-07-23 14:30:16] [DEEP] Found 44/44 in list (1.0s)
+[2026-07-23 14:30:16] [DEEP] Saving contacts to CSV...
+[2026-07-23 14:30:16] [DEEP] Saved CSV: ContactInfo_exported_SN-55247_20260723_143016.csv
+[2026-07-23 14:30:16] [DEEP] Comparing field by field...
+[2026-07-23 14:30:16] 
+[2026-07-23 14:30:16] ============================================================
+[2026-07-23 14:30:16]   DEEP VERIFY: SN-55247
+[2026-07-23 14:30:16] ============================================================
+[2026-07-23 14:30:16]   XLSX contacts   : 44
+[2026-07-23 14:30:16]   In list         : 44
+[2026-07-23 14:30:16]   Email matched   : 44
+[2026-07-23 14:30:16]   Email check     : PASS
+[2026-07-23 14:30:16] 
+[2026-07-23 14:30:16] ------------------------------------------------------------
+[2026-07-23 14:30:16]   Fields compared : 528
+[2026-07-23 14:30:16]   Fields matched  : 378
+[2026-07-23 14:30:16]   Field match     : FAIL
+[2026-07-23 14:30:16] 
+[2026-07-23 14:30:16]   Field mismatches:
+[2026-07-23 14:30:16]     Token1: 41 mismatch(es)
+[2026-07-23 14:30:16]     Token10: 2 mismatch(es)
+[2026-07-23 14:30:16]     Token11: 2 mismatch(es)
+[2026-07-23 14:30:16]     Token2: 32 mismatch(es)
+[2026-07-23 14:30:16]     Token3: 29 mismatch(es)
+[2026-07-23 14:30:16]     Token4: 19 mismatch(es)
+[2026-07-23 14:30:16]     Token5: 18 mismatch(es)
+[2026-07-23 14:30:16]     Token6: 2 mismatch(es)
+[2026-07-23 14:30:16]     Token7: 2 mismatch(es)
+[2026-07-23 14:30:16]     Token8: 2 mismatch(es)
+[2026-07-23 14:30:16]     Token9: 1 mismatch(es)
+[2026-07-23 14:30:16] 
+[2026-07-23 14:30:16]   Detail (first 20):
+[2026-07-23 14:30:16]     [a-hawang@deloittecn.deloitte.com.cn] Token1:
+[2026-07-23 14:30:16]       XLSX: b87ec458-bd7b-44be-9bd9-c7cef883a7ea, Deloitte Consulting China, 527106193980290
+[2026-07-23 14:30:16]       API : d95def07-333a-4046-8449-a74346a37d88, CN-AZSUB-APA-AUD-OMNIA-PRD, /subscriptions
+[2026-07-23 14:30:16]     [a-hawang@deloittecn.deloitte.com.cn] Token2:
+[2026-07-23 14:30:16]       XLSX: b87ec458-bd7b-44be-9bd9-c7cef883a7ea, Deloitte Consulting China, 527107004895873
+[2026-07-23 14:30:16]       API : 
+[2026-07-23 14:30:16]     [a-hawang@deloittecn.deloitte.com.cn] Token3:
+[2026-07-23 14:30:16]       XLSX: ba1763e0-fcfb-4ce7-ad07-8e2e5682d40c, Deloitte Consulting China, 527106752739147
+[2026-07-23 14:30:16]       API : 
+[2026-07-23 14:30:16]     [a-hawang@deloittecn.deloitte.com.cn] Token4:
+[2026-07-23 14:30:16]       XLSX: ba1763e0-fcfb-4ce7-ad07-8e2e5682d40c, Deloitte Consulting China, 527106820944218
+[2026-07-23 14:30:16]       API : 
+[2026-07-23 14:30:16]     [a-hawang@deloittecn.deloitte.com.cn] Token5:
+[2026-07-23 14:30:16]       XLSX: d95def07-333a-4046-8449-a74346a37d88, Deloitte Consulting China, 527106052462627
+[2026-07-23 14:30:16]       API : 
+[2026-07-23 14:30:16]     [allen.fa.fan@bmw.com] Token1:
+[2026-07-23 14:30:16]       XLSX: 4dbc713a-4595-4eb5-97cd-fb77a3d66896, BMW China, 2407144273969792
+[2026-07-23 14:30:16]       API : 317c774d-c43b-4a55-bb1b-8d548db2e61f, CSPM INTG Az China (PROD), _aks-serverless
+[2026-07-23 14:30:16]     [allen.fa.fan@bmw.com] Token2:
+[2026-07-23 14:30:16]       XLSX: 
+[2026-07-23 14:30:17]       API : 908b8212-d1c0-484e-a2d0-9f96515a0b75, CLMS-CUSTOMS-UAT-AZURE-CHINANORTH2, _cems-
+[2026-07-23 14:30:17]     [allen.fa.fan@bmw.com] Token3:
+[2026-07-23 14:30:17]       XLSX: 
+[2026-07-23 14:30:17]       API : f7495f2c-3985-4e3e-b250-e8a1b27d5926, FG-CN-6_Test (FG-CN-6-Test), _Guojun-FWMGM
+[2026-07-23 14:30:17]     [azure@ford.com] Token1:
+[2026-07-23 14:30:17]       XLSX: f44cb29d-6240-400d-b9e7-b4e9cb45f3e6, Ford Automobile Co., Ltd China, 1878336796
+[2026-07-23 14:30:17]       API : f44cb29d-6240-400d-b9e7-b4e9cb45f3e6, CN-FSM-SCAVP-PROD
+[2026-07-23 14:30:17]     [azure@ford.com] Token2:
+[2026-07-23 14:30:17]       XLSX: 
+[2026-07-23 14:30:17]       API : f7c48881-f430-4d97-9f36-3056eef448d6, CN-EC-DCSP-PROD
+[2026-07-23 14:30:17]     [azure@ford.com] Token3:
+[2026-07-23 14:30:17]       XLSX: 
+[2026-07-23 14:30:17]       API : fdb90e67-c2de-4f08-8f5d-e10b1bd64d11, CN-EC-CDMP-PROD
+[2026-07-23 14:30:17]     [azurechn@ford.com] Token1:
+[2026-07-23 14:30:17]       XLSX: f44cb29d-6240-400d-b9e7-b4e9cb45f3e6, Ford Automobile Co., Ltd China, 1878336796
+[2026-07-23 14:30:17]       API : f44cb29d-6240-400d-b9e7-b4e9cb45f3e6, CN-FSM-SCAVP-PROD
+[2026-07-23 14:30:17]     [azurechn@ford.com] Token2:
+[2026-07-23 14:30:17]       XLSX: 
+[2026-07-23 14:30:17]       API : f7c48881-f430-4d97-9f36-3056eef448d6, CN-EC-DCSP-PROD
+[2026-07-23 14:30:17]     [azurechn@ford.com] Token3:
+[2026-07-23 14:30:17]       XLSX: 
+[2026-07-23 14:30:17]       API : fdb90e67-c2de-4f08-8f5d-e10b1bd64d11, CN-EC-CDMP-PROD
+[2026-07-23 14:30:17]     [beckzwang@deloitte.com.cn] Token1:
+[2026-07-23 14:30:17]       XLSX: b87ec458-bd7b-44be-9bd9-c7cef883a7ea, Deloitte Consulting China, 527106193980290
+[2026-07-23 14:30:17]       API : d95def07-333a-4046-8449-a74346a37d88, CN-AZSUB-APA-AUD-OMNIA-PRD, /subscriptions
+[2026-07-23 14:30:17]     [beckzwang@deloitte.com.cn] Token2:
+[2026-07-23 14:30:17]       XLSX: b87ec458-bd7b-44be-9bd9-c7cef883a7ea, Deloitte Consulting China, 527107004895873
+[2026-07-23 14:30:17]       API : 
+[2026-07-23 14:30:17]     [beckzwang@deloitte.com.cn] Token3:
+[2026-07-23 14:30:17]       XLSX: ba1763e0-fcfb-4ce7-ad07-8e2e5682d40c, Deloitte Consulting China, 527106752739147
+[2026-07-23 14:30:17]       API : 
+[2026-07-23 14:30:17]     [beckzwang@deloitte.com.cn] Token4:
+[2026-07-23 14:30:17]       XLSX: ba1763e0-fcfb-4ce7-ad07-8e2e5682d40c, Deloitte Consulting China, 527106820944218
+[2026-07-23 14:30:17]       API : 
+[2026-07-23 14:30:17]     [beckzwang@deloitte.com.cn] Token5:
+[2026-07-23 14:30:17]       XLSX: d95def07-333a-4046-8449-a74346a37d88, Deloitte Consulting China, 527106052462627
+[2026-07-23 14:30:17]       API : 
+[2026-07-23 14:30:17]     [chunguang.zhang@cn.abb.com] Token1:
+[2026-07-23 14:30:17]       XLSX: 62392e5b-cea9-425e-bf77-288344ab0d39, ABB China, 5271068547548867
+[2026-07-23 14:30:17]       API : cf6b6f4b-43b0-4958-a72d-41c38706bfb4, ABB-CN-APP-NMG-PROD-APM0010682-01, _aks-os
+[2026-07-23 14:30:17] 
+[2026-07-23 14:30:17] ============================================================
+[2026-07-23 14:30:17]   RESULT: FAIL
+[2026-07-23 14:30:17] ============================================================

@@ -1,0 +1,8 @@
+2026-07-13 18:03:44 [INFO] Downloading attachments for item AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+AAAA=
+2026-07-13 18:03:45 [INFO]   Saved: image001.png (11.8 KB)
+2026-07-13 18:03:45 [INFO] Downloaded 0 .msg + 0 .xlsx
+2026-07-13 18:04:10 [INFO] 
+LiteLLM completion() model= WanWu/MiniMax-M3; provider = openai
+2026-07-13 18:04:33 [INFO] Retrying request to /chat/completions in 0.402356 seconds
+2026-07-13 18:04:55 [INFO] Retrying request to /chat/completions in 0.795527 seconds
+2026-07-13 18:05:17 [WARNING] LLM 分析失败 (openai/WanWu/MiniMax-M3): litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.，降级为规则匹配

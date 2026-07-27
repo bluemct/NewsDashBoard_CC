@@ -1,0 +1,25 @@
+{
+  "item_id": "AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+lAAA=",
+  "subject": "FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)",
+  "sender": "ma.chuntao@oe.21vianet.com",
+  "received": "2026-07-15T19:30:18.0000000+08:00",
+  "action": "edm_process",
+  "confidence": 100,
+  "reason": "邮件包含SN-56619，明确提及EDM、Token、模板，且为EDM测试与分发请求",
+  "sn": "SN-56619",
+  "success": false,
+  "process": {
+    "success": true,
+    "sn": "SN-56619",
+    "sn_folder": "C:\\Users\\SI-Agent\\Desktop\\EDM\\SN-56619",
+    "return_code": 0,
+    "error": ""
+  },
+  "import": {
+    "success": false,
+    "list_id": null,
+    "return_code": 2
+  },
+  "import_success": false,
+  "process_success": true
+}

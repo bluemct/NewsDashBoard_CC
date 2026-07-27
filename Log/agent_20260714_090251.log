@@ -1,0 +1,45 @@
+2026-07-14 09:02:51 [INFO] ============================================================
+2026-07-14 09:02:51 [INFO] EDM Auto Agent 启动
+2026-07-14 09:02:51 [INFO] Config: C:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-14 09:02:51 [INFO] LLM Config: C:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-14 09:02:51 [INFO] LLM Model: openai/WanWu/MiniMax-M3 (timeout=30s)
+2026-07-14 09:02:51 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-14 09:02:51 [INFO] Folder: EDM
+2026-07-14 09:02:51 [INFO] Log: C:\Users\SI-Agent\AgentProject\Log\agent_20260714_090251.log
+2026-07-14 09:02:51 [INFO] ============================================================
+2026-07-14 09:02:51 [INFO] Initializing EDM Agent...
+2026-07-14 09:02:51 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-14 09:02:51 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-14 09:02:52 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-14 09:02:58 [INFO] Starting polling loop (interval=30s)
+2026-07-14 09:02:58 [INFO] Scanning for new emails since 2026-07-14T07:02:58.426171
+2026-07-14 09:02:58 [INFO] Found 1 new item(s) with attachments
+2026-07-14 09:02:58 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-14 09:03:12 [WARNING] LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: _ssl.c:1015: The handshake operation timed out. Falling back to local backup.
+2026-07-14 09:03:27 [INFO] 
+LiteLLM completion() model= WanWu/MiniMax-M3; provider = openai
+2026-07-14 09:03:51 [INFO] Retrying request to /chat/completions in 0.429619 seconds
+2026-07-14 09:04:12 [INFO] Retrying request to /chat/completions in 0.908671 seconds
+2026-07-14 09:04:35 [WARNING] LLM 分析失败 (openai/WanWu/MiniMax-M3): litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.，降级为规则匹配
+2026-07-14 09:04:35 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-14 09:05:01 [INFO] User confirmed — executing EDM process pipeline...
+2026-07-14 09:05:01 [INFO] Saving email AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+NAAA= as .msg to Temp/
+2026-07-14 09:05:01 [ERROR] Error in scan loop: 500 Server Error: Internal Server Error for url: https://mail.21vianet.com/EWS/Exchange.asmx
+Traceback (most recent call last):
+  File "C:\Users\SI-Agent\AgentProject\edm_agent.py", line 1197, in run_loop
+    results = self.scan_and_process()
+  File "C:\Users\SI-Agent\AgentProject\edm_agent.py", line 1104, in scan_and_process
+    self._execute_edm_pipeline(item_id, info, analysis, action_result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SI-Agent\AgentProject\edm_agent.py", line 1147, in _execute_edm_pipeline
+    msg_path = self.fetcher.save_as_msg(item_id, subject)
+  File "C:\Users\SI-Agent\AgentProject\edm_agent.py", line 494, in save_as_msg
+    entry_id = self.ews.get_entry_id(item_id)
+  File "C:\Users\SI-Agent\AgentProject\edm_agent.py", line 437, in get_entry_id
+    root = self._soap(body_xml)
+  File "C:\Users\SI-Agent\AgentProject\edm_agent.py", line 157, in _soap
+    resp.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\AIAgent\AppData\Local\Programs\Python\Python313\Lib\site-packages\requests\models.py", line 1167, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://mail.21vianet.com/EWS/Exchange.asmx

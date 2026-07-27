@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>IcmDll</id>
+    <version>2.0.28</version>
+    <authors>IcmDll</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <readme>readme.md</readme>
+    <description>Package Description</description>
+    <copyright>Max by 2022</copyright>
+    <repository type="git" commit="8997362520eba8633bbfb18a7576279db595a873" />
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="CmeLogin" version="2.0.7" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.DependencyInjection" version="9.0.1" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Http" version="9.0.1" exclude="Build,Analyzers" />
+        <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

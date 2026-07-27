@@ -1,0 +1,41 @@
+[
+  {
+    "email": "microsoft.163163@163.com",
+    "attributes": {
+      "Token": "0c63bf26-03bf-4ac4-80e1-64fcc409aab9, EY-CTSBP-PROD-INFOSEC-CNSENTINELGSOC-01-AC47024326",
+      "TokenT": "1fd81170-beed-4f90-a6a2-7eba790599ed, EY-CTSBP-PROD-HUB-CNE2-38370767",
+      "TokenH": "269af49e-f76e-49bf-9e4a-70574806f85e, EY-CTSBP-NON-PROD-ASSURANCE-SMARTAUTOMATIONUAT-01-47039762-AT05",
+      "TokenF": "3f3aea57-6451-420f-a4d5-07780ec3a96e, EY-CTSBP-PROD-TAX-EYI_MYDOCS-01-47042797",
+      "TokenI": "4c41d652-df5b-4fdd-835f-0f8aaf218da2, EY-CTSBP-PROD-INFOSEC-CNSENTINELCOREWS-01-AC47024326",
+      "TokenS": "6926ed24-c5c7-4f55-900b-2353f4eb6b61, EY-CTSBP-NON-PROD-CT-DTPLUS-01-I-65707858",
+      "TokenE": "7ccb49b8-3eaf-4e2d-b046-ed741312020a, EY-CTSBP-PROD-ASSURANCE-SMARTAUTOMATION-01-47039873-AT05",
+      "TokenG": "81c5e82d-d661-43e8-9f73-cfc2cfa04d41, EY-BLUE_CLOUD-INFRASTRUCTURE-SELF_MANAGED-NO_CHARGE",
+      "TokenN": "8dbe3537-ce23-4e22-b85a-f3a7f35e4a5e, EY-HM-NON-PROD-INFOSEC-SENTINELLAB-01-AC47024326",
+      "TokenTEN": "b21b7903-59bf-4d8f-9ebb-ca97d302b6d5, EY-CTSBP-NON-PROD-TAX-EYI_MYDOCS-01-47042797",
+      "TokenL": "c85eb3a9-c516-429d-b6ba-5e2663c337d6, EY-CTSBP-NON-PROD-CBS-MSP-01-47032820",
+      "TokenW": "cb2fde61-6533-4ebf-9166-e5c469ddf2a4, EY-CONSULTING-DNA-PRODUCTION-01-2134618",
+      "TokenR": "cb8f727c-b0d6-41da-846a-54716bc122c8, EY-CTSBP-POC-CONSULTING-SENTINEL_SHOWROOM-DEV-01-21174563",
+      "TokenO": "db4ae2a2-908b-4c57-a865-0e73f80d0568, EY-HM-NON-PROD-INFOSEC-WIZ-POC-01-AC47024326",
+      "TokenV": "f79b0bb5-e70f-472e-a238-9f5a50555575, EY-CTSBP-POC-CBS-CHINA_ADO_PRACTICE-01-23052473"
+    }
+  },
+  {
+    "email": "ma.chuntao@oe.21vianet.com",
+    "attributes": {
+      "Token": "0e71cc33-43fd-4974-af5d-f16ba0a868e0, CN-INS-PROD",
+      "TokenT": "1b41f511-8b2b-41c5-b96f-53436372ee00, CN-FRS-NONP",
+      "TokenH": "52566e3a-55a6-4394-ab07-f10ddd86fa4f, CN-INS-NONP",
+      "TokenF": "699a1a36-b373-4c7b-89b4-a652b1726d51, ECL-FIN-PROD",
+      "TokenI": "83b6b143-7af0-4d9f-89ef-f4de81b613bb, CN-ITS-NONP",
+      "TokenS": "8d65d8c5-b4ce-4582-aa91-5daaddddd3cf, ECL-ITS-SHARED",
+      "TokenE": "90351ebb-b604-4b79-8fd8-edea03928ec5, CN-ITS-SHARED",
+      "TokenG": "92d183d9-d0f5-469d-b7a6-cf4b8bdaca0f, ECL-ITS-PROD",
+      "TokenN": "93d0ddc6-13be-40e3-b25c-568244554690, ECL-SPC-PROD",
+      "TokenTEN": "94ccd7b1-0741-4fbb-b677-07cdc988f742, CN-FRS-PROD",
+      "TokenL": "95ed2a0b-7676-407f-9f40-5a49bb08040e, CN-WAT-PROD",
+      "TokenW": "c402f7f3-24e5-4ac0-a66f-eb19353445ee, ECL-INS-PROD",
+      "TokenR": "c93cf75a-f5d2-464a-941f-b75cd0116e8c, CN-WAT-NONP",
+      "TokenO": "fabbe621-1ce5-4ec4-9b25-b58c9a064471, ECL-ITS-NONP"
+    }
+  }
+]

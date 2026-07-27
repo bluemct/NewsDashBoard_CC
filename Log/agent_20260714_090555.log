@@ -1,0 +1,169 @@
+2026-07-14 09:05:55 [INFO] ============================================================
+2026-07-14 09:05:55 [INFO] EDM Auto Agent 启动
+2026-07-14 09:05:55 [INFO] Config: C:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-14 09:05:55 [INFO] LLM Config: C:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-14 09:05:55 [INFO] LLM Model: openai/WanWu/MiniMax-M3 (timeout=30s)
+2026-07-14 09:05:55 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-14 09:05:55 [INFO] Folder: EDM
+2026-07-14 09:05:55 [INFO] Log: C:\Users\SI-Agent\AgentProject\Log\agent_20260714_090555.log
+2026-07-14 09:05:55 [INFO] ============================================================
+2026-07-14 09:05:55 [INFO] Initializing EDM Agent...
+2026-07-14 09:05:55 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-14 09:05:55 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-14 09:05:56 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-14 09:06:03 [INFO] Starting polling loop (interval=30s)
+2026-07-14 09:06:03 [INFO] Scanning for new emails since 2026-07-14T07:06:03.232382
+2026-07-14 09:06:03 [INFO] Found 1 new item(s) with attachments
+2026-07-14 09:06:03 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-14 09:06:11 [WARNING] LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: The read operation timed out. Falling back to local backup.
+2026-07-14 09:06:23 [INFO] 
+LiteLLM completion() model= WanWu/MiniMax-M3; provider = openai
+2026-07-14 09:06:47 [INFO] Retrying request to /chat/completions in 0.406592 seconds
+2026-07-14 09:07:08 [INFO] Retrying request to /chat/completions in 0.961755 seconds
+2026-07-14 09:07:31 [WARNING] LLM 分析失败 (openai/WanWu/MiniMax-M3): litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.，降级为规则匹配
+2026-07-14 09:07:31 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-14 09:07:37 [INFO] User confirmed — executing EDM process pipeline...
+2026-07-14 09:07:37 [INFO] Saving email AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+NAAA= as .msg to Temp/
+2026-07-14 09:07:43 [ERROR] eml→msg conversion failed: (-2147352567, '发生意外。', (4096, 'Microsoft Outlook', '无效的路径或 URL。', None, 0, -2147352567), None)
+2026-07-14 09:07:43 [ERROR] Failed to save email as .msg, cannot proceed
+2026-07-14 09:07:43 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260714_090743.json
+2026-07-14 09:07:43 [INFO] Completed: [edm_process] FW: [EDM test and distribution] Incident...
+2026-07-14 09:07:43 [INFO] Processed 1 email(s) this round
+2026-07-14 09:08:13 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:08:13 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:08:43 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:08:43 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:09:13 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:09:14 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:09:44 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:09:44 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:10:14 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:10:14 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:10:44 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:10:44 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:11:14 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:11:14 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:11:44 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:11:44 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:12:14 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:12:14 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:12:44 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:12:44 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:13:14 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:13:14 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:13:44 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:13:44 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:14:14 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:14:15 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:14:45 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:14:45 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:15:15 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:15:15 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:15:45 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:15:45 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:16:15 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:16:15 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:16:45 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:16:45 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:17:15 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:17:15 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:17:45 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:17:45 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:18:15 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:18:15 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:18:45 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:18:45 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:19:15 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:19:15 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:19:46 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:19:46 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:20:16 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:20:16 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:20:46 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:20:46 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:21:16 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:21:16 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:21:46 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:21:46 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:22:16 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:22:16 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:22:46 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:22:46 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:23:16 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:23:16 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:23:46 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:23:46 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:24:16 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:24:17 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:24:47 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:24:47 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:25:17 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:25:17 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:25:47 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:25:47 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:26:17 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:26:17 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:26:47 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:26:47 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:27:17 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:27:17 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:27:47 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:27:47 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:28:17 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:28:17 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:28:47 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:28:48 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:29:18 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:29:18 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:29:48 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:29:48 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:30:18 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:30:18 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:30:48 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:30:48 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:31:18 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:31:18 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:31:48 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:31:48 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:32:18 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:32:18 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:32:48 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:32:48 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:33:18 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:33:19 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:33:49 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:33:49 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:34:19 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:34:19 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:34:49 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:34:49 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:35:19 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:35:19 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:35:49 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:35:49 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:36:19 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:36:19 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:36:49 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:36:49 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:37:19 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:37:19 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:37:49 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:37:49 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:38:19 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:38:19 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:38:49 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:38:50 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:39:20 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:39:20 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:39:50 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:39:50 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:40:20 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:40:20 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:40:50 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:40:50 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:41:20 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:41:20 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:41:50 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:41:50 [INFO] Found 0 new item(s) with attachments
+2026-07-14 09:42:20 [INFO] Scanning for new emails since 2026-07-14T09:07:43.782934
+2026-07-14 09:42:20 [INFO] Found 0 new item(s) with attachments

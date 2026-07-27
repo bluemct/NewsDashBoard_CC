@@ -1,0 +1,24 @@
+2026-07-16 11:40:19 [INFO] ============================================================
+2026-07-16 11:40:19 [INFO] EDM Auto Agent 启动
+2026-07-16 11:40:19 [INFO] Config: c:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-16 11:40:19 [INFO] LLM Config: c:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-16 11:40:19 [INFO] LLM Model: openai/Qwen3.5-27B (timeout=10s)
+2026-07-16 11:40:19 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-16 11:40:19 [INFO] Folder: EDM
+2026-07-16 11:40:19 [INFO] Log: c:\Users\SI-Agent\AgentProject\Log\agent_20260716_114019.log
+2026-07-16 11:40:19 [INFO] ============================================================
+2026-07-16 11:40:19 [INFO] Initializing EDM Agent...
+2026-07-16 11:40:19 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-16 11:40:19 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-16 11:40:20 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-16 11:40:27 [INFO] Starting EWS Streaming Notifications (attempt 1)...
+2026-07-16 11:40:27 [INFO] Starting EWS Streaming Monitor: c:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-16 11:40:27 [INFO] Streaming monitor started
+2026-07-16 11:40:27 [INFO] Streaming monitor active, waiting for events...
+2026-07-16 11:40:29 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAACxkyec0dvmRIn1xTa1H5TLZmEJ++vi3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==
+2026-07-16 11:40:38 [WARNING] Notification email failed (rc=1): [ERROR] Failed to connect to SMTP server: [Errno 11001] getaddrinfo failed
+2026-07-16 11:40:38 [INFO]   [Notify] [SMTP] Connecting to svr-ex2019-04.21vianet.com:25...
+2026-07-16 11:40:54 [INFO] New mail event: RE: edm mail te
+2026-07-16 11:40:54 [INFO] Streaming event: new mail AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni...
+2026-07-16 11:40:54 [INFO] Processing streaming event: [RE: edm mail te] from ma.chuntao@oe.21vianet.com
+2026-07-16 11:40:54 [INFO] SKIP (no attachments): [RE: edm mail te]

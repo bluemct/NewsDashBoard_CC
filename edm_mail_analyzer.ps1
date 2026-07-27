@@ -256,6 +256,49 @@ foreach ($n in $newEmails) {
 $allEmails = $allEmails | Sort-Object { [datetime]::ParseExact($_.date, "yyyy-MM-dd HH:mm:ss", $null) }
 Write-LogInfo "  Total: $($allEmails.Count) emails ($($existingEmails.Count) existing + $($newEmails.Count) new, $duplicates duplicates dropped)"
 
+# --- 4.5. Merge conversations by SN — same SN, same conversation ---
+Write-LogInfo "[4.5/6] Merging conversations by SN number..."
+$snGroups = @{}
+foreach ($email in $allEmails) {
+    if ($email.subject -match 'SN-(\d+)') {
+        $sn = "SN-$($matches[1])"
+        if (-not $snGroups.ContainsKey($sn)) {
+            $snGroups[$sn] = @{ cids = @{} }
+        }
+        $cid = $email.conversation_id
+        if ($snGroups[$sn].cids.ContainsKey($cid)) {
+            $snGroups[$sn].cids[$cid]++
+        } else {
+            $snGroups[$sn].cids[$cid] = 1
+        }
+    }
+}
+
+$snReplaces = @{}
+$mergeCount = 0
+foreach ($sn in $snGroups.Keys) {
+    $cids = $snGroups[$sn].cids
+    if ($cids.Count -gt 1) {
+        $primary = ($cids.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 1).Key
+        foreach ($cid in $cids.Keys) {
+            if ($cid -ne $primary) {
+                $snReplaces[$cid] = $primary
+                $mergeCount += $cids[$cid]
+            }
+        }
+        Write-LogInfo "  $sn : merging $($cids.Count) conversations -> $primary"
+    }
+}
+
+if ($mergeCount -gt 0) {
+    foreach ($email in $allEmails) {
+        if ($snReplaces.ContainsKey($email.conversation_id)) {
+            $email.conversation_id = $snReplaces[$email.conversation_id]
+        }
+    }
+}
+Write-LogInfo "  SN merge done: $mergeCount emails reassigned"
+
 # --- 5. Assign sequential step number per conversation ---
 $convStep = @{}
 $outputRecords = @()
@@ -285,7 +328,7 @@ foreach ($record in $outputRecords) {
 }
 
 # --- 6. Summary: list all conversations with counts ---
-Write-LogInfo "[5/6] Conversations ($($convStep.Count) total):"
+Write-LogInfo "[5.5/6] Conversations ($($convStep.Count) total):"
 $convStep.GetEnumerator() | Sort-Object Value -Descending | ForEach-Object {
     Write-LogInfo "  [$($_.Value)] $($_.Key)"
 }
@@ -294,7 +337,7 @@ $convStep.GetEnumerator() | Sort-Object Value -Descending | ForEach-Object {
 $outputPath = "C:\repos\repo\edmmailanalyzer.json"
 $outputRecords | ConvertTo-Json -Depth 3 | Out-File -FilePath $outputPath -Encoding utf8
 
-Write-LogInfo "[6/6] Written $($outputRecords.Count) records to $outputPath"
+Write-LogInfo "[6.5/6] Written $($outputRecords.Count) records to $outputPath"
 Write-LogInfo "Changing location to $RepoPath"
 Set-Location $RepoPath
 

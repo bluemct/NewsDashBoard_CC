@@ -1,0 +1,17 @@
+[2026-06-24 17:05:16] [VERIFY] Fetching list info...
+[2026-06-24 17:05:16] [VERIFY] List: formal_SN-56287_Token1-9 SN-56287 MC_20260623171835 (id=350036)
+[2026-06-24 17:05:16] [VERIFY] Fetching list contacts...
+[2026-06-24 17:05:22] [VERIFY] Fetched 219 list contacts
+[2026-06-24 17:05:28] [VERIFY] Saved to: C:\Users\SI-Agent\AgentProject\listverify\formal_SN-56287_Token1-9 SN-56287 MC_20260623171835_emails.txt
+[2026-06-24 17:05:28] [VERIFY] Reading xlsx emails...
+[2026-06-24 17:05:28] [VERIFY] XLSX emails: 219 total
+[2026-06-24 17:05:28] 
+[2026-06-24 17:05:28] [VERIFY] ===========================================================
+[2026-06-24 17:05:28] [VERIFY]   formal_SN-56287_Token1-9 SN-56287 MC_20260623171835
+[2026-06-24 17:05:28] [VERIFY] ===========================================================
+[2026-06-24 17:05:28] [VERIFY]   List total     : 219
+[2026-06-24 17:05:28] [VERIFY]   Fetched emails : 219 unique
+[2026-06-24 17:05:28] [VERIFY]   XLSX emails    : 219 unique
+[2026-06-24 17:05:28] [VERIFY]   Matched        : 219
+[2026-06-24 17:05:28] [VERIFY]   RESULT: PASS
+[2026-06-24 17:05:28] [VERIFY] ===========================================================

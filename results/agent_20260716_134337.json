@@ -1,0 +1,11 @@
+{
+  "item_id": "AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+rAAA=",
+  "subject": "FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 2)",
+  "sender": "ma.chuntao@oe.21vianet.com",
+  "received": "2026-07-16T13:42:54.0000000+08:00",
+  "action": "skipped_by_user",
+  "confidence": 100,
+  "reason": "邮件明确包含SN号码(SN-56619)，多次提及EDM、Token和模板，且明确为EDM测试与分发请求。",
+  "sn": "SN-56619",
+  "success": true
+}

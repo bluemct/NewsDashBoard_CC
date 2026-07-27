@@ -1,0 +1,640 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>IcmDll</name>
+    </assembly>
+    <members>
+        <member name="T:IcmDll.ActivityLog.Communications.Communication">
+            <summary>
+            ICM 返回数据为一个数组 或者list ，定义一个对象
+            </summary>
+        </member>
+        <member name="M:IcmDll.AdvanceSearch.AdvanceSearch.#ctor(System.String)">
+            <summary>
+            filter url:  https://portal.microsofticm.com/imp/v3/incidents/search/advanced?sl=u4enj1ncwbt
+            </summary>
+            <param name="linkId">u4enj1ncwbt</param>
+        </member>
+        <member name="M:IcmDll.AdvanceSearch.AdvanceSearch.GetSearchFiler">
+            <summary>
+            获取初始化 linkid filter 的内容
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.AdvanceSearch.AdvanceSearch.CheckFieldName(System.String)">
+            <summary>
+            通过fieldid 获取名字
+            </summary>
+            <param name="fieldid"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.AdvanceSearch.AdvanceSearch.CheckFieldNameEscape(System.String)">
+            <summary>
+            检查名字中是否有转义字符，如果有进行处理
+            </summary>
+            <param name="Fieldname"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Bridge.TeamsBridge.ChangeToBridge(System.String)">
+            <summary>
+            从teams copy bridge 信息的html 中，获取bridgeuri  bridgeconfId 等相关信息
+            </summary>
+            <param name="teamsBridgeInfo"></param>
+            <returns></returns>
+        </member>
+        <member name="T:IcmDll.Get">
+            <summary>
+            Icm Get request operation
+            </summary>
+        </member>
+        <member name="M:IcmDll.Get.#ctor">
+            <summary>
+            init
+            </summary>
+        </member>
+        <member name="M:IcmDll.Get.#ctor(System.Func{System.Net.Cookie})">
+            <summary>
+            通过委托初始化cookie 信息
+            </summary>
+            <param name="cookieFunc"></param>
+        </member>
+        <member name="M:IcmDll.Get.GetIcmCookie">
+            <summary>
+            get icm cookie
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.IncidentDetails(System.String)">
+            <summary>
+            获取当前incident ticket 信息
+            </summary>
+            <param name="incidentID"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetIncidentDetails(System.String)">
+            <summary>
+            获取当前incident ticket 信息
+            </summary>
+            <param name="incidentID"></param>
+            返回值为Null，可能是由于没有权限 或者 网络问题 造成的
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.SearchContact(System.String)">
+            <summary>
+            搜索emal，返回该email 对应的组和其他信息
+            </summary>
+            <param name="email">zhang@microsoft.com</param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetComponents(System.String)">
+            <summary>
+            获取 Service 下面的 components 
+            </summary>
+            <param name="serviceid"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetCurrentUser">
+            <summary>
+             get current user info
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetTeams(System.String)">
+            <summary>
+            根据Team ID 查询 Team 相关纤细
+            </summary>
+            <param name="teamsId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetServices(System.String)">
+            <summary>
+            Get current service name
+            </summary>
+            <param name="ServicesId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.CurrentOnCalls(System.Int64)">
+            <summary>
+            通过Team Id 查询当前Team OnCalls，返回DataTable
+            </summary>
+            <param name="teamid"> int teamid</param>
+            <returns>
+             "Name", "Email", "Work", "Cell","Home","Team", "TeamEmail","TeamId"
+            </returns>
+        </member>
+        <member name="M:IcmDll.Get.GetCurrentOnCalls(System.Int64)">
+            <summary>
+             get current oncalls by teamId
+            </summary>
+            <param name="teamid"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetOnCallScheduleForTeams(System.Int32,System.DateTime,System.DateTime)">
+            <summary>
+            Get OnCall Schedule For Teams
+            </summary>
+            <param name="teamid"></param>
+            <param name="startTimeUtc"></param>
+            <param name="endTimeUtc"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetTokenAndHeaders">
+            <summary>
+            get oncall info, and response httpheaders
+            </summary>
+            <param name="headers"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetHistory(System.String)">
+            <summary>
+            获取incident 历史操作记录
+            </summary>
+            <param name="Incidentid"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.ChangeToDataTable(IcmDll.JSON.OnCalls)">
+            <summary>
+            把 oncalls 对象转换为DataTable
+            </summary>
+            <param name="IcmOnCalls"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetServiceName(System.String)">
+            <summary>
+            通过Service ID 获取 Service Name
+            </summary>
+            <param name="SeviceId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetTeamName(System.String)">
+            <summary>
+            通过TeamId 获取Team Name
+            </summary>
+            <param name="TeamId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetRelatedIncidents(System.String)">
+            <summary>
+            获取Incident 相关的Incident Link 的信息
+            </summary>
+            <param name="IncidentId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetCommunications(System.String)">
+            <summary>
+            获取 LSI Communication 信息
+            </summary>
+            <param name="LsiIncidentId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetNotifications(System.String)">
+            <summary>
+            通过 icm id 获取 Notification 信息
+            </summary>
+            <param name="IncidentId"></param>
+            <returns></returns>
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:IcmDll.Get.GetDiscussion(System.String)" -->
+        <member name="M:IcmDll.Get.GetBridges(System.String)">
+            <summary>
+            通过incident id 获取bridge 的信息，可能为空 或者多个
+            </summary>
+            <param name="IncidentId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetBridgeParticipantsCount(System.String,System.String)">
+            <summary>
+             通过BridgeURI 获取当前bridge 中的人数
+            </summary>
+            <param name="IncidentId"></param>
+            <param name="bridgeUri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetBridgeParticipants(System.String,System.String)">
+            <summary>
+            通过bridgeURI 获取当前ICM bridge 的参与者
+            </summary>
+            <param name="IncidentId"></param>
+            <param name="bridgeUri">https://teams.microsoft.com/l/meetup-join/
+            19%3ameeting_YTU2YzQyYTAtZGE0MS00YTFhLTgyZGMtYmU1ZjAzY2UwZmIy%40thread.v2/0
+            ?context=%7b%22Tid%22%3a%2272f988bf-86f1-41af-91ab-2d7cd011db47%22%2c%22Oid%22%3a%22e2223e22-9852-4b70-946b-8d0c53d0b22a%22%7d
+            </param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Get.GetIncidentsForEntities(System.String,System.String)">
+            <summary>
+            获取当前team所属incident
+            </summary>
+            <param name="ContactAlias"></param>
+            <param name="urlParameter"></param>
+            <returns></returns>
+        </member>
+        <member name="T:IcmDll.ICMToken">
+            <summary>
+            Icm token 相关操作
+            </summary>
+        </member>
+        <member name="M:IcmDll.ICMToken.GetToken(System.Net.Cookie)">
+            <summary>
+            利用icm cookies 获取 icm token
+            </summary>
+            <param name="Icmcookies"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.ICMToken.UpdateIcmCookie(System.String)">
+            <summary>
+            在获取token 的过程中，http header 中会包含新的cookies 信息
+            Set-Cookie: CloudESAuthCookie=***MUdliaV; domain=portal.microsofticm.com; path=/; expires=Mon, 15-Nov-2021 16:22:29 GMT; secure; HttpOnly
+            </summary>
+        </member>
+        <member name="M:IcmDll.IcmHttp.Http.HttpClientInit">
+            <summary>
+            http client 初始化
+            </summary>
+        </member>
+        <member name="M:IcmDll.IcmHttp.Http.HttpGet(System.String,System.String,System.Collections.Generic.List{System.Net.Cookie})">
+            <summary>
+            Get Json 请求与获取结果
+            </summary>
+            <param name="Url"></param>
+            <param name="token"></param>
+            <param name="cookies"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.IcmHttp.Http.HttpPost(System.String,System.String,System.String,System.Collections.Generic.List{System.Net.Cookie})">
+            <summary> 
+            POST请求与获取结果 
+            </summary> 
+        </member>
+        <member name="M:IcmDll.IcmHttp.Http.HttpPost(System.String,System.String,System.Collections.Generic.List{System.Net.Cookie})">
+            <summary>
+            check http response headers
+            </summary>
+            <param name="Url"></param>
+            <param name="postDataJson"></param>
+            <param name="cookies"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.IcmHttp.Http.CheckHttpHeaders(System.Net.Http.Headers.HttpHeaders,System.String)">
+            <summary>
+            check http headers
+            </summary>
+            <param name="headers"></param>
+            <param name="key"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.IcmHttp.Http.HttpPost(System.String@,System.String,System.String,System.String,System.Collections.Generic.List{System.Net.Cookie})">
+            <summary> 
+            POST请求与获取结果 
+            </summary> 
+        </member>
+        <member name="M:IcmDll.IcmHttp.Http.HttpPost(System.String,System.String,System.String,System.Collections.Generic.List{System.Net.Cookie},System.Int32)">
+            <summary> 
+            POST请求与获取结果, have time out
+            </summary> 
+        </member>
+        <member name="M:IcmDll.IcmHttp.Http.HttpPATCH(System.String,System.String,System.String,System.Collections.Generic.List{System.Net.Cookie})">
+            <summary>
+            HTTP PATCH 请求并返回结构
+            </summary>
+            <param name="Url"></param>
+            <param name="postDataJson"></param>
+            <param name="token"></param>
+            <param name="cookies"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.IcmHttp.HttpV1.HttpGet(System.String,System.String,System.Collections.Generic.List{System.Net.Cookie})">
+            <summary>
+            Get Json 请求与获取结果
+            </summary>
+            <param name="Url"></param>
+            <param name="token"></param>
+            <param name="cookies"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.IcmHttp.HttpV1.HttpPost(System.String,System.String,System.String,System.Collections.Generic.List{System.Net.Cookie})">
+            <summary> 
+            POST请求与获取结果 
+            </summary> 
+        </member>
+        <member name="M:IcmDll.IcmHttp.HttpV1.HttpPost(System.String@,System.String,System.String,System.String,System.Collections.Generic.List{System.Net.Cookie})">
+            <summary> 
+            POST请求与获取结果 
+            </summary> 
+        </member>
+        <member name="M:IcmDll.IcmHttp.HttpV1.HttpPost(System.String,System.String,System.String,System.Collections.Generic.List{System.Net.Cookie},System.Int32)">
+            <summary> 
+            POST请求与获取结果, have time out
+            </summary> 
+        </member>
+        <member name="M:IcmDll.IcmHttp.HttpV1.HttpPATCH(System.String,System.String,System.String,System.Collections.Generic.List{System.Net.Cookie})">
+            <summary>
+            HTTP PATCH 请求并返回结构
+            </summary>
+            <param name="Url"></param>
+            <param name="postDataJson"></param>
+            <param name="token"></param>
+            <param name="cookies"></param>
+            <returns></returns>
+        </member>
+        <member name="T:IcmDll.ICMLogin">
+            <summary>
+            登陆icm，获取token 信息 和cookies 信息
+            </summary>
+        </member>
+        <member name="F:IcmDll.ICMLogin.isWorkLocalhost">
+            是否在当前主机运行登陆程序 或 获取icm cookies
+        </member>
+        <member name="M:IcmDll.ICMLogin.#ctor">
+            <summary>
+            通过selenium 登陆获取cookies 和token 信息
+            </summary>
+        </member>
+        <member name="M:IcmDll.ICMLogin.GetCookieFromIcm">
+            <summary>
+            默认登陆方法，获取icm cookies
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.ICMLogin.#ctor(System.Func{System.Net.Cookie})">
+            <summary>
+            通过委托 调用 认证方式
+            </summary>
+            <param name="loginFunction"></param>
+        </member>
+        <member name="M:IcmDll.ICMLogin.#ctor(System.Boolean,System.Func{System.Net.Cookie})">
+            <summary>
+            通过委托方式认证
+            </summary>
+            <param name="isisWorkLocalhost">是否在本机</param>
+            <param name="loginFunction"> 委托方法</param>
+        </member>
+        <member name="M:IcmDll.ICMLogin.CookiesSave">
+            <summary>
+            Save Cookies to File
+            </summary>
+        </member>
+        <member name="M:IcmDll.ICMLogin.Token">
+            <summary>
+            检查token 是否过期，如果过期生成新的token
+            </summary>
+        </member>
+        <member name="M:IcmDll.ICMLogin.CheckToken">
+            <summary>
+            检查token 是否过期，True 为未过期， False 为过期
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.ICMLogin.CheckCookies">
+            <summary>
+            检查Cookie 是否过期，True 为未过期， False 为过期
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:IcmDll.JSON.Mitigate">
+            <summary>
+            Mitigated ICM and Close ICM Need Json format
+            </summary>
+        </member>
+        <member name="T:IcmDll.JSON.OnCalls">
+            <summary>
+            ICM Oncall 返回Json 数据结构
+            </summary>
+        </member>
+        <member name="T:IcmDll.JSON.Teams">
+            <summary>
+            定义查询当前Team 的oncall 
+            </summary>
+        </member>
+        <member name="M:IcmDll.Post.Create(IcmDll.Create.CreateIncident)">
+            <summary>
+             通过post 方法创建icm incident，返回创建的 incident 对象
+            </summary>
+            <param name="createIncident"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.AckIncident(System.String)">
+            <summary>
+             //兼容老版本, 不建议继续使用
+            </summary>
+            <param name="AckIncident_json"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.AckIncident(System.String,System.Boolean)">
+            <summary>
+             通过 incident ID Ack icm incident
+             参数不能省略
+            </summary>
+            <param name="incidentId"> 必填</param>
+            <param name="isIncidentID">True 不能省略，必填</param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.MitigateAndResolved(System.String,System.String)">
+            <summary>
+            Mitigated ICM and Resolved
+            </summary>
+            <param name="incidentId"></param>
+            <param name="MitigatedMessage"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.CreateIncident(System.String)">
+            <summary>
+            兼容老版本  不建议使用，建议使用create 方法
+            </summary>
+            <param name="createIncident_json"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.ChangeCustomField(IcmDll.PATH.ChangeCustomField)">
+            <summary>
+             修改 icm 中 custome field 的值
+            </summary>
+            <param name="customfield"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.Link(System.Int64,System.Int64,IcmDll.Enum.LinkTypeEnum,System.String)">
+            <summary>
+             把一个icm id link 到另外一个icm 上
+            </summary>
+            <param name="incidentid"></param>
+            <param name="LinkIncidentid"></param>
+            <param name="linkType"></param>
+            <param name="Description"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.TrackingTeams(System.String,IcmDll.POST.TrackingTeam)">
+            <summary>
+             把wasu-mooncake 添加到 tacking team
+            </summary>
+            <param name="incidentid"></param>
+            <param name="trackingteam"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.AddDiscussion(System.String,System.String,System.Boolean)">
+            <summary>
+             在icm  discussion 中，增加新的更新信息
+            </summary>
+            <param name="incidentid"></param>
+            <param name="Description"></param>
+            <param name="ShowMessageBox"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.ChangeImpactStartTime(System.String,System.String)">
+            <summary>
+             更新 icm 中 impact start time 的值
+            </summary>
+            <param name="incidentid"></param>
+            <param name="impactstarttime"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.CreateNewBridge(System.String,IcmDll.Bridge.CreateNewBridgeData)">
+            <summary>
+             创建新的bridge ，返回创建后的bridge 信息
+            </summary>
+            <param name="incidentid"></param>
+            <param name="createNewBridgeData"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.LinkToExistingBridge(System.String,IcmDll.Bridge.LinkToBridgeData)">
+            <summary>
+             把已经存在bridge 信息，添加到当前的incident 上
+            </summary>
+            <param name="incidentid"></param>
+            <param name="linkToBridgeData"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.DeleteBridge(System.String,System.Collections.Generic.List{System.Int32})">
+            <summary>
+             根据bridge id 删除已经存在bridge 信息
+            </summary>
+            <param name="incidentid"></param>
+            <param name="deletBridgeIds"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.ChangeIncidentType(System.String,System.String)">
+            <summary>
+            Change Incident Type
+            </summary>
+            <param name="incidentId"></param>
+            <param name="incidentType"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.RequestAssistance(System.Int64,System.Int32,System.String,System.Boolean,System.Boolean)">
+            <summary>
+            发送Icm    RequestAssistance 请求
+            </summary>
+            <param name="incidentId"></param>
+            <param name="TeamId"></param>
+            <param name="reason"></param>
+            <param name="ForceVoiceNotification"></param>
+            <param name="SkipCallIfOnBridge"></param>
+            <returns> "AllNotificationsFailed":false </returns>
+        </member>
+        <member name="M:IcmDll.Post.Track(System.Int64,System.Int32)">
+            <summary>
+            Icm Track
+            </summary>
+            <param name="incidentId"></param>
+            <param name="TeamId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Post.ImpactedService(System.Int64,System.Int32,System.Int32,System.String)">
+            <summary>
+            updae impacted service and team
+            </summary>
+            <param name="incidentId"></param>
+            <param name="ServiceId"></param>
+            <param name="TeamId"></param>
+            <returns></returns>
+        </member>
+        <member name="F:IcmDll.SaveCookies.CookieSaveFolder">
+            <summary>
+            only work IsSaveCookieToWasuTool=false
+            </summary>
+        </member>
+        <member name="F:IcmDll.SaveCookies.ICMCookie">
+            <summary>
+            Save ICM Cookies
+            </summary>
+        </member>
+        <member name="M:IcmDll.Search.GetIncidents(System.String)">
+            <summary>
+            搜索符合条件的 incidents
+            CreatedDate ge 2025-04-01T16:00:00Z  UTC Time
+            </summary>
+            <param name="fileter">icm filter</param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Search.GetIncidentsCount(System.String)">
+            <summary>
+            搜索符合条件的 incidents数量
+            </summary>
+            <param name="filter"></param>
+            <returns></returns>
+        </member>
+        <member name="T:IcmDll.Search.IncidentCount">
+            <summary>
+            IncidentCount 数据结构
+            </summary>
+        </member>
+        <member name="T:IcmDll.ServicesName.ServiceCategory">
+            <summary>
+            Get Service Response 对象
+            </summary>
+        </member>
+        <member name="T:IcmDll.TeamName.Team">
+            <summary>
+            Get team Response 对象
+            </summary>
+        </member>
+        <member name="M:IcmDll.Transfer.TransferWATS(System.String,System.String)">
+            <summary>
+            Transfers an incident to the Azure Incident Management China WATS team with a specified message.
+            </summary>
+            <param name="incidentId">The ID of the incident to transfer.</param>
+            <param name="transferMessage">The message to include with the transfer.</param>
+            <returns>The response from the transfer operation.</returns>
+        </member>
+        <member name="M:IcmDll.Transfer.ActiveFields(System.Int64,System.Int64)">
+            <summary>
+            Retrieves active custom fields for a specified service and team.
+            </summary>
+            <param name="serviceId">The ID of the service.</param>
+            <param name="teamId">The ID of the team.</param>
+            <returns>A JSON string containing the active custom fields.</returns>
+        </member>
+        <member name="M:IcmDll.Utitlity.Path(System.String)">
+            <summary>
+            返回文件存储路径
+            </summary>
+            <param name="name"> 文件名</param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Utitlity.Path">
+            <summary>
+            返回存储路径 such as: c:\windows
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Utitlity.Save(System.String,System.String)">
+            <summary>
+            通过IO 流的方式写文件
+            </summary>
+            <param name="filename"></param>
+            <param name="writetext"></param>
+        </member>
+        <member name="M:IcmDll.Utitlity.Read(System.String)">
+            <summary>
+            通过IO 流的方式读取文件
+            </summary>
+            <param name="filename"></param>
+            <returns></returns>
+        </member>
+        <member name="M:IcmDll.Utitlity.CheckDriver(System.String)">
+            <summary>
+             检查Driver 是否存在。
+            </summary>
+            <param name="DriverName"></param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

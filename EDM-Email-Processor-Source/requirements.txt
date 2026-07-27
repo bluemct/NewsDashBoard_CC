@@ -1,0 +1,4 @@
+extract-msg
+olefile
+openpyxl
+pywin32

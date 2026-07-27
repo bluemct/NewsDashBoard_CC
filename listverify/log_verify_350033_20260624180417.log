@@ -1,0 +1,17 @@
+[2026-06-24 18:04:17] [VERIFY] Fetching list info...
+[2026-06-24 18:04:18] [VERIFY] List: newformal_Token1-15 SN-53672 (id=350033)
+[2026-06-24 18:04:18] [VERIFY] Fetching list contacts...
+[2026-06-24 18:04:27] [VERIFY] Fetched 368 list contacts
+[2026-06-24 18:04:27] [VERIFY] Saved to: C:\Users\SI-Agent\AgentProject\listverify\newformal_Token1-15 SN-53672_emails.txt
+[2026-06-24 18:04:27] [VERIFY] Reading xlsx emails...
+[2026-06-24 18:04:27] [VERIFY] XLSX emails: 368 total
+[2026-06-24 18:04:27] 
+[2026-06-24 18:04:27] [VERIFY] ===========================================================
+[2026-06-24 18:04:27] [VERIFY]   newformal_Token1-15 SN-53672
+[2026-06-24 18:04:27] [VERIFY] ===========================================================
+[2026-06-24 18:04:27] [VERIFY]   List total     : 368
+[2026-06-24 18:04:27] [VERIFY]   Fetched emails : 368 unique
+[2026-06-24 18:04:27] [VERIFY]   XLSX emails    : 368 unique
+[2026-06-24 18:04:27] [VERIFY]   Matched        : 368
+[2026-06-24 18:04:27] [VERIFY]   RESULT: PASS
+[2026-06-24 18:04:27] [VERIFY] ===========================================================

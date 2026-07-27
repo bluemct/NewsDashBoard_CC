@@ -1,0 +1,4 @@
+2026-07-15 15:50:38 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-15 15:50:47 [INFO] Wrapper: Completed Call, calling success_handler
+2026-07-15 15:50:47 [INFO] LLM 分析结果 (openai/Qwen3.5-27B): action=edm_process, confidence=100

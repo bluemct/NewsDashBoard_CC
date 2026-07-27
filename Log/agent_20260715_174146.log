@@ -1,0 +1,9 @@
+2026-07-15 17:41:46 [INFO] Initializing EDM Agent...
+2026-07-15 17:41:46 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-15 17:41:46 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-15 17:41:47 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-15 17:41:47 [INFO] Starting EWS Streaming Monitor: C:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-15 17:41:48 [INFO] Streaming monitor started
+2026-07-15 17:41:49 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAABG3nqu40VGSYtvHGSbUFeqbcFrS1Xi3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==
+2026-07-15 17:42:18 [INFO] Stopping EWS Streaming Monitor...
+2026-07-15 17:42:18 [INFO] Streaming monitor stopped

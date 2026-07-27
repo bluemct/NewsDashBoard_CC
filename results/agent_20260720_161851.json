@@ -1,0 +1,11 @@
+{
+  "item_id": "AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S/bAAA=",
+  "subject": "FW: [EDM test and distribution] Incident 795642121 - SN-55247 [SN Email] 6 months Reminder: [SN Email] Reminder - Upcoming End of Life for Databricks Runtimes 10.4 LTS and earlier",
+  "sender": "ma.chuntao@oe.21vianet.com",
+  "received": "2026-07-20T16:11:32.0000000+08:00",
+  "action": "skipped_by_user",
+  "confidence": 100,
+  "reason": "邮件明确包含SN号码(SN-55247)，多次提及EDM、Token和模板，且为明确的EDM测试与分发处理请求。",
+  "sn": "SN-55247",
+  "success": true
+}

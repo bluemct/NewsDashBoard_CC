@@ -1,0 +1,124 @@
+2026-07-16 13:53:11 [INFO] ============================================================
+2026-07-16 13:53:11 [INFO] EDM Auto Agent 启动
+2026-07-16 13:53:11 [INFO] Config: C:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-16 13:53:11 [INFO] LLM Config: C:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-16 13:53:11 [INFO] LLM Model: openai/Qwen3.5-27B (timeout=10s)
+2026-07-16 13:53:11 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-16 13:53:11 [INFO] Folder: EDM
+2026-07-16 13:53:11 [INFO] Log: C:\Users\SI-Agent\AgentProject\Log\agent_20260716_135311.log
+2026-07-16 13:53:11 [INFO] ============================================================
+2026-07-16 13:53:11 [INFO] Initializing EDM Agent...
+2026-07-16 13:53:11 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-16 13:53:11 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-16 13:53:12 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-16 13:53:19 [INFO] Starting EWS Streaming Notifications (attempt 1)...
+2026-07-16 13:53:19 [INFO] Starting EWS Streaming Monitor: C:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-16 13:53:19 [INFO] Streaming monitor started
+2026-07-16 13:53:19 [INFO] Streaming monitor active, waiting for events...
+2026-07-16 13:53:21 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAAAcSidaoNNWS6tLT/6eJ5FLAN/biv7i3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==
+2026-07-16 13:54:07 [INFO] New mail event: FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 2)
+2026-07-16 13:54:07 [INFO] Streaming event: new mail AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni...
+2026-07-16 13:54:07 [INFO] Processing streaming event: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 2)] from ma.chuntao@oe.21vianet.com
+2026-07-16 13:54:07 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 2)] from ma.chuntao@oe.21vianet.com
+2026-07-16 13:54:07 [WARNING] get_entry_id failed for AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+sAAA=, skipping (21Vianet EWS limitation)
+2026-07-16 13:54:24 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-16 13:54:30 [INFO] Wrapper: Completed Call, calling success_handler
+2026-07-16 13:54:30 [INFO] LLM 分析结果 (openai/Qwen3.5-27B): action=edm_process, confidence=100
+2026-07-16 13:54:30 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-16 13:55:08 [INFO] User confirmed — executing EDM process pipeline...
+2026-07-16 13:55:08 [INFO] Saving email AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+sAAA= as .msg to C:\Users\SI-Agent\AgentProject\Temp/
+2026-07-16 13:55:09 [INFO]   Saved .eml: FW_ [EDM test and distribution] Incident 830353210 _ SN-56619__ Mooncake OCC-602.eml
+2026-07-16 13:55:14 [INFO]   [EML2MSG] [EML2MSG] nested: [EDM Reminder] Incident 830353210 _ SN-56619 Mooncake OCC-602_ UC-Only Workspaces Enforcement Final.msg (86 KB)
+2026-07-16 13:55:14 [INFO]   [EML2MSG] [EML2MSG] nested: 建议采取的行动：新工作区将禁用 DBFS 根目录和挂载点 - Action recommended_ DBFS Root & Mounts Disablement for New Workspace.msg (66 KB)
+2026-07-16 13:55:14 [INFO]   [EML2MSG] [EML2MSG] saved: FW_ [EDM test and distribution] Incident 830353210 _ SN-56619__ Mooncake OCC-602.msg (168 KB)
+2026-07-16 13:55:14 [INFO]   [EML2MSG] [EML2MSG] verified: 2 attachments
+2026-07-16 13:55:14 [INFO]   [EML2MSG]   [EDM Reminder] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder.msg
+2026-07-16 13:55:14 [INFO]   [EML2MSG]   œšÒé²ÉÈ¡µÄÐÐ¶¯£ºÐÂ¹€×÷Çøœ«œûÓÃ DBFS žùÄ¿ÂŒºÍ¹ÒÔØµã - Action recommended: DBFS Root & Mounts Disablement for New Workspace.msg
+2026-07-16 13:55:14 [INFO]   Saved: FW_ [EDM test and distribution] Incident 830353210 _ SN-56619__ Mooncake OCC-602.msg (167.5 KB)
+2026-07-16 13:55:15 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-16 13:55:15 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_007D001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Header is empty or was not found. Header will be generated from other streams.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_0C1A001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_5D01001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000000/__substg1.0_39FE001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000000/__substg1.0_3003001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000001/__substg1.0_39FE001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000001/__substg1.0_3003001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_1035001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_007D001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Header is empty or was not found. Header will be generated from other streams.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_0C1A001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_5D01001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_1035001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-16 13:55:15 [INFO] Stream "__substg1.0_007D001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Header is empty or was not found. Header will be generated from other streams.
+2026-07-16 13:55:15 [INFO] Stream "__substg1.0_0C1A001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__substg1.0_5D01001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__recip_version1.0_#00000000/__substg1.0_39FE001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__recip_version1.0_#00000000/__substg1.0_3003001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Stream "__substg1.0_1035001E" was requested but could not be found. Returning `None`.
+2026-07-16 13:55:15 [INFO] Copied xlsx to Temp/: SN-56619  Group 1 Token 1-15.xlsx
+2026-07-16 13:55:15 [INFO] Running EDM Process (temp=C:\Users\SI-Agent\AgentProject\Temp, edm=C:\Users\SI-Agent\Desktop\EDM)
+2026-07-16 13:55:19 [INFO]   [Process] [INPUT] FW_ [EDM test and distribution] Incident 830353210 _ SN-56619__ Mooncake OCC-602.msg
+2026-07-16 13:55:19 [INFO]   [Process] [EMAIL] Subject: FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 2)
+2026-07-16 13:55:19 [INFO]   [Process] [SN] SN-56619
+2026-07-16 13:55:19 [INFO]   [Process] [FOLDER] C:\Users\SI-Agent\Desktop\EDM\SN-56619
+2026-07-16 13:55:19 [INFO]   [Process] [COPY] SN-56619  Group 1 Token 1-15.xlsx -> SN-56619/
+2026-07-16 13:55:20 [INFO]   [Process] Input:  C:\Users\SI-Agent\Desktop\EDM\SN-56619\SN-56619  Group 1 Token 1-15.xlsx
+2026-07-16 13:55:20 [INFO]   [Process] Output: C:\Users\SI-Agent\Desktop\EDM\SN-56619\SN-56619  Group 1 Token 1-15.csv
+2026-07-16 13:55:20 [INFO]   [Process] Encoding: gb18030
+2026-07-16 13:55:20 [INFO]   [Process]   CSV written to C:\Users\SI-Agent\Desktop\EDM\SN-56619\SN-56619  Group 1 Token 1-15.csv
+2026-07-16 13:55:20 [INFO]   [Process] 
+2026-07-16 13:55:20 [INFO]   [Process] [2/2] Verifying every cell against original (encoding=gb18030)...
+2026-07-16 13:55:20 [INFO]   [Process]   All cells match. Conversion verified successfully.
+2026-07-16 13:55:20 [INFO]   [Process] [CSV-FORMAL] saved: formal_SN-56619  Group 1 Token 1-15.csv (224 rows)
+2026-07-16 13:55:20 [INFO]   [Process] [CSV-TEST] saved: test_SN-56619  Group 1 Token 1-15.csv (2 rows)
+2026-07-16 13:55:20 [INFO]   [Process] [ATTACH] saved: œšÒé²ÉÈ¡µÄÐÐ¶¯£ºÐÂ¹€×÷Çøœ«œûÓÃ DBFS žùÄ¿ÂŒºÍ¹ÒÔØµã - Action recommended_ DBFS Root & Mounts Disablement for New Workspace.msg (64.0 KB)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token1%% -> ${contactToken} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token2%% -> ${contactTokenT} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token3%% -> ${contactTokenH} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token4%% -> ${contactTokenF} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token5%% -> ${contactTokenI} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token6%% -> ${contactTokenS} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token7%% -> ${contactTokenE} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token8%% -> ${contactTokenG} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token9%% -> ${contactTokenN} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token10%% -> ${contactTokenTEN} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token11%% -> ${contactTokenL} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token12%% -> ${contactTokenW} (cross-span)
+2026-07-16 13:55:21 [INFO]   [Process] [TOKEN] %%Token13%% -> ${contactTokenR} (cross-span)
+2026-07-16 13:55:22 [INFO]   [Process] [TOKEN] %%Token14%% -> ${contactTokenO} (cross-span)
+2026-07-16 13:55:22 [INFO]   [Process] [TOKEN] %%Token15%% -> ${contactTokenV} (cross-span)
+2026-07-16 13:55:22 [INFO]   [Process] [HTML] saved: EDM_template.html (151.9 KB)
+2026-07-16 13:55:22 [INFO]   [Process] 
+2026-07-16 13:55:22 [INFO]   [Process] Done — SN folder: C:\Users\SI-Agent\Desktop\EDM\SN-56619
+2026-07-16 13:55:22 [INFO] Importing test list for C:\Users\SI-Agent\Desktop\EDM\SN-56619\SN-56619  Group 1 Token 1-15.xlsx (SN: SN-56619)
+2026-07-16 13:55:44 [INFO]   [Import] === Unimarketing Test List Import ===
+2026-07-16 13:55:44 [INFO]   [Import] SN: SN-56619
+2026-07-16 13:55:44 [INFO]   [Import] List: test_SN-56619_SN-56619  Group 1 Token 1-15_20260716135524
+2026-07-16 13:55:44 [INFO]   [Import] Test emails: ['ma.chuntao@oe.21vianet.com', 'microsoft.163163@163.com']
+2026-07-16 13:55:44 [INFO]   [Import] 
+2026-07-16 13:55:44 [INFO]   [Import] [CSV] test CSV: test_SN-56619  Group 1 Token 1-15.csv (2 rows)
+2026-07-16 13:55:44 [INFO]   [Import] Attributes: [('Token1', 'Token'), ('Token2', 'TokenT'), ('Token3', 'TokenH'), ('Token4', 'TokenF'), ('Token5', 'TokenI'), ('Token6', 'TokenS'), ('Token7', 'TokenE'), ('Token8', 'TokenG'), ('Token9', 'TokenN'), ('Token10', 'TokenTEN'), ('Token11', 'TokenL'), ('Token12', 'TokenW'), ('Token13', 'TokenR'), ('Token14', 'TokenO'), ('Token15', 'TokenV')]
+2026-07-16 13:55:44 [INFO]   [Import] 
+2026-07-16 13:55:44 [INFO]   [Import] [API] list created: 350558 (test_SN-56619_SN-56619  Group 1 Token 1-15_20260716135524)
+2026-07-16 13:55:44 [INFO]   [Import] [API] import task created: 155406
+2026-07-16 13:55:44 [INFO]   [Import] [API] contacts submitted: 2 contacts, status=waiting
+2026-07-16 13:55:44 [INFO]   [Import] 
+2026-07-16 13:55:44 [INFO]   [Import] [POLL] status=�ȴ� total=0 valid=0 invalid=0 added=0 new=0 updated=0
+2026-07-16 13:55:44 [INFO]   [Import] [POLL] status=�ȴ� total=0 valid=0 invalid=0 added=0 new=0 updated=0
+2026-07-16 13:55:44 [INFO]   [Import] [POLL] status=�ȴ� total=0 valid=0 invalid=0 added=0 new=0 updated=0
+2026-07-16 13:55:44 [INFO]   [Import] [POLL] status=�ȴ� total=0 valid=0 invalid=0 added=0 new=0 updated=0
+2026-07-16 13:55:44 [INFO]   [Import] [POLL] status=�ȴ� total=0 valid=0 invalid=0 added=0 new=0 updated=0
+2026-07-16 13:55:44 [INFO]   [Import] [POLL] status=�ȴ� total=0 valid=0 invalid=0 added=0 new=0 updated=0
+2026-07-16 13:55:44 [INFO]   [Import] [POLL] status=����ɹ� total=2 valid=2 invalid=0 added=2 new=0 updated=2
+2026-07-16 13:55:44 [INFO]   [Import] 
+2026-07-16 13:55:44 [INFO]   [Import] SUCCESS: Import complete �� listId=350558, importId=155406
+2026-07-16 13:55:44 [INFO]   [Import]   Total: 2 | Valid: 2 | Invalid: 0 | Added: 2 | New: 0 | Updated: 2
+2026-07-16 13:55:44 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260716_135544.json
+2026-07-16 13:55:44 [INFO] Completed: [edm_process] FW: [EDM test and distribution] Incident...

@@ -1,0 +1,12 @@
+{
+  "smtp_server": "svr-ex2019-04.21vianet.com",
+  "smtp_port": 25,
+  "sender": "ps-tier2.support@oe.21vianet.com",
+  "recipients": {
+    "to": ["ma.chuntao@oe.21vianet.com"],
+    "cc": [],
+    "bcc": []
+  },
+  "subject": "EDM Process Email",
+  "body": ""
+}

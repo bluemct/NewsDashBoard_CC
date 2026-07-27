@@ -1,0 +1,170 @@
+2026-07-15 17:55:12 [INFO] ============================================================
+2026-07-15 17:55:12 [INFO] EDM Auto Agent 启动
+2026-07-15 17:55:12 [INFO] Config: C:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-15 17:55:12 [INFO] LLM Config: C:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-15 17:55:12 [INFO] LLM Model: openai/Qwen3.5-27B (timeout=10s)
+2026-07-15 17:55:12 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-15 17:55:12 [INFO] Folder: EDM
+2026-07-15 17:55:12 [INFO] Log: C:\Users\SI-Agent\AgentProject\Log\agent_20260715_175512.log
+2026-07-15 17:55:12 [INFO] ============================================================
+2026-07-15 17:55:12 [INFO] Initializing EDM Agent...
+2026-07-15 17:55:12 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-15 17:55:12 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-15 17:55:14 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-15 17:55:28 [INFO] Starting EWS Streaming Notifications (attempt 1)...
+2026-07-15 17:55:28 [INFO] Starting EWS Streaming Monitor: C:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-15 17:55:28 [INFO] Streaming monitor started
+2026-07-15 17:55:28 [INFO] Streaming monitor active, waiting for events...
+2026-07-15 17:55:30 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAAB9aK2zu+mpQ566nEekfi0xNW1BNFfi3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==
+2026-07-15 17:55:30 [INFO] Scanning for new emails since 2026-07-15T15:55:30.791685
+2026-07-15 17:55:30 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 17:55:30 [INFO] Found 7 new item(s) with attachments
+2026-07-15 17:55:30 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-15 17:55:31 [WARNING] get_entry_id failed for AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+UAAA=, skipping (21Vianet EWS limitation)
+2026-07-15 17:55:48 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-15 17:56:00 [INFO] Retrying request to /chat/completions in 0.379391 seconds
+2026-07-15 17:56:10 [INFO] Retrying request to /chat/completions in 0.976536 seconds
+2026-07-15 17:56:22 [WARNING] LLM 分析失败 (openai/Qwen3.5-27B): litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.，降级为规则匹配
+2026-07-15 17:56:22 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-15 17:57:42 [INFO] User skipped: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)]
+2026-07-15 17:57:42 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260715_175742.json
+2026-07-15 17:57:42 [INFO] Completed: [skipped_by_user] FW: [EDM test and distribution] Incident...
+2026-07-15 17:57:42 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-15 17:57:43 [WARNING] get_entry_id failed for AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+TAAA=, skipping (21Vianet EWS limitation)
+2026-07-15 17:57:43 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-15 17:57:50 [INFO] Wrapper: Completed Call, calling success_handler
+2026-07-15 17:57:50 [INFO] LLM 分析结果 (openai/Qwen3.5-27B): action=edm_process, confidence=100
+2026-07-15 17:57:50 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-15 17:58:07 [INFO] User skipped: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)]
+2026-07-15 17:58:07 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260715_175807.json
+2026-07-15 17:58:07 [INFO] Completed: [skipped_by_user] FW: [EDM test and distribution] Incident...
+2026-07-15 17:58:07 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-15 17:58:08 [WARNING] get_entry_id failed for AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+SAAA=, skipping (21Vianet EWS limitation)
+2026-07-15 17:58:08 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-15 17:58:12 [INFO] Wrapper: Completed Call, calling success_handler
+2026-07-15 17:58:12 [INFO] LLM 分析结果 (openai/Qwen3.5-27B): action=edm_process, confidence=100
+2026-07-15 17:58:12 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-15 17:58:38 [INFO] User confirmed — executing EDM process pipeline...
+2026-07-15 17:58:38 [INFO] Saving email AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+SAAA= as .msg to C:\Users\SI-Agent\AgentProject\Temp/
+2026-07-15 17:58:39 [INFO]   Saved .eml: FW_ [EDM test and distribution] Incident 830353210 _ SN-56619__ Mooncake OCC-602.eml
+2026-07-15 17:58:45 [INFO]   [EML2MSG] [EML2MSG] nested: [EDM Reminder] Incident 830353210 _ SN-56619 Mooncake OCC-602_ UC-Only Workspaces Enforcement Final.msg (86 KB)
+2026-07-15 17:58:45 [INFO]   [EML2MSG] [EML2MSG] nested: 建议采取的行动：Azure Databricks 新建工作区将仅支持 Unity Catalog - Action recommended_ Unity Catalog-only workspaces.msg (72 KB)
+2026-07-15 17:58:45 [INFO]   [EML2MSG] [EML2MSG] saved: FW_ [EDM test and distribution] Incident 830353210 _ SN-56619__ Mooncake OCC-602.msg (173 KB)
+2026-07-15 17:58:45 [INFO]   [EML2MSG] [EML2MSG] verified: 2 attachments
+2026-07-15 17:58:45 [INFO]   [EML2MSG]   [EDM Reminder] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder.msg
+2026-07-15 17:58:45 [INFO]   [EML2MSG]   œšÒé²ÉÈ¡µÄÐÐ¶¯£ºAzure Databricks ÐÂœš¹€×÷Çøœ«œöÖ§³Ö Unity Catalog - Action recommended: Unity Catalog-only workspaces for new Azure Databricks deployments.msg
+2026-07-15 17:58:45 [INFO]   Saved: FW_ [EDM test and distribution] Incident 830353210 _ SN-56619__ Mooncake OCC-602.msg (173.0 KB)
+2026-07-15 17:58:47 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-15 17:58:47 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_007D001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Header is empty or was not found. Header will be generated from other streams.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_0C1A001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_5D01001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000000/__substg1.0_39FE001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000000/__substg1.0_3003001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000001/__substg1.0_39FE001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000001/__substg1.0_3003001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_1035001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_007D001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Header is empty or was not found. Header will be generated from other streams.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_0C1A001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_5D01001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_1035001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-15 17:58:47 [INFO] Stream "__substg1.0_007D001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Header is empty or was not found. Header will be generated from other streams.
+2026-07-15 17:58:47 [INFO] Stream "__substg1.0_0C1A001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__substg1.0_5D01001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__recip_version1.0_#00000000/__substg1.0_39FE001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__recip_version1.0_#00000000/__substg1.0_3003001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [INFO] Stream "__substg1.0_1035001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:58:47 [WARNING] Could not find xlsx file, skipping EDM process
+2026-07-15 17:58:47 [WARNING] Notification email failed (rc=1): [ERROR] Failed to connect to SMTP server: [Errno 11001] getaddrinfo failed
+2026-07-15 17:58:47 [INFO]   [Notify] [SMTP] Connecting to svr-ex2019-04.21vianet.com:25...
+2026-07-15 17:58:48 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260715_175848.json
+2026-07-15 17:58:48 [INFO] Completed: [edm_process] FW: [EDM test and distribution] Incident...
+2026-07-15 17:58:48 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-15 17:58:48 [WARNING] get_entry_id failed for AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+RAAA=, skipping (21Vianet EWS limitation)
+2026-07-15 17:58:48 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-15 17:58:52 [INFO] Wrapper: Completed Call, calling success_handler
+2026-07-15 17:58:52 [INFO] LLM 分析结果 (openai/Qwen3.5-27B): action=edm_process, confidence=100
+2026-07-15 17:58:52 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-15 17:58:58 [INFO] User confirmed — executing EDM process pipeline...
+2026-07-15 17:58:58 [INFO] Saving email AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+RAAA= as .msg to C:\Users\SI-Agent\AgentProject\Temp/
+2026-07-15 17:58:58 [INFO]   Saved .eml: FW_ [EDM test and distribution] Incident 830353210 _ SN-56619__ Mooncake OCC-602.eml
+2026-07-15 17:59:03 [INFO]   [EML2MSG] [EML2MSG] nested: [EDM Reminder] Incident 830353210 _ SN-56619 Mooncake OCC-602_ UC-Only Workspaces Enforcement Final.msg (86 KB)
+2026-07-15 17:59:03 [INFO]   [EML2MSG] [EML2MSG] nested: 建议采取的行动：Azure Databricks 新建工作区将仅支持 Unity Catalog - Action recommended_ Unity Catalog-only workspaces.msg (72 KB)
+2026-07-15 17:59:03 [INFO]   [EML2MSG] [EML2MSG] saved: FW_ [EDM test and distribution] Incident 830353210 _ SN-56619__ Mooncake OCC-602.msg (173 KB)
+2026-07-15 17:59:03 [INFO]   [EML2MSG] [EML2MSG] verified: 2 attachments
+2026-07-15 17:59:03 [INFO]   [EML2MSG]   [EDM Reminder] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder.msg
+2026-07-15 17:59:03 [INFO]   [EML2MSG]   œšÒé²ÉÈ¡µÄÐÐ¶¯£ºAzure Databricks ÐÂœš¹€×÷Çøœ«œöÖ§³Ö Unity Catalog - Action recommended: Unity Catalog-only workspaces for new Azure Databricks deployments.msg
+2026-07-15 17:59:03 [INFO]   Saved: FW_ [EDM test and distribution] Incident 830353210 _ SN-56619__ Mooncake OCC-602.msg (173.0 KB)
+2026-07-15 17:59:03 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-15 17:59:03 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_007D001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Header is empty or was not found. Header will be generated from other streams.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_0C1A001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_5D01001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000000/__substg1.0_39FE001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000000/__substg1.0_3003001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000001/__substg1.0_39FE001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__recip_version1.0_#00000001/__substg1.0_3003001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000000/__substg1.0_3701000D/__substg1.0_1035001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_007D001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Header is empty or was not found. Header will be generated from other streams.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_0C1A001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_5D01001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__attach_version1.0_#00000001/__substg1.0_3701000D/__substg1.0_1035001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [WARNING] Encoding property not found. Defaulting to ISO-8859-15.
+2026-07-15 17:59:03 [INFO] Stream "__substg1.0_007D001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Header is empty or was not found. Header will be generated from other streams.
+2026-07-15 17:59:03 [INFO] Stream "__substg1.0_0C1A001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__substg1.0_5D01001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__recip_version1.0_#00000000/__substg1.0_39FE001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__recip_version1.0_#00000000/__substg1.0_3003001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [INFO] Stream "__substg1.0_1035001E" was requested but could not be found. Returning `None`.
+2026-07-15 17:59:03 [WARNING] Could not find xlsx file, skipping EDM process
+2026-07-15 17:59:04 [WARNING] Notification email failed (rc=1): [ERROR] Failed to connect to SMTP server: [Errno 11001] getaddrinfo failed
+2026-07-15 17:59:04 [INFO]   [Notify] [SMTP] Connecting to svr-ex2019-04.21vianet.com:25...
+2026-07-15 17:59:04 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260715_175904.json
+2026-07-15 17:59:04 [INFO] Completed: [edm_process] FW: [EDM test and distribution] Incident...
+2026-07-15 17:59:04 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-15 17:59:04 [WARNING] get_entry_id failed for AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+QAAA=, skipping (21Vianet EWS limitation)
+2026-07-15 17:59:04 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-15 17:59:14 [INFO] Retrying request to /chat/completions in 0.436451 seconds
+2026-07-15 17:59:25 [INFO] Retrying request to /chat/completions in 0.873787 seconds
+2026-07-15 17:59:36 [WARNING] LLM 分析失败 (openai/Qwen3.5-27B): litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.，降级为规则匹配
+2026-07-15 17:59:36 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-15 17:59:44 [INFO] User skipped: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)]
+2026-07-15 17:59:44 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260715_175944.json
+2026-07-15 17:59:44 [INFO] Completed: [skipped_by_user] FW: [EDM test and distribution] Incident...
+2026-07-15 17:59:44 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-15 17:59:44 [WARNING] get_entry_id failed for AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+PAAA=, skipping (21Vianet EWS limitation)
+2026-07-15 17:59:44 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-15 17:59:55 [INFO] Retrying request to /chat/completions in 0.463837 seconds
+2026-07-15 18:00:01 [INFO] Wrapper: Completed Call, calling success_handler
+2026-07-15 18:00:01 [INFO] LLM 分析结果 (openai/Qwen3.5-27B): action=edm_process, confidence=100
+2026-07-15 18:00:01 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-15 18:00:16 [INFO] User skipped: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)]
+2026-07-15 18:00:16 [INFO] Result saved to C:\Users\SI-Agent\AgentProject\results\agent_20260715_180016.json
+2026-07-15 18:00:16 [INFO] Completed: [skipped_by_user] FW: [EDM test and distribution] Incident...
+2026-07-15 18:00:16 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 1)] from ma.chuntao@oe.21vianet.com
+2026-07-15 18:00:16 [WARNING] get_entry_id failed for AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+OAAA=, skipping (21Vianet EWS limitation)
+2026-07-15 18:00:16 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-15 18:00:17 [INFO] Stopping EWS Streaming Monitor...
+2026-07-15 18:00:17 [INFO] Streaming monitor stopped
+2026-07-15 18:00:26 [INFO] Retrying request to /chat/completions in 0.421030 seconds
+2026-07-15 18:00:37 [INFO] Retrying request to /chat/completions in 0.807052 seconds
+2026-07-15 18:00:48 [WARNING] LLM 分析失败 (openai/Qwen3.5-27B): litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.，降级为规则匹配
+2026-07-15 18:00:48 [INFO] LLM suggests EDM process — requesting user confirmation...

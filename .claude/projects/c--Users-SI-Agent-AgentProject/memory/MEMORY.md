@@ -1,0 +1,4 @@
+- [edm-dashboard-features](edm-dashboard-features.md) — EDM 看板手动刷新、git clone 数据源、本地保存
+- [unimarketing-api-contact-create](unimarketing-api-contact-create.md) — Unimarketing API POST /contact/ 联系人创建调用方式、字段限制、服务器 Bug
+- [edm-gui-tool](edm-gui-tool.md) — EDM GUI tkinter 应用，双 Tab，EDM 处理和 Unimarketing 导入验证
+- [fix-edm-gui-import-worker-closure](fix-edm-gui-import-worker-closure.md) — 修复 _import_worker 闭包调用误用 self.

@@ -1,0 +1,9 @@
+model_list:
+  - model_name: deepseek-v3.1
+    litellm_params:
+      model: openai/WanWu/MiniMax-M3
+      api_base: http://61.49.53.5:30001/v1
+      api_key: "deepSeek-v3.1"
+
+router_settings:
+  enable_pre_call_checks: false

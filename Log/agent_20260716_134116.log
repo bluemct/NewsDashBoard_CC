@@ -1,0 +1,31 @@
+2026-07-16 13:41:16 [INFO] ============================================================
+2026-07-16 13:41:16 [INFO] EDM Auto Agent 启动
+2026-07-16 13:41:16 [INFO] Config: c:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-16 13:41:16 [INFO] LLM Config: c:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-16 13:41:16 [INFO] LLM Model: openai/Qwen3.5-27B (timeout=10s)
+2026-07-16 13:41:16 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-16 13:41:16 [INFO] Folder: EDM
+2026-07-16 13:41:16 [INFO] Log: c:\Users\SI-Agent\AgentProject\Log\agent_20260716_134116.log
+2026-07-16 13:41:16 [INFO] ============================================================
+2026-07-16 13:41:16 [INFO] Initializing EDM Agent...
+2026-07-16 13:41:16 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-16 13:41:16 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-16 13:41:18 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-16 13:41:50 [INFO] Starting EWS Streaming Notifications (attempt 1)...
+2026-07-16 13:41:50 [INFO] Starting EWS Streaming Monitor: c:\Users\SI-Agent\AgentProject\ews_streaming.ps1
+2026-07-16 13:41:51 [INFO] Streaming monitor started
+2026-07-16 13:41:51 [INFO] Streaming monitor active, waiting for events...
+2026-07-16 13:41:53 [INFO] Streaming connected: subscription=GgBzdnItZXgyMDE5LTAxLjIxdmlhbmV0LmNvbRAAAAA7mJq3RCB9S4tp1sysoTJ1Tq/F8Pzi3ggQAAAA3l1jE+WAZkmksh8/HvEy/Q==
+2026-07-16 13:42:57 [INFO] New mail event: FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 2)
+2026-07-16 13:42:57 [INFO] Streaming event: new mail AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni...
+2026-07-16 13:42:57 [INFO] Processing streaming event: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 2)] from ma.chuntao@oe.21vianet.com
+2026-07-16 13:42:57 [INFO] Processing: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 2)] from ma.chuntao@oe.21vianet.com
+2026-07-16 13:42:58 [WARNING] get_entry_id failed for AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3S+rAAA=, skipping (21Vianet EWS limitation)
+2026-07-16 13:43:24 [INFO] 
+LiteLLM completion() model= Qwen3.5-27B; provider = openai
+2026-07-16 13:43:29 [INFO] Wrapper: Completed Call, calling success_handler
+2026-07-16 13:43:29 [INFO] LLM 分析结果 (openai/Qwen3.5-27B): action=edm_process, confidence=100
+2026-07-16 13:43:29 [INFO] LLM suggests EDM process — requesting user confirmation...
+2026-07-16 13:43:37 [INFO] User skipped: [FW: [EDM test and distribution] Incident 830353210 : SN-56619 Mooncake OCC-602: UC-Only Workspaces Enforcement Final Reminder (Group 2)]
+2026-07-16 13:43:37 [INFO] Result saved to c:\Users\SI-Agent\AgentProject\results\agent_20260716_134337.json
+2026-07-16 13:43:37 [INFO] Completed: [skipped_by_user] FW: [EDM test and distribution] Incident...

@@ -1309,7 +1309,7 @@ class EDMGUI:
 
         def _do_import():
             try:
-                self._import_worker(import_fn, is_formal, xlsx_path, logger)
+                _import_worker(import_fn, is_formal, xlsx_path, logger)
             except Exception as e:
                 import traceback
                 tb = traceback.format_exc()

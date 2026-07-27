@@ -7,13 +7,23 @@ EDM Email Processor — full workflow:
 5. Convert nested .msg to HTML via win32com
 
 Usage:
-    python edm_process.py
+    python edm_process.py [--temp-dir DIR] [--edm-dir DIR]
 """
+import argparse
 import ctypes
 import os
 import re
 import shutil
 import sys
+
+# Force UTF-8 stdout so filenames with special characters (œ, etc.) don't crash print()
+if sys.stdout is not None and sys.stdout.encoding and sys.stdout.encoding.upper() != "UTF-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except AttributeError:
+        # Python < 3.7 fallback
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 try:
     from extract_msg import Message as MsgParser
@@ -29,10 +39,29 @@ def _get_short_path(long_path):
     return buf.value
 
 
-BASE_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "EDM"
-)
-TEMP_DIR = os.path.join(BASE_DIR, "Temp")
+def _default_base_dir():
+    """Default EDM output directory (4 levels up from this script + EDM)."""
+    return os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "EDM"
+    )
+
+
+def _parse_args():
+    """Parse CLI arguments. Returns (temp_dir, edm_dir)."""
+    parser = argparse.ArgumentParser(description="EDM Email Processor")
+    parser.add_argument("--temp-dir", default=None,
+                        help="Directory containing input .msg and .xlsx files")
+    parser.add_argument("--edm-dir", default=_default_base_dir(),
+                        help="Base directory for SN output folders (default: project/EDM)")
+    args = parser.parse_args()
+
+    if args.temp_dir is None:
+        args.temp_dir = os.path.join(args.edm_dir, "Temp")
+    return args.temp_dir, args.edm_dir
+
+
+# Resolve paths from CLI or defaults
+TEMP_DIR, BASE_DIR = _parse_args()
 
 
 def extract_sn(text):
@@ -80,18 +109,74 @@ def save_target_attachment(att, save_dir):
     if not fn:
         fn = "attached.msg"
 
+    # extract-msg may decode PR_ATTACH_LONG_FILENAME (UTF-16LE) as Latin-1,
+    # producing mojibake for Chinese characters. If the name contains no
+    # CJK but has non-ASCII characters, try re-decoding the original bytes
+    # as UTF-16LE to recover the correct filename.
+    try:
+        has_cjk = any('一' <= c <= '鿿' for c in fn)
+        has_nonascii = any(ord(c) > 127 for c in fn)
+        if has_nonascii and not has_cjk:
+            # Try Latin-1 round-trip (works for U+0080..U+00FF)
+            try:
+                raw = fn.encode("latin-1")
+                fixed = raw.decode("utf-16-le", errors="ignore")
+                if any('一' <= ch <= '鿿' for ch in fixed):
+                    fn = fixed
+            except UnicodeEncodeError:
+                # Characters like œ (U+0153) can't encode as Latin-1.
+                # Fall back: read the correct subject from the .msg file itself.
+                pass
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        pass
+
     safe_fn = re.sub(r'[/\\:*?"<>|]', '_', fn)
     safe_fn = re.sub(r'\s+', ' ', safe_fn)
 
     save_path = os.path.join(save_dir, safe_fn)
 
     nested = att.data
-    raw = nested.exportBytes()
+    # extract-msg may return raw bytes (direct blob) or a Message object
+    if isinstance(nested, bytes):
+        raw = nested
+    else:
+        raw = nested.exportBytes()
     with open(save_path, "wb") as f:
         f.write(raw)
 
     sz = os.path.getsize(save_path)
     print(f"[ATTACH] saved: {safe_fn} ({sz / 1024:.1f} KB)")
+
+    # Fix mojibake: use win32com (Outlook) to read correct subject from .msg
+    # extract-msg returns mojibake for nested attachments — Outlook handles UTF-16LE properly
+    try:
+        import pythoncom
+        import win32com.client
+        pythoncom.CoInitialize()
+        outlook = win32com.client.Dispatch("Outlook.Application")
+        namespace = outlook.GetNamespace("MAPI")
+        short_path = _get_short_path(save_path)
+        outlook_msg = namespace.OpenSharedItem(short_path)
+        correct_subject = (outlook_msg.Subject or "")[:100]
+        try:
+            outlook_msg.Close(0)
+        except Exception:
+            pass
+        pythoncom.CoUninitialize()
+        if correct_subject and any('一' <= c <= '鿿' for c in correct_subject):
+            new_name = re.sub(r'[/\\:*?"<>|]', '_', correct_subject)
+            new_name = re.sub(r'\s+', ' ', new_name)
+            new_name = new_name.rstrip('.').strip() or "EDM_template"
+            new_path = os.path.join(save_dir, new_name + ".msg")
+            if os.path.isfile(new_path):
+                new_path = os.path.join(save_dir, f"{new_name}_nested.msg")
+            elif new_path != save_path:
+                os.rename(save_path, new_path)
+                save_path = new_path
+                print(f"[ATTACH] renamed to: {os.path.basename(new_path)}")
+    except Exception as e:
+        print(f"[ATTACH] rename skipped (no Outlook or error): {e}", file=sys.stderr)
+
     return save_path
 
 
@@ -113,10 +198,11 @@ def convert_xlsx_to_csv(xlsx_path):
 
 
 def generate_formal_test_csv(xlsx_path):
-    """Generate formal_*.csv (all rows) and test_*.csv (2 test rows with replaced emails)."""
+    """Generate formal_*.csv (all rows) and test_*.csv (N rows, one per test email)."""
     import csv
     import shutil
     import glob
+    import json
 
     sn_dir = os.path.dirname(xlsx_path)
     base = os.path.splitext(os.path.basename(xlsx_path))[0]
@@ -138,7 +224,22 @@ def generate_formal_test_csv(xlsx_path):
     shutil.copy2(csv_path, formal_path)
     print(f"[CSV-FORMAL] saved: {os.path.basename(formal_path)} ({len(rows)} rows)")
 
-    # Test CSV: pick two distinct rows with most tokens filled, replace Email
+    # Load test emails from config.json
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    config_path = os.path.join(project_root, "config.json")
+    default_emails = [
+        "ma.chuntao@oe.21vianet.com",
+        "microsoft.163163@163.com",
+    ]
+    if os.path.isfile(config_path):
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        test_emails = config.get("test_emails", default_emails)
+    else:
+        test_emails = default_emails
+    test_count = max(len(test_emails), 2)
+
+    # Find Email and Token columns
     email_idx = None
     for i, col in enumerate(header):
         if col.strip().lower() == "email":
@@ -153,27 +254,30 @@ def generate_formal_test_csv(xlsx_path):
             row_scores.append((score, i, row))
     row_scores.sort(reverse=True)
 
-    test_rows = [header]
-    if len(row_scores) >= 2:
-        r1 = list(row_scores[0][2])
-        r2 = list(row_scores[1][2])
-    elif len(row_scores) == 1:
-        r1 = list(row_scores[0][2])
-        r2 = list(rows[0])
-        r2[email_idx] = ""
-    else:
-        r1 = list(rows[0]) if rows else list(header)
-        r2 = list(rows[1]) if len(rows) > 1 else ["" * len(header)]
+    # Collect up to test_count distinct rows
+    selected = []
+    idx = 0
+    while len(selected) < test_count:
+        if idx < len(row_scores):
+            selected.append(list(row_scores[idx][2]))
+        elif len(rows) > len(selected):
+            selected.append(list(rows[len(selected)]))
+        else:
+            selected.append(["" for _ in header])
+        idx += 1
 
     if email_idx is not None:
-        r1[email_idx] = "ma.chuntao@oe.21vianet.com"
-        r2[email_idx] = "microsoft.163163@163.com"
+        for i, row in enumerate(selected):
+            if i < len(test_emails):
+                row[email_idx] = test_emails[i]
 
     test_path = os.path.join(sn_dir, f"test_{base}.csv")
     with open(test_path, "w", encoding="gb18030", newline="") as f:
         writer = csv.writer(f)
-        writer.writerows(test_rows)
-    print(f"[CSV-TEST] saved: {os.path.basename(test_path)} (2 rows)")
+        writer.writerow(header)
+        for row in selected:
+            writer.writerow(row)
+    print(f"[CSV-TEST] saved: {os.path.basename(test_path)} ({len(selected)} rows)")
 
 
 def replace_span_tokens(html, mapping):
@@ -354,16 +458,14 @@ def process_edm():
     os.makedirs(sn_folder, exist_ok=True)
     print(f"[FOLDER] {sn_folder}")
 
-    # Copy .xlsx to SN folder and convert to CSV
-    for xlsx_file in xlsx_files:
-        src = os.path.join(TEMP_DIR, xlsx_file)
-        dst = os.path.join(sn_folder, xlsx_file)
-        shutil.copy2(src, dst)
-        print(f"[COPY] {xlsx_file} -> {sn}/")
-        convert_xlsx_to_csv(dst)
-        generate_formal_test_csv(dst)
+    # --- Clean previous round's output ---
+    for fname in os.listdir(sn_folder):
+        fpath = os.path.join(sn_folder, fname)
+        if os.path.isfile(fpath):
+            os.remove(fpath)
+            print(f"[CLEANUP] removed stale: {fname}")
 
-    # Extract nested EDM template .msg (no-recipients one)
+    # --- Extract nested EDM template .msg ---
     target_idx = find_target_attachment_idx(msg_path)
     attach_path = None
     if target_idx is not None and target_idx < len(msg.attachments):
@@ -374,10 +476,24 @@ def process_edm():
 
     msg.close()
 
-    # Convert nested .msg to HTML via win32com
+    # --- Copy original .msg to SN folder (after msg.close to release file handle) ---
+    msg_dst = os.path.join(sn_folder, msg_file)
+    shutil.copy2(msg_path, msg_dst)
+    print(f"[COPY] {msg_file} -> {sn}/ (original email)")
+
+    # --- Convert nested .msg to HTML via win32com ---
     if attach_path:
         html_path = os.path.join(sn_folder, "EDM_template.html")
         convert_msg_to_html(attach_path, html_path)
+
+    # --- Copy .xlsx to SN folder and convert to CSV ---
+    for xlsx_file in xlsx_files:
+        src = os.path.join(TEMP_DIR, xlsx_file)
+        dst = os.path.join(sn_folder, xlsx_file)
+        shutil.copy2(src, dst)
+        print(f"[COPY] {xlsx_file} -> {sn}/")
+        convert_xlsx_to_csv(dst)
+        generate_formal_test_csv(dst)
 
     print(f"\nDone — SN folder: {sn_folder}")
 

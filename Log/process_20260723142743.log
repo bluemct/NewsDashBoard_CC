@@ -1,0 +1,17 @@
+[2026-07-23 14:27:43] === EDM Processing Started ===
+[2026-07-23 14:27:43] MSG file: C:/Users/SI-Agent/AgentProject/EDM/FW_ _EDM test and distribution_ Incident 838442058 _ SN-56891 MOONCAKE 2 weeks Reminder_ _SN Email_ Upcoming Azure SQL Minimum TLS None_0 Configuration Retirement.msg
+[2026-07-23 14:27:43] XLSX file: C:/Users/SI-Agent/AgentProject/Microsoft/Azure Service Notifications Collaboration - 2026\2026-07\838442058 SN-56891\token1-6 SN-56891.xlsx
+[2026-07-23 14:27:43] Subject: FW: [EDM test and distribution] Incident 838442058 : SN-56891 MOONCAKE 2 weeks Reminder: [SN Email] Upcoming Azure SQL Minimum TLS None/0 Configuration Retirement
+[2026-07-23 14:27:43] SN extracted: SN-56891
+[2026-07-23 14:27:43] Output folder: C:\Users\SI-Agent\Desktop\EDM\SN-56891
+[2026-07-23 14:27:44] [COPY] token1-6 SN-56891.xlsx -> SN-56891/
+[2026-07-23 14:27:44] [CSV] token1-6 SN-56891.csv (gb18030)
+[2026-07-23 14:27:44] [CSV-FORMAL] saved: formal_token1-6 SN-56891.csv (138 rows)
+[2026-07-23 14:27:44] [CSV-TEST] saved: test_token1-6 SN-56891.csv (2 rows)
+[2026-07-23 14:27:44] [CLEANUP] removed raw CSV: token1-6 SN-56891.csv
+[2026-07-23 14:27:44] [ATTACH] saved nested .msg
+[2026-07-23 14:27:44] [HTML] converting to HTML via Outlook...
+[2026-07-23 14:27:44] [TOKEN] loaded 30 tokens from Tokenmapping.json
+[2026-07-23 14:27:45] [HTML] saved: EDM_template.html (158.9 KB)
+[2026-07-23 14:27:45] === Processing Complete ===
+[2026-07-23 14:27:45] Output folder: C:\Users\SI-Agent\Desktop\EDM\SN-56891

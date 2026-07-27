@@ -1,0 +1,92 @@
+2026-07-15 16:16:32 [INFO] ============================================================
+2026-07-15 16:16:32 [INFO] EDM Auto Agent 启动
+2026-07-15 16:16:32 [INFO] Config: C:\Users\SI-Agent\AgentProject\.edm_agent_config.json
+2026-07-15 16:16:32 [INFO] LLM Config: C:\Users\SI-Agent\AgentProject\.edm_agent_llm_config.json
+2026-07-15 16:16:32 [INFO] LLM Model: openai/Qwen3.5-27B (timeout=10s)
+2026-07-15 16:16:32 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-15 16:16:32 [INFO] Folder: EDM
+2026-07-15 16:16:32 [INFO] Log: C:\Users\SI-Agent\AgentProject\Log\agent_20260715_161632.log
+2026-07-15 16:16:32 [INFO] ============================================================
+2026-07-15 16:16:32 [INFO] Initializing EDM Agent...
+2026-07-15 16:16:32 [INFO] Mailbox: ps-tier2.support@oe.21vianet.com
+2026-07-15 16:16:32 [INFO] EWS URL: https://mail.21vianet.com/EWS/Exchange.asmx
+2026-07-15 16:16:33 [INFO] Found EDM folder: AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZAAuAAAAAADKGWzc7WJ/TpXN6K4xWNv0AQDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAAA=
+2026-07-15 16:16:40 [INFO] Starting polling loop (interval=30s)
+2026-07-15 16:16:40 [INFO] Scanning for new emails since 2026-07-15T14:16:40.981150
+2026-07-15 16:16:40 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:16:41 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:17:11 [INFO] Scanning for new emails since 2026-07-15T14:17:11.060147
+2026-07-15 16:17:11 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:17:11 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:17:41 [INFO] Scanning for new emails since 2026-07-15T14:17:41.176694
+2026-07-15 16:17:41 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:17:41 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:18:11 [INFO] Scanning for new emails since 2026-07-15T14:18:11.270340
+2026-07-15 16:18:11 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:18:11 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:18:41 [INFO] Scanning for new emails since 2026-07-15T14:18:41.369062
+2026-07-15 16:18:41 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:18:41 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:19:11 [INFO] Scanning for new emails since 2026-07-15T14:19:11.493340
+2026-07-15 16:19:11 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:19:11 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:19:41 [INFO] Scanning for new emails since 2026-07-15T14:19:41.605117
+2026-07-15 16:19:41 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:19:41 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:20:11 [INFO] Scanning for new emails since 2026-07-15T14:20:11.693990
+2026-07-15 16:20:11 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:20:11 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:20:41 [INFO] Scanning for new emails since 2026-07-15T14:20:41.798393
+2026-07-15 16:20:41 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:20:41 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:21:11 [INFO] Scanning for new emails since 2026-07-15T14:21:11.890779
+2026-07-15 16:21:11 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:21:12 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:21:42 [INFO] Scanning for new emails since 2026-07-15T14:21:42.014652
+2026-07-15 16:21:42 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:21:42 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:22:12 [INFO] Scanning for new emails since 2026-07-15T14:22:12.098633
+2026-07-15 16:22:12 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:22:12 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:22:42 [INFO] Scanning for new emails since 2026-07-15T14:22:42.218653
+2026-07-15 16:22:42 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:22:42 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:23:12 [INFO] Scanning for new emails since 2026-07-15T14:23:12.312647
+2026-07-15 16:23:12 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:23:12 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:23:42 [INFO] Scanning for new emails since 2026-07-15T14:23:42.443632
+2026-07-15 16:23:42 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:23:42 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:24:12 [INFO] Scanning for new emails since 2026-07-15T14:24:12.512784
+2026-07-15 16:24:12 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:24:12 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:24:34 [INFO] Scanning for new emails since 2026-07-15T14:24:34.078406
+2026-07-15 16:24:34 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:24:34 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:24:42 [INFO] Scanning for new emails since 2026-07-15T14:24:42.645004
+2026-07-15 16:24:42 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:24:42 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:24:51 [INFO] Scanning for new emails since 2026-07-15T14:24:51.824070
+2026-07-15 16:24:51 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:24:51 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:25:12 [INFO] Scanning for new emails since 2026-07-15T14:25:12.727458
+2026-07-15 16:25:12 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:25:12 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:25:42 [INFO] Scanning for new emails since 2026-07-15T14:25:42.823370
+2026-07-15 16:25:42 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:25:42 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:26:12 [INFO] Scanning for new emails since 2026-07-15T14:26:12.915577
+2026-07-15 16:26:12 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:26:13 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:26:43 [INFO] Scanning for new emails since 2026-07-15T14:26:43.022832
+2026-07-15 16:26:43 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:26:43 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:27:13 [INFO] Scanning for new emails since 2026-07-15T14:27:13.162825
+2026-07-15 16:27:13 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:27:13 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:27:43 [INFO] Scanning for new emails since 2026-07-15T14:27:43.253855
+2026-07-15 16:27:43 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:27:43 [INFO] Found 0 new item(s) with attachments
+2026-07-15 16:28:13 [INFO] Scanning for new emails since 2026-07-15T14:28:13.350836
+2026-07-15 16:28:13 [INFO] Filter rules: 发件人: ma.chuntao@oe.21vianet.com | 主题关键字: edm | 正文关键字: edm agent
+2026-07-15 16:28:13 [INFO] Found 0 new item(s) with attachments

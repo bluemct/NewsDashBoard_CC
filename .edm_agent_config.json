@@ -1,0 +1,16 @@
+{
+  "ews": {
+    "url": "https://mail.21vianet.com/EWS/Exchange.asmx",
+    "domain_user": "21vianet\\ps-tier2.support",
+    "password": "j1ux1@nM10/09/24",
+    "mailbox": "ps-tier2.support@oe.21vianet.com",
+    "folder_name": "EDM"
+  },
+  "poll_interval": 30,
+  "output_base": "C:\\Users\\SI-Agent\\Desktop\\EDM",
+  "filter_rules": {
+    "sender": ["ma.chuntao@oe.21vianet.com"],
+    "subject_keywords": ["edm"],
+    "body_keywords": ["EDM Agent"]
+  }
+}

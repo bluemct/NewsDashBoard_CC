@@ -1,0 +1,2 @@
+2026-07-15 15:24:12 [WARNING] LLM 分析失败 (Qwen3.5-27B): litellm.BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=Qwen3.5-27B
+ Pass model as E.g. For 'Huggingface' inference endpoints pass in `completion(model='huggingface/starcoder',..)` Learn more: https://docs.litellm.ai/docs/providers，降级为规则匹配

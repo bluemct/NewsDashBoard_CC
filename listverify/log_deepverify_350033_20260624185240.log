@@ -1,0 +1,99 @@
+[2026-06-24 18:52:40] [DEEP] Reading xlsx...
+[2026-06-24 18:52:40] [DEEP] XLSX: 368 emails
+[2026-06-24 18:52:40] [DEEP] Querying 368 emails via API (workers=10)...
+[2026-06-24 18:52:44] [DEEP] Found 368/368 in list (4.2s)
+[2026-06-24 18:52:44] [DEEP] Saving contacts to CSV...
+[2026-06-24 18:52:44] [DEEP] Saved CSV: ContactInfo_exported_SN-53672_20260624_185244.csv
+[2026-06-24 18:52:44] [DEEP] Comparing field by field...
+[2026-06-24 18:52:44] 
+[2026-06-24 18:52:44] ============================================================
+[2026-06-24 18:52:44]   DEEP VERIFY: SN-53672
+[2026-06-24 18:52:44] ============================================================
+[2026-06-24 18:52:44]   XLSX contacts   : 368
+[2026-06-24 18:52:44]   In list         : 368
+[2026-06-24 18:52:44]   Email matched   : 368
+[2026-06-24 18:52:44]   Email check     : PASS
+[2026-06-24 18:52:44] 
+[2026-06-24 18:52:44] ------------------------------------------------------------
+[2026-06-24 18:52:44]   Fields compared : 5520
+[2026-06-24 18:52:44]   Fields matched  : 5075
+[2026-06-24 18:52:44]   Field match     : FAIL
+[2026-06-24 18:52:44] 
+[2026-06-24 18:52:44]   Field mismatches:
+[2026-06-24 18:52:44]     Token1: 104 mismatch(es)
+[2026-06-24 18:52:44]     Token10: 6 mismatch(es)
+[2026-06-24 18:52:44]     Token11: 5 mismatch(es)
+[2026-06-24 18:52:44]     Token2: 84 mismatch(es)
+[2026-06-24 18:52:44]     Token3: 69 mismatch(es)
+[2026-06-24 18:52:44]     Token4: 65 mismatch(es)
+[2026-06-24 18:52:44]     Token5: 41 mismatch(es)
+[2026-06-24 18:52:44]     Token6: 35 mismatch(es)
+[2026-06-24 18:52:44]     Token7: 14 mismatch(es)
+[2026-06-24 18:52:44]     Token8: 12 mismatch(es)
+[2026-06-24 18:52:44]     Token9: 10 mismatch(es)
+[2026-06-24 18:52:44] 
+[2026-06-24 18:52:44]   Detail (first 20):
+[2026-06-24 18:52:44]     [a-hawang@deloittecn.deloitte.com.cn] Token1:
+[2026-06-24 18:52:44]       XLSX: 19952593-3921-4eee-90fa-8df4a3d7257b, CN-AZSUB-APA-RRG-APPHUB-PRD
+[2026-06-24 18:52:44]       API : d95def07-333a-4046-8449-a74346a37d88, CN-AZSUB-APA-AUD-OMNIA-PRD
+[2026-06-24 18:52:44]     [a-hawang@deloittecn.deloitte.com.cn] Token2:
+[2026-06-24 18:52:44]       XLSX: 316c2c02-5356-4e05-8647-7c17ba238c4d, CN-AZSUB-APA-ITS-DASUAT-NPD
+[2026-06-24 18:52:44]       API : 
+[2026-06-24 18:52:44]     [a-hawang@deloittecn.deloitte.com.cn] Token3:
+[2026-06-24 18:52:44]       XLSX: 82bd0245-1283-497b-bd11-d5e13b7bad5d, CN-AZSUB-APA-FA-REA-PRD
+[2026-06-24 18:52:44]       API : 
+[2026-06-24 18:52:44]     [a-hawang@deloittecn.deloitte.com.cn] Token4:
+[2026-06-24 18:52:44]       XLSX: 89cb704a-18e6-4006-844b-8ae1259750bb, CN-AZSUB-APA-ITS-DASPRD-PRD
+[2026-06-24 18:52:44]       API : 
+[2026-06-24 18:52:44]     [a-hawang@deloittecn.deloitte.com.cn] Token5:
+[2026-06-24 18:52:44]       XLSX: d95def07-333a-4046-8449-a74346a37d88, CN-AZSUB-APA-AUD-OMNIA-PRD
+[2026-06-24 18:52:44]       API : 
+[2026-06-24 18:52:44]     [a-hawang@deloittecn.deloitte.com.cn] Token6:
+[2026-06-24 18:52:44]       XLSX: f1a9ca5f-cda7-4b4d-b873-e9551d2e0260, CN-AZSUB-APA-ITS-DASDEV-NPD
+[2026-06-24 18:52:44]       API : 
+[2026-06-24 18:52:45]     [adbowe@mmm.com] Token1:
+[2026-06-24 18:52:45]       XLSX: d1591ff9-3a36-43a6-8da6-04ef088bab26, 3M-CCOECN05-IT_APP
+[2026-06-24 18:52:45]       API : 9380ba53-d10e-4816-b290-eb69631b1160, 3M-CCOECN04-SECOPS
+[2026-06-24 18:52:45]     [allen.fa.fan@bmw.com] Token1:
+[2026-06-24 18:52:45]       XLSX: 49831bed-738a-4730-910a-4a7987fc8e41, JoyLearning-FAF_Pro-Prod
+[2026-06-24 18:52:45]       API : 159d57da-d517-46d0-9a8a-16ce6230402d, VD-CN3 Middleware
+[2026-06-24 18:52:45]     [allen.fa.fan@bmw.com] Token2:
+[2026-06-24 18:52:45]       XLSX: 64eee672-44ea-4c46-a4a8-0cad9f5cc4c1, JoyLearning-FAF_Dev
+[2026-06-24 18:52:45]       API : 285253d3-965f-46a2-91d7-ee006ada3f15, OtD_Dev-dev
+[2026-06-24 18:52:45]     [allen.fa.fan@bmw.com] Token3:
+[2026-06-24 18:52:45]       XLSX: 908b8212-d1c0-484e-a2d0-9f96515a0b75, CLMS-CUSTOMS-UAT-AZURE-CHINANORTH2
+[2026-06-24 18:52:45]       API : 4dbc713a-4595-4eb5-97cd-fb77a3d66896, DP_PrediMA_prod-prod
+[2026-06-24 18:52:45]     [allen.fa.fan@bmw.com] Token4:
+[2026-06-24 18:52:45]       XLSX: bc6df39e-80a9-4273-bcbf-b148b1b4801d, CLMS-CUSTOMS-INT-AZURE-CHINANORTH2
+[2026-06-24 18:52:45]       API : 91ac7acb-e052-4876-b3a2-e08f543b0172, Automation_Prod
+[2026-06-24 18:52:45]     [allen.fa.fan@bmw.com] Token5:
+[2026-06-24 18:52:45]       XLSX: bed955ee-aacb-4f01-8619-5fb4e58abf5e, CLMS-CUSTOMS-PROD-AZURE-CHINANORTH2
+[2026-06-24 18:52:45]       API : d765acd1-0461-442f-97ca-517923aa2cf7, Cloud Foundation - SIEM (BMWCN)
+[2026-06-24 18:52:45]     [allen.fa.fan@bmw.com] Token6:
+[2026-06-24 18:52:45]       XLSX: de71d37f-6ef4-468c-a634-66e8df3e482e, JoyLearning-FAF_UAT-Pre-Prod
+[2026-06-24 18:52:45]       API : 
+[2026-06-24 18:52:45]     [an.jing@vstecs.com] Token1:
+[2026-06-24 18:52:45]       XLSX: 3d56c971-0c0a-4d6a-a4a4-6997919346a0, 标准预付费服务
+[2026-06-24 18:52:45]       API : c4e7c552-bba3-4306-bd25-5324737ebfa6, WINDOWS AZURE 企业, /subscriptions/c4e7c552-
+[2026-06-24 18:52:45]     [an.jing@vstecs.com] Token2:
+[2026-06-24 18:52:45]       XLSX: 5f42fea3-e5f6-474e-a8a0-f21e47e55e29, WINDOWS AZURE 企业
+[2026-06-24 18:52:45]       API : d72462e6-35b8-4a0c-9610-bd5c1fcf0e33, WINDOWS AZURE 企业, /subscriptions/d72462e6-
+[2026-06-24 18:52:45]     [an.jing@vstecs.com] Token3:
+[2026-06-24 18:52:45]       XLSX: c27c193d-e70e-4c8a-a29f-753c055c1397, SMARTINSIGHT
+[2026-06-24 18:52:45]       API : 
+[2026-06-24 18:52:45]     [an.jing@vstecs.com] Token4:
+[2026-06-24 18:52:45]       XLSX: cdf79280-86db-4e85-b214-60b96f83fb07, WINDOWS AZURE CEA
+[2026-06-24 18:52:45]       API : 
+[2026-06-24 18:52:45]     [azure@ford.com] Token1:
+[2026-06-24 18:52:45]       XLSX: 25318d06-a953-46f2-a34a-8b1d6a72e932, CN-SDN-VHA-PROD
+[2026-06-24 18:52:45]       API : c5168f74-4b3b-463a-a05f-9b173c740714, CN-FSM-SCAVP-PRE, /subscriptions/c5168f74-
+[2026-06-24 18:52:45]     [azure@ford.com] Token2:
+[2026-06-24 18:52:45]       XLSX: 96187975-a51b-4ff0-99f1-70f605ed4bf9, FORDCN-SDN-CVFMA-F-UAT
+[2026-06-24 18:52:45]       API : f44cb29d-6240-400d-b9e7-b4e9cb45f3e6, CN-FSM-SCAVP-PROD, /subscriptions/f44cb29d
+[2026-06-24 18:52:45]     [azure@ford.com] Token3:
+[2026-06-24 18:52:45]       XLSX: bba326ad-60b3-4c3a-9765-d61ef0155e16, AZ-PD-EMBEDSYS-DTS-PROD
+[2026-06-24 18:52:45]       API : 
+[2026-06-24 18:52:45] 
+[2026-06-24 18:52:45] ============================================================
+[2026-06-24 18:52:45]   RESULT: FAIL
+[2026-06-24 18:52:45] ============================================================

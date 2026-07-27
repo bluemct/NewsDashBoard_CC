@@ -1,0 +1,17 @@
+[2026-07-21 14:56:01] === EDM Processing Started ===
+[2026-07-21 14:56:01] MSG file: C:/Users/SI-Agent/AgentProject/EDM/_EDM test and distribution_ Incident 795642121 - SN-55247 _SN Email_ 6 months Reminder_ _SN Email_ Reminder - Upcoming End of Life for Databricks Runtimes 10_4 LTS and earlier.msg
+[2026-07-21 14:56:01] XLSX file: C:/Users/SI-Agent/AgentProject/Microsoft/Azure Service Notifications Collaboration - 2026\2026-07\795642121 SN-55247\Token1-12 SN-55247.xlsx
+[2026-07-21 14:56:01] Subject: [EDM test and distribution] Incident 795642121 - SN-55247 [SN Email] 6 months Reminder: [SN Email] Reminder - Upcoming End of Life for Databricks Runtimes 10.4 LTS and earlier
+[2026-07-21 14:56:01] SN extracted: SN-55247
+[2026-07-21 14:56:01] Output folder: C:\Users\SI-Agent\Desktop\EDM\SN-55247
+[2026-07-21 14:56:01] [COPY] Token1-12 SN-55247.xlsx -> SN-55247/
+[2026-07-21 14:56:02] [CSV] Token1-12 SN-55247.csv (gb18030)
+[2026-07-21 14:56:02] [CSV-FORMAL] saved: formal_Token1-12 SN-55247.csv (44 rows)
+[2026-07-21 14:56:02] [CSV-TEST] saved: test_Token1-12 SN-55247.csv (2 rows)
+[2026-07-21 14:56:02] [CLEANUP] removed raw CSV: Token1-12 SN-55247.csv
+[2026-07-21 14:56:02] [ATTACH] saved nested .msg
+[2026-07-21 14:56:02] [HTML] converting to HTML via Outlook...
+[2026-07-21 14:56:02] [TOKEN] loaded 30 tokens from Tokenmapping.json
+[2026-07-21 14:56:02] [HTML] saved: EDM_template.html (128.2 KB)
+[2026-07-21 14:56:02] === Processing Complete ===
+[2026-07-21 14:56:02] Output folder: C:\Users\SI-Agent\Desktop\EDM\SN-55247
