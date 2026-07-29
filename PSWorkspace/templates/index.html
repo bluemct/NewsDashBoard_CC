@@ -268,6 +268,7 @@
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="btn btn-secondary btn-sm" onclick="verifyToken()">验证 Token</button>
+        <button class="btn btn-primary btn-sm" onclick="refreshToken()" style="margin-left:4px;">刷新 Token</button>
         <span id="token-status"></span>
       </div>
     </div>
@@ -278,10 +279,18 @@
       <div class="tab" onclick="switchIcmTab('search', this)">查询工单</div>
       <div class="tab" onclick="switchIcmTab('action', this)">工单操作</div>
       <div class="tab" onclick="switchIcmTab('oncall', this)">值班查询</div>
+      <div class="tab" onclick="switchIcmTab('tokhistory', this)">Token 历史</div>
     </div>
 
     <!-- Create Tab -->
     <div class="tab-content active" id="icm-create">
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">工单模板</label>
+        <select class="form-select" id="icm-template" onchange="applyIcmTemplate()">
+          <option value="">-- 选择模板（自动填充下方字段）--</option>
+          <option value="disable_sae">Disable SAE Account</option>
+        </select>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">标题 *</label>
@@ -305,8 +314,8 @@
         <div class="form-group">
           <label class="form-label">类型</label>
           <select class="form-select" id="icm-type">
-            <option value="LiveSite" selected>LiveSite</option>
-            <option value="customerreported">Customer Reported</option>
+            <option value="LiveSite">LiveSite</option>
+            <option value="customerreported" selected>Customer Reported</option>
           </select>
         </div>
         <div class="form-group">
@@ -409,6 +418,15 @@
       <div id="oncall-result" style="margin-top:12px;">
         <div class="empty-state"><p>点击查询当前值班人员</p></div>
       </div>
+    </div>
+
+    <!-- Token History Tab -->
+    <div class="tab-content" id="icm-tokhistory">
+      <button class="btn btn-primary" onclick="loadTokenHistory()" style="margin-bottom:8px;">刷新</button>
+      <div id="token-history-table" style="margin-top:4px;">
+        <div class="empty-state"><p>加载 Token 历史记录中...</p></div>
+      </div>
+      <div id="token-history-pagination" style="margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px;"></div>
     </div>
   </div>
 </div>
@@ -1021,6 +1039,29 @@ function switchIcmTab(name, el) {
   for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
   var target = document.getElementById("icm-" + name);
   if (target) target.classList.add("active");
+  if (name === 'tokhistory') loadTokenHistory();
+}
+function applyIcmTemplate() {
+  var tpl = document.getElementById("icm-template").value;
+  var titleEl = document.getElementById("icm-title");
+  var descEl = document.getElementById("icm-description");
+  var sevEl = document.getElementById("icm-severity");
+  var typeEl = document.getElementById("icm-type");
+
+  if (!tpl) return; // no template selected, don't change
+
+  if (tpl === "disable_sae") {
+    var acct = prompt("请输入要禁用的 SAE Account 名称:");
+    if (!acct) {
+      document.getElementById("icm-template").value = "";
+      return;
+    }
+    var title = "[PAW]:::Disable SAE Account_" + acct;
+    titleEl.value = title;
+    descEl.value = title;
+    sevEl.value = "4";
+    typeEl.value = "customerreported";
+  }
 }
 function createIncident() {
   var title = document.getElementById("icm-title").value.trim();
@@ -1297,6 +1338,8 @@ function doIcmAction(url, label) {
         pswp.startTask(data.task_id, "action-log");
       } else if (data.returncode === 0 || data.ok) {
         resultEl.innerHTML = '<div class="alert alert-success">' + label + ' 成功</div>';
+      } else if (data.error) {
+        resultEl.innerHTML = '<div class="alert alert-error">' + label + ' 失败: ' + escapeHtml(data.error) + '</div>';
       } else {
         resultEl.innerHTML = '<div class="log-output">' + escapeHtml(data.stderr || data.stdout || "") + '</div>';
       }
@@ -1323,6 +1366,8 @@ function submitAction() {
       pswp.startTask(data.task_id, "action-log");
     } else if (data.returncode === 0 || data.ok) {
       resultEl.innerHTML = '<div class="alert alert-success">' + currentIcmAction.label + ' 成功</div>';
+    } else if (data.error) {
+      resultEl.innerHTML = '<div class="alert alert-error">' + currentIcmAction.label + ' 失败: ' + escapeHtml(data.error) + '</div>';
     } else {
       resultEl.innerHTML = '<div class="log-output">' + escapeHtml(data.stderr || data.stdout || "") + '</div>';
     }
@@ -1347,8 +1392,123 @@ function verifyToken() {
         var msg = data.error || '未知错误';
         statusEl.innerHTML = '<span class="status-badge error" style="margin-left:8px;">无效: ' + escapeHtml(msg) + '</span>';
       }
+      loadTokenHistory();
     })
     .catch(function(e) { statusEl.innerHTML = '<span class="status-badge error" style="margin-left:8px;">失败</span>'; });
+}
+function refreshToken() {
+  var statusEl = document.getElementById("token-status");
+  statusEl.innerHTML = '<span class="spinner" style="margin-left:8px;"></span> 刷新中...';
+  pswp.authenticatedFetch("/api/icm/token/refresh", { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        var remaining = data.remaining_minutes;
+        var color = remaining < 30 ? '#f59e0b' : '#22c55e';
+        var icon = remaining < 30 ? '⚠' : '✓';
+        statusEl.innerHTML =
+          '<span style="margin-left:8px; padding:4px 10px; border-radius:4px; background:' + color + '; color:white; font-size:12px;">' +
+          icon + ' 已刷新 · 剩余 ' + remaining + ' 分钟' +
+          '</span>';
+      } else {
+        var msg = data.error || '未知错误';
+        statusEl.innerHTML = '<span class="status-badge error" style="margin-left:8px;">刷新失败: ' + escapeHtml(msg) + '</span>';
+      }
+      loadTokenHistory();
+    })
+    .catch(function(e) { statusEl.innerHTML = '<span class="status-badge error" style="margin-left:8px;">刷新失败: ' + escapeHtml(e.message) + '</span>'; });
+}
+/* ─── Token History Functions ───────────────────────────── */
+var _tokenHistoryPage = 1;
+var _tokenHistoryPageSize = 10;
+var _tokenHistoryLoading = false;
+function loadTokenHistory(page) {
+  if (page !== undefined) _tokenHistoryPage = page;
+  if (_tokenHistoryLoading) return;
+  _tokenHistoryLoading = true;
+  var container = document.getElementById("token-history-table");
+  var pagEl = document.getElementById("token-history-pagination");
+  container.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 加载中...</div>';
+  pswp.authenticatedFetch("/api/icm/token/history?page=" + _tokenHistoryPage + "&size=" + _tokenHistoryPageSize)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok || !data.data || data.data.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>暂无 Token 历史记录</p></div>';
+        pagEl.innerHTML = '';
+      } else {
+        var html = '<div class="table-container"><table><thead><tr>' +
+          '<th>时间</th><th>操作</th><th>状态</th><th>新Token</th>' +
+          '<th>Token 获取时间</th><th>Token 过期时间</th><th>Token 剩余(min)</th>' +
+          '<th>Cookie 更新</th><th>Cookie 过期时间</th>' +
+          '<th>来源</th><th>详情</th>' +
+          '</tr></thead><tbody>';
+        for (var i = 0; i < data.data.length; i++) {
+          var r = data.data[i];
+          var time = pswp.formatDate(r.created_at);
+          var actionText = r.action === 'refresh' ? '刷新' : '验证';
+          var statusClass = r.success ? 'done' : 'error';
+          var statusText = r.success ? '成功' : '失败';
+          var gotNew = '-';
+          if (r.got_new_token === 'yes') gotNew = '✓ 是';
+          else if (r.got_new_token === 'no') gotNew = '✗ 否';
+          var obtained = r.token_obtained_at ? pswp.formatDate(r.token_obtained_at) : '-';
+          var expires = r.token_expires_at ? pswp.formatDate(r.token_expires_at) : '-';
+          var remaining = r.remaining_min != null ? r.remaining_min.toFixed(1) : '-';
+          var cookieUpd = '-';
+          if (r.cookie_updated === 'yes') cookieUpd = '✓ 是';
+          var cookieExp = r.cookie_expires_at ? pswp.formatDate(r.cookie_expires_at) : '-';
+          var detail = '';
+          try {
+            var d = JSON.parse(r.detail || '{}');
+            detail = d.source || '';
+          } catch(e) { detail = r.detail || ''; }
+          var errorMsg = r.error_message ? '<br><small style="color:var(--color-danger)">' + escapeHtml(r.error_message) + '</small>' : '';
+          html += '<tr>' +
+            '<td>' + time + '</td>' +
+            '<td>' + actionText + '</td>' +
+            '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span>' + errorMsg + '</td>' +
+            '<td>' + gotNew + '</td>' +
+            '<td>' + obtained + '</td>' +
+            '<td>' + expires + '</td>' +
+            '<td>' + remaining + '</td>' +
+            '<td>' + cookieUpd + '</td>' +
+            '<td>' + cookieExp + '</td>' +
+            '<td>' + detail + '</td>' +
+            '<td>' + (r.detail && r.detail !== '{}' ? escapeHtml(r.detail).substring(0, 60) : '-') + '</td>' +
+            '</tr>';
+        }
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+
+        // Pagination controls
+        var totalPages = data.pages || 1;
+        var currentPage = data.page || 1;
+        var totalRecords = data.total || 0;
+        var pagHtml = '<span style="font-size:12px;color:var(--color-text-dim);">共 ' + totalRecords + ' 条</span> ';
+        if (currentPage <= 1) {
+          pagHtml += '<button class="btn btn-sm disabled" disabled>&laquo; 首页</button> ';
+          pagHtml += '<button class="btn btn-sm disabled" disabled>&lsaquo; 上一页</button> ';
+        } else {
+          pagHtml += '<button class="btn btn-sm" onclick="loadTokenHistory(1)">&laquo; 首页</button> ';
+          pagHtml += '<button class="btn btn-sm" onclick="loadTokenHistory(' + (currentPage - 1) + ')" >&lsaquo; 上一页</button> ';
+        }
+        pagHtml += '<span style="font-size:12px;min-width:60px;display:inline-block;text-align:center;">' + currentPage + ' / ' + totalPages + '</span> ';
+        if (currentPage >= totalPages) {
+          pagHtml += '<button class="btn btn-sm disabled" disabled>下一页 &rsaquo;</button> ';
+          pagHtml += '<button class="btn btn-sm disabled" disabled>尾页 &raquo;</button>';
+        } else {
+          pagHtml += '<button class="btn btn-sm" onclick="loadTokenHistory(' + (currentPage + 1) + ')">下一页 &rsaquo;</button> ';
+          pagHtml += '<button class="btn btn-sm" onclick="loadTokenHistory(' + totalPages + ')">尾页 &raquo;</button>';
+        }
+        pagEl.innerHTML = pagHtml;
+      }
+      _tokenHistoryLoading = false;
+    })
+    .catch(function(e) {
+      container.innerHTML = '<div class="alert alert-error">加载失败: ' + escapeHtml(e.message) + '</div>';
+      pagEl.innerHTML = '';
+      _tokenHistoryLoading = false;
+    });
 }
 /* ─── On-Call Functions ─────────────────────────────────── */
 function loadOnCall() {

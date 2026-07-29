@@ -138,7 +138,8 @@ def run_powershell_function(ps1_file: str, function: str,
             else:
                 param_str += f" -{k} {json.dumps(v)}"
 
-    ps_cmd = f". '{{path}}'; {function}{param_str}".format(path=ps1_file)
+    # Build command using concatenation to avoid .format() breaking on JSON {}
+    ps_cmd = f". '{ps1_file}'; {function}{param_str}"
 
     full_cmd = [
         "powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",

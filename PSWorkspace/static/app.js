@@ -108,8 +108,12 @@
         ? '<span class="status-badge error">Failed</span>'
         : '<span class="status-badge running">Running...</span>';
       var log = data.stdout || "";
-      if (data.status === "failed" && data.stderr) {
-        log += "\n[Error] " + data.stderr;
+      if (data.stderr && data.stderr.trim()) {
+        if (data.status === "failed") {
+          log += "\n[Error] " + data.stderr;
+        } else {
+          log += "\n[Stderr] " + data.stderr;
+        }
       }
       logEl.innerHTML = '<div class="log-output">' + log.replace(/\n/g, "<br>") + '</div>';
       var statusEl = document.getElementById("task-status-" + taskId);

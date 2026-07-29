@@ -23,8 +23,9 @@ cd PSWorkspace && python app.py
 
 | 表 | 说明 |
 |----|------|
-| `tasks` | 异步任务记录（EDM Process、ICM Create/Resolve），支持 `run_task()` generator 进度输出 |
+| `tasks` | 异步任务记录（EDM Process、ICM Create），支持 `run_task()` generator 进度输出 |
 | `edm_events` | EDM 监听检测事件（连接、新邮件、成功、错误），重启不丢失 |
+| `icm_token_history` | ICM Token 刷新/验证历史记录（分页查询，含 Cookie 续期信息） |
 
 - `utils/task_queue.processed_eml_files()` — 从 tasks 表查询 `edm-process-*` 且 `status=completed` 的记录，返回 `{filename: completed_at}`
 - `temp_files` API 返回 `processed` 和 `processed_at` 字段，`history` API 返回 SN 的 `processed` 字段
@@ -37,7 +38,7 @@ cd PSWorkspace && python app.py
 | EDM 监听 | EWS Streaming 实时推送，自动检测 EDM 邮件并保存到 `EDM/Temp/` |
 | EDM 看板 | 按 conversation_id 分组展示 EDM 处理进度（7 步流程） |
 | TFS | Azure DevOps Webhook 日志、更新 Labor Time、查询工单 |
-| ICM | Microsoft ICM 工单创建/查询/Ack/Mitigate/Resolve、值班人员查询 |
+| ICM | Microsoft ICM 工单创建/查询/批量操作/值班人员查询 |
 
 ## EDM Agent 页面功能
 
@@ -75,63 +76,122 @@ cd PSWorkspace && python app.py
 
 ## ICM 工单管理
 
-ICM 模块通过 dot-source `IcMHelperPS/IcmApi.ps1` 调用 PowerShell 函数。
+ICM 模块：**所有操作已转为纯 Python**（Token 验证、搜索、创建、单条操作、批量操作、值班查询、Token 刷新），**0 PowerShell 依赖**，速度快且支持中文。
 
-### ICM 配置
+### 纯 Python API 调用函数
 
-- Token/Cookie 存储：`IcMHelperPS/icm_config.json`（PS Workspace 使用）
-- 原始 Token/Cookie 存储：`IcMHelper/icm_config.json`（手动更新源）
-- Token 刷新：`IcMHelper/icm_token_refresh.py`（Python，在 IcMHelper 目录运行）或 `IcMHelperPS/IcmTokenRefresh.ps1`（PowerShell）
-- **Token 过期后**：从浏览器 ICM Portal 获取新 Cookie，更新 `IcMHelper/icm_config.json`，运行刷新脚本
+| 函数 | 说明 |
+|------|------|
+| `_get_token()` | 读取 `IcMHelperPS/icm_config.json` 获取 access_token |
+| `_icm_get(url)` | GET 请求 api2，返回 `(data, status)`，空 body 返回 `{}` |
+| `_icm_post(url, body)` | POST 请求 api2，`ensure_ascii=False` + `charset=utf-8`，空 body 返回 `{}` |
+| `_icm_patch(url, body)` | PATCH 请求 api2，空 body 返回 `{}` |
+| `_icm_post_portal(url, body)` | POST Portal API（带 Origin/Referer 头），空 body 返回 `{}` |
+| `_icm_patch_portal(url, body)` | PATCH Portal API（带 Origin/Referer 头），空 body 返回 `{}` |
+
+### 共享操作 Helper（单条 + batch 共用）
+
+| Helper | 说明 |
+|--------|------|
+| `_ack_incident(iid)` | Ack 确认单票 |
+| `_update_description(iid, desc)` | 更新描述（PATCH api2） |
+| `_mitigate_incidents(ids, message)` | 缓解（Portal API，支持多票） |
+| `_set_rootcause(iid, cat, desc, title)` | 设置根因（PATCH Portal 头） |
+| `_resolve_incidents(ids, message)` | 解决（Portal API，支持多票） |
+| `_resolve_full(iid, message, rc_cat)` | 完整解决流程：Mitigate → RootCause → Resolve |
+
+### Token 管理（自动 + 手动刷新）
+
+**自动刷新**：`_start_auto_refresh()` 在 `app.py` 启动时调用，启动守护线程：
+- 每 **15 分钟**检查 `IcMHelperPS/icm_config.json` 中 Token 的 JWT expiry
+- 剩余时间 **< 1 小时**时自动调用 `_do_token_refresh()` 换新 Token
+- 每 **15 分钟**检查 `cookie_expires`，剩余 **< 48 小时**时主动发起刷新，尝试从 `Set-Cookie` 获取新 Cookie
+- 从 `IcMHelper/icm_config.json` 读取 CloudESAuthCookie → Portal SSO 换新 Token → 写入两个 config 文件
+- 日志记录：`ICM token auto-refresh: Token refreshed, expires in X min`
+
+**手动刷新**：前端 ICM 页面「刷新 Token」按钮 → POST `/api/icm/token/refresh`：
+- 复用 `_do_token_refresh()` 函数
+- 刷新成功显示"已刷新 · 剩余 X 分钟"（绿色/橙色），失败显示红色错误
+
+**Cookie 续期**：每次刷新检查响应 `Set-Cookie` 头：
+- 提取 `CloudESAuthCookie=xxx` → 更新配置中 `cookie_string`
+- 解析 `expires=Thu, 30-Jul-2026 23:20:35 GMT` → 存为 ISO 格式到 `cookie_expires`
+- API 不总是返回新 Cookie（需服务端判定），未返回则保留旧值
+
+### Token 历史（SQLite 持久化）
+
+- **SQLite 表** `icm_token_history`（`Log/ps_workspace_tasks.db`），启动时自动创建（ALTER TABLE 兼容旧库）
+- **字段**：action (refresh/verify), success, got_new_token, token_obtained_at, token_expires_at, remaining_min, cookie_updated, cookie_expires_at, error_message, detail (JSON: source), created_at
+- **记录时机**：验证操作（`_save_verify_history`）、手动刷新、自动刷新（`_record_token_history`, source: manual/auto/auto-cookie）
+- **分页 API**：`GET /api/icm/token/history?page=1&size=10` → `{ok, total, page, pages, size, data}`
+- **前端**：ICM 卡片 "Token 历史" Tab，切换时自动加载，每页 10 条，分页控件（首页/上一页/下一页/尾页），验证/刷新后自动刷新当前页
+- **读取函数**：`task_queue.list_icm_token_history(page, page_size)` — 支持 OFFSET 分页
 
 ### Token 验证
 
-- 前端按钮：点击后立即显示 `⏳ 验证中...`，结果内联显示 `有效 ✓` 或 `无效: 401`
-- 后端：`token_verify()` 解析 PowerShell 返回值（`Test-IcmToken` 返回 True/False），检查 stdout 为 `"true"` 且 stderr 不包含 `"401"`
-- **注意**：PowerShell 即使命令报错也返回 exit code 0，不能只看 returncode
+- **验证按钮**：GET `/api/icm/token/verify`，纯 Python JWT 解析 + API 调用（<1 秒）
+- 显示剩余分钟数，绿色（>30min）或橙色警告（<30min）
+
+### 后台线程安全
+
+所有 ICM 函数不依赖 Flask `current_app`：
+- `_PROJECT_ROOT` — 模块级全局变量，`app.py` 启动时调用 `_set_project_root()` 设置
+- `_BASE_DIR` — import 时从 `__file__` 计算（PSWorkspace/ 目录）
+- 后台线程（`task_queue.submit()`）可直接调用 `_get_token()`、`_icm_*` 等函数
+
+### 搜索工单
+
+- 后端强制过滤 `OwningTeamId eq 37883`
+- 前端下拉框：状态（Active/Mitigated/Closed）、严重度（1-4）、已确认（是/否）、标题关键词、客户名称
+- 条件自动用 `and` 组合
 
 ### 创建工单
 
-- 两步流程：`New-IcmIncident`（构造 PS 对象）→ `New-IcmIncidentApi`（发送 HTTP POST）
-- 使用 PowerShell 原生 hashtable 语法（`@{ ServiceId = 20284 }`），**不是 JSON 字符串**
-- `-Type` 参数正确传递前端选择的值（`LiveSite` 或 `customerreported`）
+- 纯 Python 构造 JSON 直接 POST `api2/incidentapi/incidents`，`Content-Type: application/json; charset=utf-8`
+- 模板功能：选择 "Disable SAE Account" → 弹窗输入 Account 名称 → 自动填充 Title、Description、Severity(4)、Type(Customer Reported)
+- **中文支持**：`json.dumps(ensure_ascii=False)` + `charset=utf-8` 发送 UTF-8
 
-### PowerShell 参数传递注意事项
+### 单条操作
 
-- `utils/script_runner.py` 的 `run_powershell_function()` 使用 `f-string` 拼接命令（已修复 `.format()` 问题）
-- 参数中的 JSON 花括号 `{}` 曾被 `.format()` 当作占位符解析导致 `KeyError`
-- ICM 函数参数名使用 `-IncidentId`（不是 `-Id`）
+| 操作 | 实现 | 友好错误处理 |
+|------|------|------|
+| Ack | `_ack_incident()` → `_icm_post` | 400 → "工单已被 Ack，无需重复操作" |
+| 更新描述 | `_update_description()` → `_icm_patch` | — |
+| Mitigate | `_mitigate_incidents()` → `_icm_post_portal` | 400 → "工单可能已被 Mitigate" |
+| Resolve | `_resolve_full()` → 3 步纯 Python（后台任务） | — |
 
-## 前端行为
+前端 `doIcmAction()` / `submitAction()` 显示逻辑：
+- `data.ok === true` → 绿色"✓ 成功"
+- `data.error` 存在 → 红色"失败: ..."
+- 无以上 → 显示 `data.stderr / data.stdout`
+
+### 批量操作
+
+- 搜索结果的复选框选择 → 操作栏出现（选择 ≥1 条）
+- 批量 Ack、更新描述、Mitigate、Resolve（纯 Python，复用上述 Helper）
+- Resolve 三步流程独立 try/catch + 日志：Mitigate → RootCause（每票）→ Resolve
+- RootCause PATCH 需用 `_icm_patch_portal`（带 Portal Origin/Referer 头）
+- per-ID 错误结果：`{"id": xxx, "ok": false, "error": "..."}`，前端逐条展示
+
+### 前端行为
 
 | 操作 | 按钮状态 | 事件刷新 |
 |------|----------|----------|
-| 启动监听 | 点击立即变灰 → 成功后恢复可用 | 快速轮询 3 秒 + 10 秒定期刷新 |
-| 停止监听 | 点击立即变灰 → 成功后恢复可用 | 立即刷新一次 |
-| Process 处理 | 处理中 → 灰色「✓ 已完成」/ 红色「✗ 失败」 | 弹窗展示结果 |
-| 创建 ICM 工单 | 显示"创建中..." → 轮询任务状态 → 显示日志（stdout + stderr） | — |
-
-### 任务日志显示
-
-- `startTask()`：completed 状态下也显示 stderr（标记为 `[Stderr]`），failed 状态标记为 `[Error]`
-- PowerShell 命令即使报错也返回 rc=0，所以 completed 状态的 stderr 也需要展示
+| 搜索工单 | 查询中 → 显示表格 + 批量操作栏 | — |
+| 创建 ICM 工单 | 显示"创建中..." → 轮询任务状态 → 显示结果 | — |
+| 批量操作 | 执行中 → 显示成功/失败数量 → 自动刷新搜索结果 | — |
+| 单条操作 | 执行中 → 显示成功/失败 | — |
 
 ## 关键文件
 
 | 文件 | 说明 |
 |------|------|
-| `PSWorkspace/utils/task_queue.py` | SQLite 任务队列（tasks + edm_events 表），`run_task()` 支持 generator 进度 |
-| `PSWorkspace/utils/script_runner.py` | PowerShell/Python 脚本运行器，`run_powershell_function()` dot-source 调用函数 |
+| `PSWorkspace/utils/task_queue.py` | SQLite 任务队列（tasks + edm_events + icm_token_history 表），`run_task()` 支持 generator 进度，`list_icm_token_history(page, size)` 分页查询 |
+| `PSWorkspace/utils/script_runner.py` | PowerShell/Python 脚本运行器（ICM 模块已不再使用） |
 | `PSWorkspace/routes/edm.py` | EDM 路由，`_process()` 编排 3 步流程，`_discover_xlsx()` xlsx 精确发现 |
-| `PSWorkspace/routes/icm.py` | ICM 路由，创建/查询/操作工单，inline PowerShell 命令构建 |
+| `PSWorkspace/routes/icm.py` | ICM 路由，纯 Python `_icm_*` 辅助函数 + 共享 Helper + 自动 Token 刷新 |
 | `PSWorkspace/static/app.js` | 前端公用 JS，`startTask()` 任务轮询，`pollTask()` 异步轮询 |
-| `PSWorkspace/templates/index.html` | 前端模板，`processTempFile()` 处理函数，`showProcessResultDialog()` 结果弹窗 |
-| `IcMHelperPS/IcmApi.ps1` | ICM API PowerShell 封装，`New-IcmIncident` → `New-IcmIncidentApi` 两步创建 |
-| `IcMHelper/icm_config.json` | ICM Token/Cookie 配置文件（手动更新源） |
-| `IcMHelperPS/icm_config.json` | PS Workspace 使用的 ICM 配置（从 IcMHelper 同步） |
-
-## 开发修改
-
-- 所有页面和静态文件都带了 `no-cache` 头，F5 刷新即可看到最新变化
-- 修改 Python 代码需要重启 Flask 进程
-- 修改 CSS/JS 只需刷新浏览器
+| `PSWorkspace/templates/index.html` | 前端模板，ICM 搜索过滤、批量操作、创建模板 JS、Token 刷新按钮 |
+| `IcMHelper/icm_config.json` | ICM Token/Cookie 配置文件（手动更新源，Cookie 过期时从此文件更新） |
+| `IcMHelperPS/icm_config.json` | PS Workspace 使用的 ICM 配置（自动同步，刷新时自动更新） |
+| `IcMHelperPS/IcmApi.ps1` | ICM API PowerShell 封装（已弃用，ICM 模块已转为纯 Python） |

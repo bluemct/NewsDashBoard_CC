@@ -670,7 +670,9 @@
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File '_test_tls12.ps1')",
       "Edit(/.claude/skills/icm-api-ps/**)",
       "Bash(python3 -c \"import openpyxl; print\\('ok'\\)\")",
-      "Bash(python -c \"import openpyxl; print\\('ok'\\)\")"
+      "Bash(python -c \"import openpyxl; print\\('ok'\\)\")",
+      "Bash(python -m py_compile PSWorkspace/utils/task_queue.py)",
+      "Bash(python -m py_compile PSWorkspace/routes/icm.py)"
     ],
     "additionalDirectories": [
       "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills",

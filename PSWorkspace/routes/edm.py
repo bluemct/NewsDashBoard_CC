@@ -16,6 +16,7 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, current_app, Response, request
 from routes.auth import require_auth
+from utils import task_queue
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +28,6 @@ edm_bp = Blueprint('edm', __name__, url_prefix='/api/edm')
 _listener_proc: subprocess.Popen | None = None
 _listener_thread: threading.Thread | None = None
 _listener_lock = threading.Lock()
-_event_log: list = []            # recent detection events
-_event_lock = threading.Lock()
 
 TARGET_SENDER = "ma.chuntao"
 KEYWORD = "EDM Agent"
@@ -68,11 +67,17 @@ def _load_ews_config():
 
 
 def _add_event(event: dict):
-    """Add a detection event to the log."""
-    with _event_lock:
-        _event_log.insert(0, event)
-        if len(_event_log) > 200:
-            _event_log.pop()
+    """Add a detection event to the database."""
+    event_type = event.get("type", "info")
+    event_time = event.get("time", datetime.now().isoformat())
+    task_queue.save_event(
+        event_time=event_time,
+        event_type=event_type,
+        message=event.get("message", ""),
+        subject=event.get("subject", ""),
+        from_addr=event.get("from", ""),
+        sn=event.get("sn", ""),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -393,9 +398,19 @@ def listener_stop():
 def listener_events():
     """GET /api/edm/listener/events?max=50 - Get recent detection events."""
     max_events = request.args.get('max', 50, type=int)
-    with _event_lock:
-        events = list(_event_log[:max_events])
-    return jsonify({"events": events})
+    events = task_queue.list_events(max_events)
+    # Remap field names to match what the frontend expects
+    mapped = []
+    for ev in events:
+        mapped.append({
+            "time": ev["event_time"],
+            "type": ev["event_type"],
+            "message": ev["message"],
+            "subject": ev["subject"] or "",
+            "from": ev["from_addr"] or "",
+            "sn": ev["sn"] or "",
+        })
+    return jsonify({"events": mapped})
 
 
 # ---------------------------------------------------------------------------
@@ -411,6 +426,8 @@ def temp_files():
     if not os.path.isdir(temp_dir):
         return jsonify({"files": [], "message": "Temp directory not found"})
 
+    processed = task_queue.processed_eml_files()
+
     files = []
     for f in sorted(os.listdir(temp_dir)):
         fp = os.path.join(temp_dir, f)
@@ -421,6 +438,8 @@ def temp_files():
                 "size": stat.st_size,
                 "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
                 "ext": os.path.splitext(f)[1].lower(),
+                "processed": f in processed,
+                "processed_at": processed.get(f, ""),
             })
     return jsonify({"files": files})
 
@@ -433,6 +452,15 @@ def history():
     edm_dir = os.path.join(project_root, "EDM")
     if not os.path.isdir(edm_dir):
         return jsonify({"history": []})
+
+    # Get successfully processed filenames from task DB
+    processed = task_queue.processed_eml_files()
+    processed_sns = set()
+    for fname in processed:
+        # e.g. "SN-55247_email.eml" → "SN-55247"
+        m = re.match(r"(SN-\d+)", fname)
+        if m:
+            processed_sns.add(m.group(1))
 
     sns = []
     for entry in sorted(os.listdir(edm_dir)):
@@ -447,6 +475,7 @@ def history():
                     "has_template": has_template,
                     "file_count": len(files),
                     "updated": datetime.fromtimestamp(latest).isoformat() if latest else "",
+                    "processed": entry in processed_sns,
                 })
 
     return jsonify({"history": list(reversed(sns))})
