@@ -367,6 +367,19 @@ def _icm_post_portal(url: str, body: dict, timeout: int = 60):
     resp = urllib.request.urlopen(req, timeout=timeout)
     return json.loads(resp.read()), resp.status
 
+def _icm_patch_portal(url: str, body: dict, timeout: int = 60):
+    """PATCH to ICM API with Portal Origin/Referer headers."""
+    token = _get_token()
+    data = json.dumps(body).encode('utf-8')
+    req = urllib.request.Request(url, data=data, method='PATCH')
+    req.add_header('Authorization', 'Bearer ' + token)
+    req.add_header('Accept', 'application/json, text/plain, */*')
+    req.add_header('Content-Type', 'application/json')
+    req.add_header('Origin', 'https://portal.microsofticm.com')
+    req.add_header('Referer', 'https://portal.microsofticm.com/')
+    resp = urllib.request.urlopen(req, timeout=timeout)
+    return json.loads(resp.read()), resp.status
+
 @icm_bp.route('/batch', methods=['POST'])
 @require_auth
 def batch_action():
@@ -441,10 +454,11 @@ def batch_action():
                 results.append({"id": iid, "ok": False, "error": str(e)})
 
     elif action == "resolve":
-        # Step 1: Mitigate (batch)
+        # Step 1: Mitigate (batch via Portal API)
         html_msg = ""
         if message:
             html_msg = f'<div style="font-family: Calibri, Arial, Helvetica, sans-serif; font-size: 11pt; color: rgb(0, 0, 0);">{message}<br></div>'
+        mitigate_failed = set()
         try:
             mit_body = {
                 "Description": html_msg,
@@ -458,9 +472,16 @@ def batch_action():
                 "AutoResolve": False,
             }
             _icm_post_portal("https://portal.microsofticm.com/imp/api/incident/Mitigate", mit_body)
+            logger.info("Batch resolve step1 (mitigate) OK for %d incidents", len(ids))
+        except Exception as e:
+            logger.error("Batch resolve step1 (mitigate) failed: %s", e)
+            # All IDs failed mitigate
+            mitigate_failed.update(ids)
 
-            # Step 2: RootCause (per-incident PATCH)
-            for iid in ids:
+        # Step 2: RootCause (per-incident PATCH via api2)
+        rootcause_failed = set()
+        for iid in ids:
+            try:
                 rc_body = {
                     "Id": iid,
                     "ImpactedEntities": [],
@@ -474,9 +495,14 @@ def batch_action():
                     }
                 }
                 url = f'https://prod.microsofticm.com/api2/incidentapi/incidents({iid})'
-                _icm_patch(url, rc_body)
+                _icm_patch_portal(url, rc_body)
+            except Exception as e:
+                logger.error("Batch resolve step2 (rootcause) failed for %d: %s", iid, e)
+                rootcause_failed.add(iid)
 
-            # Step 3: Resolve (batch)
+        # Step 3: Resolve (batch via Portal API)
+        resolve_failed = set()
+        try:
             res_body = {
                 "HowFixed": "Other",
                 "Description": message or "",
@@ -488,12 +514,24 @@ def batch_action():
                 "RootCauseOption": 5,
             }
             _icm_post_portal("https://portal.microsofticm.com/imp/api/incident/Resolve", res_body)
-
-            for iid in ids:
-                results.append({"id": iid, "ok": True})
+            logger.info("Batch resolve step3 (resolve) OK for %d incidents", len(ids))
         except Exception as e:
-            for iid in ids:
-                results.append({"id": iid, "ok": False, "error": str(e)})
+            logger.error("Batch resolve step3 (resolve) failed: %s", e)
+            resolve_failed.update(ids)
+
+        # Combine results per-ID
+        for iid in ids:
+            errors = []
+            if iid in mitigate_failed:
+                errors.append("mitigate failed")
+            if iid in rootcause_failed:
+                errors.append("rootcause failed")
+            if iid in resolve_failed:
+                errors.append("resolve failed")
+            if errors:
+                results.append({"id": iid, "ok": False, "error": "; ".join(errors)})
+            else:
+                results.append({"id": iid, "ok": True})
 
     ok_count = sum(1 for r in results if r["ok"])
     fail_count = len(results) - ok_count

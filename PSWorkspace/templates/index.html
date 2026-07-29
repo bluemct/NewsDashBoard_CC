@@ -327,6 +327,7 @@
             <select class="form-select" id="icm-filter-state">
               <option value="">全部</option>
               <option value="ACTIVE">Active</option>
+              <option value="MITIGATED">Mitigated</option>
               <option value="CLOSED">Closed</option>
             </select>
           </div>
@@ -368,28 +369,6 @@
         </div>
       </div>
       <div id="search-result">
-        <!-- Batch Action Bar -->
-        <div id="batch-action-bar" style="display:none; margin-top:16px; padding:12px 16px; background:var(--color-bg-secondary); border-radius:6px; border:1px solid var(--color-border);">
-          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <strong style="font-size:13px;">
-              已选 <span id="batch-selected-count" style="color:#3b82f6">0</span> 条工单
-            </strong>
-            <button class="btn btn-primary btn-sm" onclick="doBatchAction('ack')">&#10004; 批量 Ack</button>
-            <button class="btn btn-secondary btn-sm" onclick="showBatchTextForm('discussion')">&#128172; 批量更新描述</button>
-            <button class="btn btn-warning btn-sm" style="background:var(--color-warning);color:white" onclick="showBatchTextForm('mitigate')">&#128166; 批量 Mitigate</button>
-            <button class="btn btn-danger btn-sm" onclick="showBatchTextForm('resolve')">&#9940; 批量 Resolve</button>
-          </div>
-          <div id="batch-text-form" style="display:none; margin-top:12px;">
-            <div class="form-group" style="margin-bottom:8px;">
-              <textarea class="form-textarea" id="batch-text-input" rows="2" placeholder="输入内容..."></textarea>
-            </div>
-            <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary btn-sm" id="batch-submit-btn" onclick="submitBatchAction()">提交</button>
-              <button class="btn btn-secondary btn-sm" onclick="hideBatchTextForm()">取消</button>
-            </div>
-          </div>
-          <div id="batch-result" style="margin-top:12px;"></div>
-        </div>
         <div class="empty-state"><p>选择过滤条件后点击查询</p></div>
       </div>
     </div>
@@ -1117,6 +1096,8 @@ function searchIncidents() {
           var sevColor = sevColors[sev] || '#999';
           var stateBadge = inc.State === 'ACTIVE'
             ? '<span class="status-badge done" style="background:#3b82f6">Active</span>'
+            : inc.State === 'MITIGATED'
+            ? '<span class="status-badge done" style="background:#eab308">Mitigated</span>'
             : '<span class="status-badge error">Closed</span>';
           var ackMark = inc.IsAcknowledged
             ? '<span style="color:#22c55e">✓</span>'
@@ -1130,7 +1111,25 @@ function searchIncidents() {
             '<td>' + ackMark + '</td>' +
             '<td>' + pswp.formatDate(inc.CreatedDate) + '</td></tr>';
         }
-        html += '</tbody></table></div>';
+        html += '</tbody></table></div>' +
+          '<div id="batch-action-bar" style="display:none; margin-top:16px; padding:12px 16px; background:var(--color-bg-secondary); border-radius:6px; border:1px solid var(--color-border);">' +
+          '<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">' +
+          '<strong style="font-size:13px;">已选 <span id="batch-selected-count" style="color:#3b82f6">0</span> 条工单</strong>' +
+          '<button class="btn btn-primary btn-sm" onclick="doBatchAction(\'ack\')">&#10004; 批量 Ack</button>' +
+          '<button class="btn btn-secondary btn-sm" onclick="showBatchTextForm(\'discussion\')">&#128172; 批量更新描述</button>' +
+          '<button class="btn btn-warning btn-sm" style="background:var(--color-warning);color:white" onclick="showBatchTextForm(\'mitigate\')">&#128166; 批量 Mitigate</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="showBatchTextForm(\'resolve\')">&#9940; 批量 Resolve</button>' +
+          '</div>' +
+          '<div id="batch-text-form" style="display:none; margin-top:12px;">' +
+          '<div class="form-group" style="margin-bottom:8px;">' +
+          '<textarea class="form-textarea" id="batch-text-input" rows="2" placeholder="输入内容..."></textarea>' +
+          '</div>' +
+          '<div style="display:flex; gap:8px;">' +
+          '<button class="btn btn-primary btn-sm" onclick="submitBatchAction()">提交</button>' +
+          '<button class="btn btn-secondary btn-sm" onclick="hideBatchTextForm()">取消</button>' +
+          '</div></div>' +
+          '<div id="batch-result" style="margin-top:12px;"></div>' +
+          '</div>';
         resultEl.innerHTML = html;
       } else if (data.ok && data.raw) {
         resultEl.innerHTML = '<div class="log-output">' + escapeHtml(data.raw) + '</div>';
@@ -1215,9 +1214,10 @@ function submitBatchAction() {
   if (ids.length === 0) return alert("请先选择工单");
   var resultEl = document.getElementById("batch-result");
   resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 执行中...</div>';
-  hideBatchTextForm();
 
   var body = { action: currentBatchAction, incident_ids: ids, message: text };
+  hideBatchTextForm();
+
   pswp.authenticatedFetch("/api/icm/batch", {
     method: "POST", body: JSON.stringify(body)
   })
