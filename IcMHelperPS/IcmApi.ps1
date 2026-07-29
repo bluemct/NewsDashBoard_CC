@@ -205,6 +205,7 @@ function New-IcmIncident {
         [string]$Description = "Incident Created",
         [string]$Summary,
         [int]$Severity = 3,
+        [string]$Type = "LiveSite",
         [int]$OwningServiceId = 20284,
         [int]$OwningTeamId = 37883,
         [bool]$IsSecurityRisk = $false,
@@ -245,7 +246,7 @@ function New-IcmIncident {
     $dict["Severity"] = $Severity
     $dict["Attachments"] = $Attachments
     $dict["CloudInstanceId"] = 3
-    $dict["Type"] = "LiveSite"
+    $dict["Type"] = $Type
     $dict["OwningServiceId"] = $OwningServiceId
     $dict["OwningTeamId"] = $OwningTeamId
     $dict["IsAcknowledged"] = $false

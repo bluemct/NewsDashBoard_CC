@@ -266,8 +266,9 @@
         <div class="card-title">&#128737; ICM 工单管理</div>
         <div class="card-subtitle">Microsoft ICM - 创建、确认、缓解、解决工单</div>
       </div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:8px; align-items:center;">
         <button class="btn btn-secondary btn-sm" onclick="verifyToken()">验证 Token</button>
+        <span id="token-status"></span>
       </div>
     </div>
 
@@ -319,21 +320,77 @@
 
     <!-- Search Tab -->
     <div class="tab-content" id="icm-search">
-      <div class="form-row" style="margin-bottom:16px;">
-        <div class="form-group">
-          <label class="form-label">过滤条件 (OData Filter)</label>
-          <input type="text" class="form-input" id="icm-filter" placeholder='Severity eq 3'>
+      <div style="margin-bottom:12px;">
+        <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label class="form-label">状态</label>
+            <select class="form-select" id="icm-filter-state">
+              <option value="">全部</option>
+              <option value="ACTIVE">Active</option>
+              <option value="CLOSED">Closed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">严重度</label>
+            <select class="form-select" id="icm-filter-severity">
+              <option value="">全部</option>
+              <option value="1">1 - Critical</option>
+              <option value="2">2 - High</option>
+              <option value="3">3 - Medium</option>
+              <option value="4">4 - Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">已确认</label>
+            <select class="form-select" id="icm-filter-ack">
+              <option value="">全部</option>
+              <option value="true">已确认</option>
+              <option value="false">未确认</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">结果数</label>
+            <input type="number" class="form-input" id="icm-top" value="10" min="1" max="100">
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">最大结果数</label>
-          <input type="number" class="form-input" id="icm-top" value="10" min="1" max="100">
-        </div>
-        <div class="form-group" style="display:flex; align-items:flex-end;">
-          <button class="btn btn-primary" onclick="searchIncidents()">查询</button>
+        <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr 100px; gap:12px; margin-top:12px;">
+          <div class="form-group">
+            <label class="form-label">标题关键词</label>
+            <input type="text" class="form-input" id="icm-filter-title" placeholder='包含 "Azure"'>
+          </div>
+          <div class="form-group">
+            <label class="form-label">客户名称</label>
+            <input type="text" class="form-input" id="icm-filter-customer" placeholder='包含 "contoso"'>
+          </div>
+          <div class="form-group" style="display:flex; align-items:flex-end;">
+            <button class="btn btn-primary" onclick="searchIncidents()" style="width:100%">查询</button>
+          </div>
         </div>
       </div>
       <div id="search-result">
-        <div class="empty-state"><p>输入过滤条件后点击查询</p></div>
+        <!-- Batch Action Bar -->
+        <div id="batch-action-bar" style="display:none; margin-top:16px; padding:12px 16px; background:var(--color-bg-secondary); border-radius:6px; border:1px solid var(--color-border);">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <strong style="font-size:13px;">
+              已选 <span id="batch-selected-count" style="color:#3b82f6">0</span> 条工单
+            </strong>
+            <button class="btn btn-primary btn-sm" onclick="doBatchAction('ack')">&#10004; 批量 Ack</button>
+            <button class="btn btn-secondary btn-sm" onclick="showBatchTextForm('discussion')">&#128172; 批量更新描述</button>
+            <button class="btn btn-warning btn-sm" style="background:var(--color-warning);color:white" onclick="showBatchTextForm('mitigate')">&#128166; 批量 Mitigate</button>
+            <button class="btn btn-danger btn-sm" onclick="showBatchTextForm('resolve')">&#9940; 批量 Resolve</button>
+          </div>
+          <div id="batch-text-form" style="display:none; margin-top:12px;">
+            <div class="form-group" style="margin-bottom:8px;">
+              <textarea class="form-textarea" id="batch-text-input" rows="2" placeholder="输入内容..."></textarea>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-primary btn-sm" id="batch-submit-btn" onclick="submitBatchAction()">提交</button>
+              <button class="btn btn-secondary btn-sm" onclick="hideBatchTextForm()">取消</button>
+            </div>
+          </div>
+          <div id="batch-result" style="margin-top:12px;"></div>
+        </div>
+        <div class="empty-state"><p>选择过滤条件后点击查询</p></div>
       </div>
     </div>
 
@@ -429,7 +486,6 @@ document.addEventListener("DOMContentLoaded", loadRecentTasks);
 var listenerRefreshTimer = null;
 var listenerIsRunning = false;
 var lastEventTime = null;  // track latest event time to detect new files
-var processedFiles = {};   // { filename: "ISO timestamp" } — tracks successfully processed .eml files
 
 function loadListenerStatus() {
   pswp.authenticatedFetch("/api/edm/listener/status")
@@ -582,10 +638,9 @@ function loadTempFiles() {
         if (f.ext === '.msg' || f.ext === '.xlsx') continue;
         var btn = '';
         if (f.ext === '.eml') {
-          // Check if already processed
-          var isDone = processedFiles[f.name];
-          if (isDone) {
-            btn = '<button class="btn btn-sm" disabled style="background:#ccc;color:#888;cursor:not-allowed" title="已处理于 ' + isDone + '">&#10004; 已完成</button>';
+          // Check if already processed (from backend)
+          if (f.processed) {
+            btn = '<button class="btn btn-sm" disabled style="background:#ccc;color:#888;cursor:not-allowed" title="已处理于 ' + escapeHtml(f.processed_at) + '">&#10004; 已完成</button>';
           } else {
             btn = '<button class="btn btn-primary btn-sm btn-process" data-filename="' + escapeHtml(f.name) + '" onclick="processTempFile(this)">&#9654; Process</button>';
           }
@@ -624,6 +679,7 @@ function showProcessResultDialog(stdout, failed, errMsg) {
     }
     if (l.indexOf("[STEP 2/3]") >= 0 || l.indexOf("[XLSX]") >= 0) {
       if (l.indexOf("✓") >= 0) steps[1].ok = true;
+      else if (l.indexOf("[XLSX]") >= 0) steps[1].ok = "warn";  // xlsx 未找到
       if (l.indexOf("[XLSX]") >= 0) steps[1].detail = l.replace(/[\[\]]/g, '').trim();
     }
     if (l.indexOf("[STEP 3/3]") >= 0 || l.indexOf("[SN]") >= 0 || l.indexOf("[HTML]") >= 0 || l.indexOf("[CSV") >= 0) {
@@ -631,26 +687,38 @@ function showProcessResultDialog(stdout, failed, errMsg) {
       if (l.indexOf("[SN]") >= 0) steps[2].detail = l.replace(/[\[\]]/g, '').trim();
     }
   }
-  // If completed, mark all steps as ok
+  // For completed tasks: give missing steps a default detail, keep their ok state as-is
   if (!failed) {
     for (var s = 0; s < steps.length; s++) {
       if (!steps[s].detail) steps[s].detail = "已完成";
-      // Only mark ok if we have at least a detail
-      if (steps[s].detail && !steps[s].ok) steps[s].ok = true;
     }
   }
 
-  // Build dialog HTML
-  var icon = failed ? "✗" : "✓";
-  var title = failed ? "处理失败" : "处理完成";
-  var color = failed ? "#ef4444" : "#22c55e";
+  // Determine overall result from step states
+  var allOk = steps.every(function(st) { return st.ok === true; });
+  var anyWarn = steps.some(function(st) { return st.ok === "warn"; });
+  var dialogIcon, dialogTitle, dialogColor;
+  if (failed) {
+    dialogIcon = "✗"; dialogTitle = "处理失败"; dialogColor = "#ef4444";
+  } else if (allOk) {
+    dialogIcon = "✓"; dialogTitle = "处理完成"; dialogColor = "#22c55e";
+  } else if (anyWarn) {
+    dialogIcon = "⚠"; dialogTitle = "部分完成"; dialogColor = "#f59e0b";
+  } else {
+    dialogIcon = "✓"; dialogTitle = "处理完成"; dialogColor = "#22c55e";
+  }
 
   var rows = "";
   for (var s = 0; s < steps.length; s++) {
     var st = steps[s];
-    var check = failed ?
-      (st.ok ? '<span style="color:#f59e0b">⚠</span>' : '<span style="color:#ef4444">✗</span>') :
-      '<span style="color:#22c55e">✓</span>';
+    var check;
+    if (st.ok === true) {
+      check = '<span style="color:#22c55e">✓</span>';
+    } else if (st.ok === "warn") {
+      check = '<span style="color:#f59e0b">⚠</span>';
+    } else {
+      check = '<span style="color:#ef4444">✗</span>';
+    }
     rows += '<tr><td style="padding:6px 12px;border-bottom:1px solid #eee;">' +
       check + ' <strong>' + st.label + '</strong></td>' +
       '<td style="padding:6px 12px;border-bottom:1px solid #eee;color:#666;font-size:12px;">' +
@@ -669,13 +737,13 @@ function showProcessResultDialog(stdout, failed, errMsg) {
     '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;">' +
     '<div style="background:white;border-radius:12px;min-width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
     '<div style="padding:20px 24px 16px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px;">' +
-    '<span style="font-size:24px;color:' + color + '">' + icon + '</span>' +
-    '<span style="font-size:16px;font-weight:bold;">' + title + '</span>' +
+    '<span style="font-size:24px;color:' + dialogColor + '">' + dialogIcon + '</span>' +
+    '<span style="font-size:16px;font-weight:bold;">' + dialogTitle + '</span>' +
     '</div>' +
     '<table style="width:100%;border-collapse:collapse;">' + rows + '</table>' +
     errorDetail +
     '<div style="padding:16px 24px;text-align:right;">' +
-    '<button onclick="this.closest(\'[style*=z-index]\').parentElement.remove()" ' +
+    '<button onclick="this.closest(\'[style*=z-index]\').remove()" ' +
     'style="padding:8px 24px;border:none;border-radius:6px;background:#3b82f6;color:white;cursor:pointer;font-size:14px;">确定</button>' +
     '</div></div></div>';
 
@@ -708,15 +776,13 @@ function processTempFile(btn) {
           btn.innerHTML = '<span class="spinner"></span> ' + escapeHtml(latest);
 
           if (task.status === "completed") {
-            // Record completion before refresh so loadTempFiles renders "已完成"
-            processedFiles[filename] = new Date().toLocaleString();
+            // Mark button as done — loadTempFiles() will pick up backend processed flag
             btn.className = "btn btn-sm";
             btn.style.background = "#ccc";
             btn.style.color = "#888";
             btn.disabled = true;
             btn.style.cursor = "not-allowed";
             btn.innerHTML = '&#10004; 已完成';
-            btn.title = '已处理于 ' + processedFiles[filename];
             // Show result dialog
             showProcessResultDialog(task.stdout, false);
             // Refresh temp files and history
@@ -1009,36 +1075,188 @@ function createIncident() {
   .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">创建失败: ' + e.message + '</div>'; });
 }
 function searchIncidents() {
-  var filter = document.getElementById("icm-filter").value.trim();
-  var top = document.getElementById("icm-top").value;
   var resultEl = document.getElementById("search-result");
   resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 查询中...</div>';
+
+  // Build OData filter from dropdowns
+  var parts = [];
+  var state = document.getElementById("icm-filter-state").value;
+  var severity = document.getElementById("icm-filter-severity").value;
+  var ack = document.getElementById("icm-filter-ack").value;
+  var title = document.getElementById("icm-filter-title").value.trim();
+  var customer = document.getElementById("icm-filter-customer").value.trim();
+  var top = document.getElementById("icm-top").value;
+
+  if (state) parts.push("State eq '" + state + "'");
+  if (severity) parts.push("Severity eq " + severity);
+  if (ack) parts.push("IsAcknowledged eq " + ack);
+  if (title) parts.push("contains(Title,'" + title.replace(/'/g, "''") + "')");
+  if (customer) parts.push("contains(CustomerName,'" + customer.replace(/'/g, "''") + "')");
+
+  var filter = parts.join(" and ");
   var url = "/api/icm/search?top=" + top;
   if (filter) url += "&filter=" + encodeURIComponent(filter);
+
   pswp.authenticatedFetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.ok && data.data && data.data.value) {
         var incidents = data.data.value;
-        var html = '<div class="table-container"><table><thead><tr><th>ID</th><th>标题</th><th>严重度</th><th>状态</th><th>已确认</th></tr></thead><tbody>';
+        if (!incidents.length) {
+          resultEl.innerHTML = '<div class="empty-state"><p>没有匹配的工单</p></div>';
+          return;
+        }
+        var sevColors = {1: '#ef4444', 2: '#f97316', 3: '#eab308', 4: '#22c55e'};
+        var html = '<div class="table-container"><table><thead><tr>' +
+          '<th style="width:40px"><input type="checkbox" onchange="toggleAllSearchChecks(this)"></th>' +
+          '<th>ID</th><th>标题</th><th>严重度</th><th>状态</th><th>已确认</th>' +
+          '<th>创建时间</th></tr></thead><tbody>';
         for (var i = 0; i < incidents.length; i++) {
           var inc = incidents[i];
-          html += '<tr><td><strong>' + inc.Id + '</strong></td>' +
-            '<td>' + truncate(escapeHtml(inc.Title || ""), 50) + '</td>' +
-            '<td>' + (inc.Severity || "-") + '</td>' +
-            '<td>' + (inc.State || "-") + '</td>' +
-            '<td>' + (inc.IsAcknowledged ? '&#10004;' : '&#10060;') + '</td></tr>';
+          var sev = inc.Severity || 4;
+          var sevColor = sevColors[sev] || '#999';
+          var stateBadge = inc.State === 'ACTIVE'
+            ? '<span class="status-badge done" style="background:#3b82f6">Active</span>'
+            : '<span class="status-badge error">Closed</span>';
+          var ackMark = inc.IsAcknowledged
+            ? '<span style="color:#22c55e">✓</span>'
+            : '<span style="color:#999">✗</span>';
+          html += '<tr>' +
+            '<td><input type="checkbox" class="search-row-check" data-id="' + inc.Id + '" onchange="updateBatchBar()"></td>' +
+            '<td><strong>' + inc.Id + '</strong></td>' +
+            '<td title="' + escapeHtml(inc.Title || "") + '">' + truncate(escapeHtml(inc.Title || ""), 50) + '</td>' +
+            '<td><span style="color:' + sevColor + ';font-weight:bold">' + sev + '</span></td>' +
+            '<td>' + stateBadge + '</td>' +
+            '<td>' + ackMark + '</td>' +
+            '<td>' + pswp.formatDate(inc.CreatedDate) + '</td></tr>';
         }
         html += '</tbody></table></div>';
         resultEl.innerHTML = html;
       } else if (data.ok && data.raw) {
         resultEl.innerHTML = '<div class="log-output">' + escapeHtml(data.raw) + '</div>';
       } else {
-        resultEl.innerHTML = '<div class="alert alert-error">查询失败: ' + escapeHtml(data.error || "Unknown") + '</div>';
+        var errMsg = data.error || "Unknown";
+        if (data.body) errMsg += ": " + escapeHtml(data.body.substring(0, 200));
+        resultEl.innerHTML = '<div class="alert alert-error">查询失败: ' + escapeHtml(errMsg) + '</div>';
       }
     })
     .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
 }
+
+/* ─── Batch Action Helpers ──────────────────────────────────── */
+var currentBatchAction = null;
+
+function getSelectedIncidentIds() {
+  var checks = document.querySelectorAll(".search-row-check:checked");
+  var ids = [];
+  for (var i = 0; i < checks.length; i++) {
+    ids.push(parseInt(checks[i].getAttribute("data-id")));
+  }
+  return ids;
+}
+
+function updateBatchBar() {
+  var ids = getSelectedIncidentIds();
+  var bar = document.getElementById("batch-action-bar");
+  if (ids.length > 0) {
+    bar.style.display = "block";
+    document.getElementById("batch-selected-count").textContent = ids.length;
+  } else {
+    bar.style.display = "none";
+    hideBatchTextForm();
+  }
+}
+
+function toggleAllSearchChecks(el) {
+  var checks = document.querySelectorAll(".search-row-check");
+  for (var i = 0; i < checks.length; i++) {
+    checks[i].checked = el.checked;
+  }
+  updateBatchBar();
+}
+
+function showBatchTextForm(action) {
+  currentBatchAction = action;
+  document.getElementById("batch-text-form").style.display = "block";
+  document.getElementById("batch-result").innerHTML = "";
+  var label = action === "discussion" ? "输入新描述内容..." :
+              action === "mitigate" ? "输入缓解说明..." :
+              "输入解决说明...";
+  document.getElementById("batch-text-input").placeholder = label;
+  document.getElementById("batch-text-input").focus();
+}
+
+function hideBatchTextForm() {
+  document.getElementById("batch-text-form").style.display = "none";
+  currentBatchAction = null;
+}
+
+function doBatchAction(action) {
+  var ids = getSelectedIncidentIds();
+  if (ids.length === 0) return alert("请先选择工单");
+  var resultEl = document.getElementById("batch-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 执行中...</div>';
+  hideBatchTextForm();
+
+  var body = { action: action, incident_ids: ids };
+  pswp.authenticatedFetch("/api/icm/batch", {
+    method: "POST", body: JSON.stringify(body)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) { renderBatchResult(data); })
+  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">执行失败: ' + e.message + '</div>'; });
+}
+
+function submitBatchAction() {
+  if (!currentBatchAction) return;
+  var text = document.getElementById("batch-text-input").value.trim();
+  if (!text) return alert("请输入内容");
+  var ids = getSelectedIncidentIds();
+  if (ids.length === 0) return alert("请先选择工单");
+  var resultEl = document.getElementById("batch-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 执行中...</div>';
+  hideBatchTextForm();
+
+  var body = { action: currentBatchAction, incident_ids: ids, message: text };
+  pswp.authenticatedFetch("/api/icm/batch", {
+    method: "POST", body: JSON.stringify(body)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) { renderBatchResult(data); })
+  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">执行失败: ' + e.message + '</div>'; });
+}
+
+function renderBatchResult(data) {
+  var resultEl = document.getElementById("batch-result");
+  if (!data.ok) {
+    resultEl.innerHTML = '<div class="alert alert-error">失败: ' + escapeHtml(data.error) + '</div>';
+    return;
+  }
+  var ok = data.succeeded || 0;
+  var fail = data.failed || 0;
+  var icon = fail === 0 ? '✓' : '⚠';
+  var color = fail === 0 ? '#22c55e' : '#f59e0b';
+  var title = fail === 0 ? "执行完成" : "部分成功";
+  var html = '<div style="padding:10px 14px; background:' + (fail === 0 ? '#f0fdf4' : '#fffbeb') +
+    '; border:1px solid ' + (fail === 0 ? '#bbf7d0' : '#fde68a') +
+    '; border-radius:6px; font-size:13px;">' +
+    '<strong style="color:' + color + '">' + icon + ' ' + title + '</strong> · ' +
+    ok + ' 成功 / ' + fail + ' 失败</div>';
+  if (fail > 0 && data.results) {
+    html += '<div style="margin-top:8px; font-size:12px; color:#991b1b; background:#fef2f2; border:1px solid #fecaca; padding:8px; border-radius:4px;">';
+    for (var i = 0; i < data.results.length; i++) {
+      var r = data.results[i];
+      if (!r.ok) {
+        html += '✗ ID ' + r.id + ': ' + escapeHtml(r.error || "unknown") + '<br>';
+      }
+    }
+    html += '</div>';
+  }
+  resultEl.innerHTML = html;
+  // Refresh search to update row states
+  searchIncidents();
+}
+
 function ackIncident() {
   var id = document.getElementById("icm-action-id").value;
   if (!id) return alert("请输入 ICM 工单 ID");
@@ -1112,15 +1330,27 @@ function submitAction() {
   .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">提交失败: ' + e.message + '</div>'; });
 }
 function verifyToken() {
+  var statusEl = document.getElementById("token-status");
+  statusEl.innerHTML = '<span class="spinner" style="margin-left:8px;"></span> 验证中...';
   pswp.authenticatedFetch("/api/icm/token/verify")
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      var ok = data.returncode === 0 || data.ok;
-      var msg = ok ? "Token 有效" : "Token 无效: " + (data.stderr || "");
-      alert(msg);
+      if (data.ok) {
+        var remaining = data.remaining_minutes;
+        var color = remaining < 30 ? '#f59e0b' : '#22c55e';
+        var icon = remaining < 30 ? '⚠' : '✓';
+        statusEl.innerHTML =
+          '<span style="margin-left:8px; padding:4px 10px; border-radius:4px; background:' + color + '; color:white; font-size:12px;">' +
+          icon + ' 有效 · 剩余 ' + remaining + ' 分钟' +
+          '</span>';
+      } else {
+        var msg = data.error || '未知错误';
+        statusEl.innerHTML = '<span class="status-badge error" style="margin-left:8px;">无效: ' + escapeHtml(msg) + '</span>';
+      }
     })
-    .catch(function(e) { alert("验证失败: " + e.message); });
+    .catch(function(e) { statusEl.innerHTML = '<span class="status-badge error" style="margin-left:8px;">失败</span>'; });
 }
+/* ─── On-Call Functions ─────────────────────────────────── */
 function loadOnCall() {
   var resultEl = document.getElementById("oncall-result");
   resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 查询中...</div>';
