@@ -1,0 +1,30 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 9000
+  },
+  "paths": {
+    "project_root": "C:/Users/SI-Agent/AgentProject",
+    "edm_process": ".claude/skills/edm-process/edm_process.py",
+    "edm_agent": ".claude/skills/edm-agent-download/edm_agent_download.py",
+    "edm_dashboard_data": "edmmailanalyzer.json",
+    "edm_handlers": ".claude/skills/edm-dashboard/handlers.json",
+    "icm_ps": "IcMHelperPS/IcmApi.ps1",
+    "icm_config": "IcMHelperPS/icm_config.json",
+    "edm_temp": "EDM/Temp/"
+  },
+  "auth": {
+    "domain": "bj-oe.21vianet.com",
+    "test_password": "1234",
+    "token_expiry_hours": 1
+  },
+  "tfs": {
+    "organization": "21vianet-azure",
+    "project": "21ViaNet-Project",
+    "pat": "",
+    "base_url": "https://dev.azure.com/21vianet-azure"
+  },
+  "webhook": {
+    "secret": ""
+  }
+}

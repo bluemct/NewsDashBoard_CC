@@ -429,6 +429,7 @@ document.addEventListener("DOMContentLoaded", loadRecentTasks);
 var listenerRefreshTimer = null;
 var listenerIsRunning = false;
 var lastEventTime = null;  // track latest event time to detect new files
+var processedFiles = {};   // { filename: "ISO timestamp" } — tracks successfully processed .eml files
 
 function loadListenerStatus() {
   pswp.authenticatedFetch("/api/edm/listener/status")
@@ -574,15 +575,184 @@ function loadTempFiles() {
         container.innerHTML = '<div class="empty-state"><p>Temp 目录为空</p></div>';
         return;
       }
-      var html = '<table><thead><tr><th>文件名</th><th>大小</th><th>修改时间</th></tr></thead><tbody>';
+      var html = '<table><thead><tr><th>文件名</th><th>大小</th><th>修改时间</th><th>操作</th></tr></thead><tbody>';
       for (var i = 0; i < data.files.length; i++) {
         var f = data.files[i];
-        html += '<tr><td>' + f.name + '</td><td>' + pswp.formatSize(f.size) + '</td><td>' + pswp.formatDate(f.modified) + '</td></tr>';
+        // Skip .msg files (intermediate artifacts) and .xlsx (copied from discovery)
+        if (f.ext === '.msg' || f.ext === '.xlsx') continue;
+        var btn = '';
+        if (f.ext === '.eml') {
+          // Check if already processed
+          var isDone = processedFiles[f.name];
+          if (isDone) {
+            btn = '<button class="btn btn-sm" disabled style="background:#ccc;color:#888;cursor:not-allowed" title="已处理于 ' + isDone + '">&#10004; 已完成</button>';
+          } else {
+            btn = '<button class="btn btn-primary btn-sm btn-process" data-filename="' + escapeHtml(f.name) + '" onclick="processTempFile(this)">&#9654; Process</button>';
+          }
+        } else {
+          btn = '<span style="color:var(--color-text-secondary);font-size:12px">—</span>';
+        }
+        html += '<tr><td>' + f.name + '</td><td>' + pswp.formatSize(f.size) + '</td><td>' + pswp.formatDate(f.modified) + '</td><td>' + btn + '</td></tr>';
       }
       html += '</tbody></table>';
       container.innerHTML = html;
     })
     .catch(function(e) { console.error("Failed to load temp files:", e); });
+}
+
+/* ─── Process Result Dialog ─────────────────────────────────── */
+
+function showProcessResultDialog(stdout, failed, errMsg) {
+  var log = stdout || "";
+  if (failed && errMsg) {
+    log += "\n[Error] " + errMsg;
+  }
+
+  // Parse steps from log
+  var steps = [
+    { label: "EML → MSG 转换", ok: false, detail: "" },
+    { label: "XLSX 发现", ok: false, detail: "" },
+    { label: "EDM Process", ok: false, detail: "" },
+  ];
+
+  var lines = log.split("\n");
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i];
+    if (l.indexOf("[STEP 1/3]") >= 0 || l.indexOf("[EML2MSG]") >= 0) {
+      steps[0].ok = !failed || steps[0].ok;
+      if (l.indexOf("[EML2MSG]") >= 0) steps[0].detail = l.replace(/[\[\]]/g, '').trim();
+    }
+    if (l.indexOf("[STEP 2/3]") >= 0 || l.indexOf("[XLSX]") >= 0) {
+      if (l.indexOf("✓") >= 0) steps[1].ok = true;
+      if (l.indexOf("[XLSX]") >= 0) steps[1].detail = l.replace(/[\[\]]/g, '').trim();
+    }
+    if (l.indexOf("[STEP 3/3]") >= 0 || l.indexOf("[SN]") >= 0 || l.indexOf("[HTML]") >= 0 || l.indexOf("[CSV") >= 0) {
+      if (l.indexOf("[HTML]") >= 0 || l.indexOf("[CSV") >= 0) steps[2].ok = true;
+      if (l.indexOf("[SN]") >= 0) steps[2].detail = l.replace(/[\[\]]/g, '').trim();
+    }
+  }
+  // If completed, mark all steps as ok
+  if (!failed) {
+    for (var s = 0; s < steps.length; s++) {
+      if (!steps[s].detail) steps[s].detail = "已完成";
+      // Only mark ok if we have at least a detail
+      if (steps[s].detail && !steps[s].ok) steps[s].ok = true;
+    }
+  }
+
+  // Build dialog HTML
+  var icon = failed ? "✗" : "✓";
+  var title = failed ? "处理失败" : "处理完成";
+  var color = failed ? "#ef4444" : "#22c55e";
+
+  var rows = "";
+  for (var s = 0; s < steps.length; s++) {
+    var st = steps[s];
+    var check = failed ?
+      (st.ok ? '<span style="color:#f59e0b">⚠</span>' : '<span style="color:#ef4444">✗</span>') :
+      '<span style="color:#22c55e">✓</span>';
+    rows += '<tr><td style="padding:6px 12px;border-bottom:1px solid #eee;">' +
+      check + ' <strong>' + st.label + '</strong></td>' +
+      '<td style="padding:6px 12px;border-bottom:1px solid #eee;color:#666;font-size:12px;">' +
+      escapeHtml(st.detail) + '</td></tr>';
+  }
+
+  // Find error line for failed case
+  var errorDetail = "";
+  if (failed && errMsg) {
+    var errLines = errMsg.split("\n").filter(function(l){return l.trim()}).slice(0, 3);
+    errorDetail = '<div style="margin-top:12px;padding:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;color:#991b1b;font-size:12px;font-family:Consolas,monospace;white-space:pre-wrap;">' +
+      escapeHtml(errLines.join("\n")) + '</div>';
+  }
+
+  var dialogHtml =
+    '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;">' +
+    '<div style="background:white;border-radius:12px;min-width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
+    '<div style="padding:20px 24px 16px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px;">' +
+    '<span style="font-size:24px;color:' + color + '">' + icon + '</span>' +
+    '<span style="font-size:16px;font-weight:bold;">' + title + '</span>' +
+    '</div>' +
+    '<table style="width:100%;border-collapse:collapse;">' + rows + '</table>' +
+    errorDetail +
+    '<div style="padding:16px 24px;text-align:right;">' +
+    '<button onclick="this.closest(\'[style*=z-index]\').parentElement.remove()" ' +
+    'style="padding:8px 24px;border:none;border-radius:6px;background:#3b82f6;color:white;cursor:pointer;font-size:14px;">确定</button>' +
+    '</div></div></div>';
+
+  document.body.insertAdjacentHTML("beforeend", dialogHtml);
+}
+
+/* ─── Process a single .eml file ──────────────────────────────── */
+function processTempFile(btn) {
+  var filename = btn.getAttribute("data-filename");
+  if (!filename) return;
+
+  // Disable button and show spinner
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Processing...';
+
+  pswp.authenticatedFetch("/api/edm/process-file/" + encodeURIComponent(filename), { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.task_id) {
+        pswp.pollTask(data.task_id, function(task) {
+          // Show output inline below the button row
+          var log = task.stdout || "";
+          if (task.status === "failed" && task.stderr) {
+            log += "\n[Error] " + task.stderr;
+          }
+          // Show latest line in button text
+          var lines = log.split("\n");
+          var latest = lines[lines.length - 1] || "";
+          if (latest.length > 40) latest = latest.substring(0, 40) + "...";
+          btn.innerHTML = '<span class="spinner"></span> ' + escapeHtml(latest);
+
+          if (task.status === "completed") {
+            // Record completion before refresh so loadTempFiles renders "已完成"
+            processedFiles[filename] = new Date().toLocaleString();
+            btn.className = "btn btn-sm";
+            btn.style.background = "#ccc";
+            btn.style.color = "#888";
+            btn.disabled = true;
+            btn.style.cursor = "not-allowed";
+            btn.innerHTML = '&#10004; 已完成';
+            btn.title = '已处理于 ' + processedFiles[filename];
+            // Show result dialog
+            showProcessResultDialog(task.stdout, false);
+            // Refresh temp files and history
+            loadTempFiles();
+            loadHistory();
+          } else if (task.status === "failed") {
+            btn.className = "btn btn-sm";
+            btn.style.background = "var(--color-error)";
+            btn.style.color = "white";
+            // Extract first meaningful error line
+            var err = task.stderr || "未知错误";
+            var errLines = err.split("\n").filter(function(l){return l.trim()}).slice(0, 3);
+            var errMsg = errLines.join(" ");
+            if (errMsg.length > 80) errMsg = errMsg.substring(0, 80) + "...";
+            btn.innerHTML = '&#10008; 失败';
+            btn.title = escapeHtml(errMsg);  // tooltip with full error
+            btn.disabled = false;
+            btn.onclick = function() {
+              alert("错误详情:\n\n" + errMsg);
+              if (confirm("是否重试？")) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span> Processing...';
+                processTempFile(btn);
+              }
+            };
+            // Show result dialog
+            showProcessResultDialog(task.stdout, true, errMsg);
+          }
+        });
+      }
+    })
+    .catch(function(e) {
+      btn.disabled = false;
+      btn.innerHTML = '&#9654; Process';
+      alert("处理失败: " + e.message);
+    });
 }
 function loadHistory() {
   pswp.authenticatedFetch("/api/edm/history")

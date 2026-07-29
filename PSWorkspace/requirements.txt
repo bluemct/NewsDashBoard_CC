@@ -1,0 +1,4 @@
+flask>=3.0
+requests
+pypiwin32
+pyjwt>=2.0

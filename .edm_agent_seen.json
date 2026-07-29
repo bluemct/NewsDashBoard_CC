@@ -154,5 +154,11 @@
     "action": "filtered",
     "sn": null,
     "success": true
+  },
+  "AAMkADEzNjM1ZGRlLTgwZTUtNDk2Ni1hNGIyLTFmM2YxZWYxMzJmZABGAAAAAADKGWzc7WJ/TpXN6K4xWNv0BwDGw/jIo2kOS5UxvUQ9OYZlAATf3SuPAADGw/jIo2kOS5UxvUQ9OYZlAATf3TAiAAA=": {
+    "processed_at": "2026-07-29T12:24:43.933800",
+    "action": "skipped_by_user",
+    "sn": "SN-55247",
+    "success": true
   }
 }

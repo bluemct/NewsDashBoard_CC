@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}PS Workspace{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-title">
+      <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      PS Workspace
+    </div>
+    <div class="topbar-user">
+      <div class="avatar" id="user-avatar"></div>
+      <span id="user-display"></span>
+      <button class="logout-btn" onclick="pswp.clearSession()">登出</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-section">核心功能</div>
+    <a class="sidebar-item" data-page="home" onclick="pswp.navigate('home')">
+      <span class="icon">&#127968;</span>
+      <span>首页</span>
+    </a>
+    <a class="sidebar-item" data-page="edm-agent" onclick="pswp.navigate('edm-agent')">
+      <span class="icon">&#9993;</span>
+      <span>EDM 监听处理</span>
+    </a>
+    <a class="sidebar-item" data-page="edm-dashboard" onclick="pswp.navigate('edm-dashboard')">
+      <span class="icon">&#128202;</span>
+      <span>EDM 看板</span>
+    </a>
+    <a class="sidebar-item" data-page="tfs" onclick="pswp.navigate('tfs')">
+      <span class="icon">&#128203;</span>
+      <span>TFS Request</span>
+    </a>
+    <a class="sidebar-item" data-page="icm" onclick="pswp.navigate('icm')">
+      <span class="icon">&#128737;</span>
+      <span>ICM 工单</span>
+    </a>
+
+    <div class="sidebar-section">更多工具</div>
+    <a class="sidebar-item disabled" href="/placeholder?module=AIQC">
+      <span class="icon">&#129302;</span>
+      <span>AIQC</span>
+      <span class="coming-soon">开发中</span>
+    </a>
+    <a class="sidebar-item disabled" href="/placeholder?module=出题大师">
+      <span class="icon">&#127891;</span>
+      <span>出题大师</span>
+      <span class="coming-soon">开发中</span>
+    </a>
+    <a class="sidebar-item disabled" href="/placeholder?module=会议室预定">
+      <span class="icon">&#128197;</span>
+      <span>会议室预定</span>
+      <span class="coming-soon">开发中</span>
+    </a>
+  </nav>
+
+  <!-- Main Content Area -->
+  <div class="main-content" id="content-area">
+    {% block content %}{% endblock %}
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

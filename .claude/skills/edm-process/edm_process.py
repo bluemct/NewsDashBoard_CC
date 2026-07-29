@@ -47,21 +47,23 @@ def _default_base_dir():
 
 
 def _parse_args():
-    """Parse CLI arguments. Returns (temp_dir, edm_dir)."""
+    """Parse CLI arguments. Returns (temp_dir, edm_dir, file)."""
     parser = argparse.ArgumentParser(description="EDM Email Processor")
     parser.add_argument("--temp-dir", default=None,
                         help="Directory containing input .msg and .xlsx files")
     parser.add_argument("--edm-dir", default=_default_base_dir(),
                         help="Base directory for SN output folders (default: project/EDM)")
+    parser.add_argument("--file", default=None,
+                        help="Specific .msg file to process (without directory)")
     args = parser.parse_args()
 
     if args.temp_dir is None:
         args.temp_dir = os.path.join(args.edm_dir, "Temp")
-    return args.temp_dir, args.edm_dir
+    return args.temp_dir, args.edm_dir, args.file
 
 
 # Resolve paths from CLI or defaults
-TEMP_DIR, BASE_DIR = _parse_args()
+TEMP_DIR, BASE_DIR, CLI_FILE = _parse_args()
 
 
 def extract_sn(text):
@@ -427,14 +429,23 @@ def process_edm():
         sys.exit(1)
 
     # Find .msg and .xlsx files in Temp/
-    msg_files = [f for f in os.listdir(TEMP_DIR) if f.lower().endswith('.msg')]
-    xlsx_files = [f for f in os.listdir(TEMP_DIR) if f.lower().endswith('.xlsx')]
-
-    if not msg_files:
-        print("Error: no .msg file found in Temp/", file=sys.stderr)
-        sys.exit(1)
-
-    msg_file = msg_files[0]
+    if CLI_FILE:
+        # Process a specific .msg file
+        msg_file = CLI_FILE
+        msg_path = os.path.join(TEMP_DIR, msg_file)
+        if not os.path.isfile(msg_path):
+            print(f"Error: specified file not found: {msg_path}", file=sys.stderr)
+            sys.exit(1)
+        # Pick up ALL .xlsx in Temp/ — caller (edm.py) cleans stale xlsx before running
+        xlsx_files = [f for f in os.listdir(TEMP_DIR) if f.lower().endswith('.xlsx')]
+    else:
+        # Legacy: process first .msg found (backward compatible)
+        msg_files = [f for f in os.listdir(TEMP_DIR) if f.lower().endswith('.msg')]
+        if not msg_files:
+            print("Error: no .msg file found in Temp/", file=sys.stderr)
+            sys.exit(1)
+        msg_file = msg_files[0]
+        xlsx_files = [f for f in os.listdir(TEMP_DIR) if f.lower().endswith('.xlsx')]
     msg_path = os.path.join(TEMP_DIR, msg_file)
     print(f"[INPUT] {msg_file}")
 

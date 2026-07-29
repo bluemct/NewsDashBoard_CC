@@ -3,8 +3,10 @@
 Uses ews_streaming.ps1 (EWS Managed API DLL) for server-push streaming notifications.
 """
 import os
+import sys
 import json
 import re
+import shutil
 import time
 import logging
 import subprocess
@@ -418,6 +420,7 @@ def temp_files():
                 "name": f,
                 "size": stat.st_size,
                 "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "ext": os.path.splitext(f)[1].lower(),
             })
     return jsonify({"files": files})
 
@@ -447,6 +450,208 @@ def history():
                 })
 
     return jsonify({"history": list(reversed(sns))})
+
+
+# ---------------------------------------------------------------------------
+# XLSX Discovery helpers (from edm_agent.py)
+# ---------------------------------------------------------------------------
+
+def _extract_xlsx_filename_from_msg(msg_path: str) -> str | None:
+    """Extract xlsx filename from MSG body SharePoint URL."""
+    try:
+        from extract_msg import Message as MsgParser
+        from urllib import parse as urllib_parse
+
+        msg = MsgParser(msg_path)
+        # Try htmlBody first
+        html = msg.htmlBody or b""
+        if isinstance(html, bytes):
+            html_str = html.decode("utf-8", errors="replace")
+        else:
+            html_str = html
+        urls = re.findall(r'https?://[^\s<>"\']+\.xlsx[^\s<>"\']*', html_str)
+        if urls:
+            after_last_slash = urls[0].rsplit("/", 1)[-1]
+            filename = urllib_parse.unquote(after_last_slash.split("?")[0])
+            msg.close()
+            if filename:
+                return filename
+        # Fallback: plain body text
+        body = msg.body or ""
+        urls = re.findall(r'https?://[^\s<>"\']+\.xlsx[^\s<>"\']*', body)
+        msg.close()
+        if urls:
+            after_last_slash = urls[0].rsplit("/", 1)[-1]
+            filename = urllib_parse.unquote(after_last_slash.split("?")[0])
+            return filename if filename else None
+        return None
+    except Exception:
+        return None
+
+
+def _load_xlsx_search_dir(project_root: str) -> str:
+    """Load xlsx_search_dir.json or return default."""
+    xlsx_config_path = os.path.join(project_root, "xlsx_search_dir.json")
+    default_dir = os.path.join(
+        os.path.expanduser("~"),
+        "AppData", "Local", "Microsoft", "Windows", "INetCache", "Content.MSO"
+    )
+    if os.path.isfile(xlsx_config_path):
+        try:
+            with open(xlsx_config_path, "r", encoding="utf-8") as f:
+                return json.load(f).get("search_directory", default_dir)
+        except (json.JSONDecodeError, IOError):
+            pass
+    return default_dir
+
+
+def _discover_xlsx(msg_path: str, project_root: str) -> str | None:
+    """Discover xlsx file: extract filename from MSG body, then search locally.
+
+    Strict file discovery — mirror edm_agent.py:
+      - If filename extracted from MSG body → exact filename match only
+      - If no filename extracted → fall back to SN folder match
+    """
+    filename_hint = _extract_xlsx_filename_from_msg(msg_path)
+    search_dir = _load_xlsx_search_dir(project_root)
+
+    if not os.path.isdir(search_dir):
+        return None
+
+    # If we got a filename hint, ONLY do exact match — no fuzzy fallback
+    if filename_hint:
+        logger.info(f"[edm-process] Searching xlsx: '{filename_hint}' (len={len(filename_hint)})")
+        hint_lower = filename_hint.lower().strip()
+        for root, dirs, files in os.walk(search_dir):
+            for f in files:
+                f_lower = f.lower().strip()
+                if f_lower == hint_lower:
+                    found = os.path.join(root, f)
+                    logger.info(f"[edm-process] Found xlsx (exact match): {f} -> {found}")
+                    return found
+                # Debug: log near matches
+                if filename_hint.split()[0].lower() in f_lower or any(s.lower() in f_lower for s in filename_hint.split() if len(s) > 3):
+                    logger.debug(f"[edm-process] Near miss: '{f}' (len={len(f)}) vs '{filename_hint}' (len={len(filename_hint)})")
+        logger.warning(
+            f"[edm-process] xlsx '{filename_hint}' not found in {search_dir}, giving up (no fuzzy match)"
+        )
+        return None
+
+    # No filename hint — fall back to SN folder match
+    sn_match = re.search(r"SN-\d+", os.path.basename(msg_path))
+    if sn_match:
+        sn = sn_match.group(0)
+        sn_no_dash = sn.replace("-", "")
+        for root, dirs, files in os.walk(search_dir):
+            folder_name = os.path.basename(root).lower()
+            if sn_no_dash.lower() in folder_name.replace("-", "") or sn.lower() in folder_name:
+                xlsx_files = [f for f in files if f.lower().endswith(".xlsx")]
+                if xlsx_files:
+                    found = os.path.join(root, xlsx_files[0])
+                    logger.info(f"[edm-process] Found xlsx (SN match): {found}")
+                    return found
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Process a single .eml file
+# ---------------------------------------------------------------------------
+
+@edm_bp.route('/process-file/<filename>', methods=['POST'])
+@require_auth
+def process_file(filename):
+    """POST /api/edm/process-file/<filename> - Convert .eml → .msg and run edm_process.
+
+    Runs in a background thread with task tracking.
+    """
+    from utils.task_queue import run_task
+
+    project_root = _get_project_root()
+    temp_dir = os.path.join(project_root, "EDM", "Temp")
+    eml_path = os.path.join(temp_dir, filename)
+
+    if not os.path.isfile(eml_path):
+        return jsonify({"error": f"File not found: {filename}"}), 404
+
+    if not filename.lower().endswith('.eml'):
+        return jsonify({"error": "Only .eml files are supported"}), 400
+
+    def _process():
+        sys_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # PSWorkspace/
+        project_root_local = os.path.dirname(sys_path)  # project root
+
+        # ── Step 1: Convert .eml to .msg ─────────────────────
+        msg_path = eml_path[:-4] + ".msg"
+        logger.info(f"[edm-process] Converting {filename} → .msg ...")
+        yield f"[STEP 1/3] 正在转换 {filename} 为 .msg ..."
+
+        eml_skill = os.path.join(
+            project_root_local,
+            ".claude", "skills", "eml-to-msg", "eml_to_msg.py"
+        )
+
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, eml_skill, eml_path],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        if result.stdout:
+            for line in result.stdout.strip().split("\n"):
+                yield line
+        if result.returncode != 0:
+            raise RuntimeError(f"eml_to_msg failed: {result.stderr.strip()}")
+
+        if not os.path.isfile(msg_path):
+            raise RuntimeError(f"Expected .msg file not created: {msg_path}")
+
+        msg_file = os.path.basename(msg_path)
+
+        # ── Step 2: Discover xlsx (from MSG body URL) ────────
+        logger.info(f"[edm-process] Discovering xlsx for {msg_file} ...")
+        yield f"\n[STEP 2/3] 正在查找 xlsx 联系人列表 ..."
+
+        xlsx_path = _discover_xlsx(msg_path, project_root_local)
+        if xlsx_path:
+            # Clean stale .xlsx from Temp/
+            for stale in os.listdir(temp_dir):
+                if stale.lower().endswith(".xlsx"):
+                    stale_path = os.path.join(temp_dir, stale)
+                    if os.path.isfile(stale_path):
+                        os.remove(stale_path)
+
+            # Copy xlsx to Temp/
+            xlsx_in_temp = os.path.join(temp_dir, os.path.basename(xlsx_path))
+            shutil.copy2(xlsx_path, xlsx_in_temp)
+            yield f"[XLSX] ✓ 已复制到 Temp/: {os.path.basename(xlsx_path)}"
+            logger.info(f"[edm-process] Copied xlsx to Temp/: {os.path.basename(xlsx_path)}")
+        else:
+            yield f"[XLSX] ⚠ 未找到 xlsx 文件，将跳过 xlsx 处理"
+            logger.warning(f"[edm-process] No xlsx found for {msg_file}")
+
+        # ── Step 3: Run edm_process.py ───────────────────────
+        logger.info(f"[edm-process] Running edm_process for {msg_file} ...")
+        yield f"\n[STEP 3/3] 正在运行 EDM Process ..."
+
+        edm_script = os.path.join(
+            project_root_local,
+            ".claude", "skills", "edm-process", "edm_process.py"
+        )
+        result = subprocess.run(
+            [sys.executable, edm_script, "--temp-dir", temp_dir, "--file", msg_file],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        if result.stdout:
+            for line in result.stdout.strip().split("\n"):
+                yield line
+        if result.returncode != 0:
+            raise RuntimeError(f"edm_process failed: {result.stderr.strip()}")
+
+        logger.info(f"[edm-process] Done processing {filename}")
+        yield f"\n[DONE] 处理完成"
+
+    task_id = run_task(f"edm-process-{filename}", _process())
+    return jsonify({"task_id": task_id, "filename": filename})
 
 
 # ---------------------------------------------------------------------------

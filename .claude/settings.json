@@ -668,7 +668,9 @@
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File '_ack_test.ps1')",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command ' *)",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File '_test_tls12.ps1')",
-      "Edit(/.claude/skills/icm-api-ps/**)"
+      "Edit(/.claude/skills/icm-api-ps/**)",
+      "Bash(python3 -c \"import openpyxl; print\\('ok'\\)\")",
+      "Bash(python -c \"import openpyxl; print\\('ok'\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\SI-Agent\\AgentProject\\.claude\\skills",

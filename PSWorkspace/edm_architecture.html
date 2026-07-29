@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EDM 监听处理架构</title>
+  <style>
+    :root {
+      --bg: #faf9f8; --surface: #fff; --primary: #0078d4;
+      --success: #107c10; --warning: #ff8c00; --error: #d13438;
+      --text: #323130; --text2: #605e5c; --border: #edebe9;
+      --font: 'Segoe UI', system-ui, sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); padding: 40px 20px; }
+    h1 { text-align: center; font-size: 22px; margin-bottom: 8px; }
+    .subtitle { text-align: center; color: var(--text2); font-size: 13px; margin-bottom: 32px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* Flow Diagram */
+    .flow { display: flex; flex-direction: column; align-items: center; gap: 0; }
+    .arrow { color: var(--primary); font-size: 24px; padding: 6px 0; }
+    .phase {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      width: 100%;
+      max-width: 900px;
+      box-shadow: 0 1.6px 3.6px rgba(0,0,0,.1);
+    }
+    .phase-title {
+      font-size: 15px; font-weight: 700; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .phase-title .num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--primary); color: #fff; font-size: 13px; flex-shrink: 0;
+    }
+    .phase-body { font-size: 13px; line-height: 1.8; color: var(--text2); padding-left: 34px; }
+    .phase-body code {
+      background: #f3f2f1; padding: 1px 6px; border-radius: 3px;
+      font-family: 'Cascadia Code', Consolas, monospace; font-size: 12px; color: var(--primary);
+    }
+
+    /* Grid for step details */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 10px;
+    }
+    .step-card {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 10px 14px; font-size: 12px;
+    }
+    .step-card .step-num { font-weight: 700; color: var(--primary); font-size: 11px; text-transform: uppercase; }
+    .step-card .step-text { margin-top: 3px; color: var(--text); }
+
+    /* Output tree */
+    .tree { font-family: 'Cascadia Code', Consolas, monospace; font-size: 12px; padding-left: 34px; line-height: 2; }
+    .tree .folder { color: var(--primary); font-weight: 600; }
+    .tree .file { color: var(--text); }
+    .tree .comment { color: var(--text2); font-style: italic; }
+
+    /* Web call flow */
+    .web-flow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-left: 34px; }
+    .web-node {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 8px 14px; font-size: 12px; text-align: center; min-width: 140px;
+    }
+    .web-node .method { font-size: 10px; font-weight: 700; color: var(--success); text-transform: uppercase; }
+    .web-node .path { font-family: 'Cascadia Code', Consolas, monospace; font-size: 11px; margin-top: 2px; }
+    .web-arrow { color: var(--primary); font-size: 18px; flex-shrink: 0; }
+
+    /* Dependency table */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; padding-left: 34px; margin-top: 8px; }
+    th { text-align: left; padding: 6px 10px; background: var(--bg); color: var(--text2); font-weight: 600; }
+    td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+    .status { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .status.need { background: #ffefa8; color: #735700; }
+    .status.ok { background: #dff6dd; color: var(--success); }
+
+    hr { border: none; border-top: 1px solid var(--border); max-width: 900px; margin: 32px auto; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>&#9993; EDM 监听处理架构</h1>
+    <p class="subtitle">EWS 邮件扫描 → 自动处理 → HTML 模板输出</p>
+
+    <!-- Main Flow -->
+    <div class="flow">
+
+      <!-- Phase 1 -->
+      <div class="phase">
+        <div class="phase-title"><span class="num">1</span>触发方式</div>
+        <div class="phase-body">
+          <strong>方式 A — 手动触发：</strong>用户在 PS Workspace 点击「扫描 EWS」→「处理 EDM」<br>
+          <strong>方式 B — 自动下载：</strong>Michael Ma 转发带 <code>EDM Agent</code> 关键词的邮件 → EWS 扫描 → 下载到 <code>EDM/Temp/</code>
+        </div>
+      </div>
+
+      <div class="arrow">&#8595;</div>
+
+      <!-- Phase 2 -->
+      <div class="phase">
+        <div class="phase-title"><span class="num">2</span>扫描 EWS <span style="font-weight:400; font-size:12px; color:var(--text2)">(edm_agent_download.py)</span></div>
+        <div class="phase-body">
+          连接 EWS SOAP API → 扫描 EDM 文件夹<br>
+          匹配条件：发件人 <code>ma.chuntao</code> + 正文含 <code>EDM Agent</code> + 有附件<br>
+          下载 <code>.eml</code> 到 <code>EDM/Temp/</code>，自动发现 <code>.xlsx</code> 联系人列表
+        </div>
+      </div>
+
+      <div class="arrow">&#8595;</div>
+
+      <!-- Phase 3 -->
+      <div class="phase">
+        <div class="phase-title"><span class="num">3</span>处理 EDM <span style="font-weight:400; font-size:12px; color:var(--text2)">(edm_process.py) — 12 步</span></div>
+        <div class="steps-grid" style="margin-top:12px;">
+          <div class="step-card"><div class="step-num">Step 1-2</div><div class="step-text">读取 <code>.msg</code> + <code>.xlsx</code>，提取 SN（如 SN-56891）</div></div>
+          <div class="step-card"><div class="step-num">Step 3-4</div><div class="step-text">创建 <code>EDM/SN-56891/</code> 目录，清理旧文件</div></div>
+          <div class="step-card"><div class="step-num">Step 5</div><div class="step-text">用 <code>olefile</code> 提取嵌套 .msg（0 收件人）</div></div>
+          <div class="step-card"><div class="step-num">Step 6</div><div class="step-text">用 <code>win32com</code> 将 .msg 转为 HTML</div></div>
+          <div class="step-card"><div class="step-num">Step 7-8</div><div class="step-text">插入主题行，替换 <code>%%TokenN%%</code> → <code>${contactTokenN}</code></div></div>
+          <div class="step-card"><div class="step-num">Step 9</div><div class="step-text">保存 <code>EDM_template.html</code></div></div>
+          <div class="step-card"><div class="step-num">Step 10</div><div class="step-text">将 .xlsx 转为 CSV（GB18030 编码）</div></div>
+          <div class="step-card"><div class="step-num">Step 11</div><div class="step-text">生成 <code>formal_*.csv</code> + <code>test_*.csv</code></div></div>
+          <div class="step-card"><div class="step-num">Step 12</div><div class="step-text">复制原始 .msg 到 SN 目录（审计记录）</div></div>
+        </div>
+      </div>
+
+      <div class="arrow">&#8595;</div>
+
+      <!-- Phase 4 -->
+      <div class="phase">
+        <div class="phase-title"><span class="num">4</span>输出 <span style="font-weight:400; font-size:12px; color:var(--text2)">(EDM/SN-56891/)</span></div>
+        <div class="tree">
+          <span class="folder">&#128193; SN-56891/</span><br>
+          ├── <span class="file">EDM_template.html</span> <span class="comment">← 最终 HTML 模板</span><br>
+          ├── <span class="file">formal_*.csv</span> <span class="comment">← 正式联系人列表</span><br>
+          ├── <span class="file">test_*.csv</span> <span class="comment">← 测试联系人列表（2 行）</span><br>
+          ├── <span class="file">*.xlsx</span> <span class="comment">← 原始联系人列表</span><br>
+          └── <span class="file">*.msg</span> <span class="comment">← 原始邮件（审计）</span>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- PS Workspace API Flow -->
+    <div class="container" style="max-width:900px;">
+      <h2 style="font-size:17px; margin-bottom:16px;">PS Workspace 调用流程</h2>
+
+      <div class="phase" style="max-width:100%;">
+        <div class="phase-title">扫描 EWS</div>
+        <div class="web-flow">
+          <div class="web-node"><div>用户</div><div class="path">点击「扫描 EWS」</div></div>
+          <div class="web-arrow">&#8594;</div>
+          <div class="web-node"><div class="method">POST</div><div class="path">/api/edm/scan</div></div>
+          <div class="web-arrow">&#8594;</div>
+          <div class="web-node"><div>后台线程</div><div class="path">scan_and_download()</div></div>
+          <div class="web-arrow">&#8594;</div>
+          <div class="web-node"><div class="method">轮询</div><div class="path">GET /api/task/{id}</div></div>
+        </div>
+      </div>
+
+      <div style="height:16px;"></div>
+
+      <div class="phase" style="max-width:100%;">
+        <div class="phase-title">处理 EDM</div>
+        <div class="web-flow">
+          <div class="web-node"><div>用户</div><div class="path">点击「处理 EDM」</div></div>
+          <div class="web-arrow">&#8594;</div>
+          <div class="web-node"><div class="method">POST</div><div class="path">/api/edm/process</div></div>
+          <div class="web-arrow">&#8594;</div>
+          <div class="web-node"><div>后台线程</div><div class="path">edm_process.py</div></div>
+          <div class="web-arrow">&#8594;</div>
+          <div class="web-node"><div class="method">轮询</div><div class="path">GET /api/task/{id}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Dependencies -->
+    <div class="container" style="max-width:900px;">
+      <h2 style="font-size:17px; margin-bottom:16px;">依赖检查</h2>
+      <table>
+        <thead><tr><th>依赖</th><th>说明</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td>Outlook + Exchange</td><td>win32com 读取 HTMLBody</td><td><span class="status need">需要</span></td></tr>
+          <tr><td>EWS 认证</td><td><code>.edm_agent_config.json</code></td><td><span class="status need">需要</span></td></tr>
+          <tr><td>extract-msg</td><td>Python 库，解析 .msg 文件</td><td><span class="status need">需要</span></td></tr>
+          <tr><td>olefile</td><td>Python 库，提取嵌套附件</td><td><span class="status need">需要</span></td></tr>
+          <tr><td>openpyxl</td><td>Python 库，读取 .xlsx</td><td><span class="status need">需要</span></td></tr>
+          <tr><td>pypiwin32</td><td>Python 库，Outlook COM</td><td><span class="status ok">已安装</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</body>
+</html>

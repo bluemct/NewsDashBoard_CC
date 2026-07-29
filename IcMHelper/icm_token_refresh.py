@@ -34,7 +34,7 @@ def refresh_token():
 
     # --- Step 1: 读取 config ---
     try:
-        with open(CONFIG_PATH, encoding="utf-8") as f:
+        with open(CONFIG_PATH, encoding="utf-8-sig") as f:
             config = json.load(f)
     except Exception as e:
         msg = f"[FAIL] 读取配置失败: {e}"
@@ -242,7 +242,7 @@ def verify_token():
     now_bj = datetime.now(BEIJING).strftime("%H:%M:%S CST")
 
     try:
-        with open(CONFIG_PATH, encoding="utf-8") as f:
+        with open(CONFIG_PATH, encoding="utf-8-sig") as f:
             config = json.load(f)
         token = config["access_token"]
     except Exception as e:
