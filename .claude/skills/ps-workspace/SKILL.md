@@ -36,7 +36,7 @@ cd PSWorkspace && python app.py
 | 模块 | 功能 |
 |------|------|
 | EDM 监听 | EWS Streaming 实时推送，自动检测 EDM 邮件并保存到 `EDM/Temp/` |
-| EDM 看板 | 按 conversation_id 分组展示 EDM 处理进度（7 步流程） |
+| EDM 看板 | 按 conversation_id 分组展示 EDM 处理进度（7 步流程），数据源来自 GitHub（bluemct/docs） |
 | TFS | Azure DevOps Webhook 日志、更新 Labor Time、查询工单 |
 | ICM | Microsoft ICM 工单创建/查询/批量操作/值班人员查询 |
 
@@ -48,6 +48,30 @@ cd PSWorkspace && python app.py
 - **已处理 SN**：手动刷新查看历史处理记录，`processed` 字段标记是否已成功处理
 
 ## EDM Process 处理流程
+
+### EDM 看板刷新机制
+
+看板数据来自 GitHub 仓库 `bluemct/docs/master/edmmailanalyzer.json`，后端复用 `.claude/skills/edm-dashboard/edm_dashboard.py` 的 `do_refresh()` 函数。
+
+**前端两个函数**：
+
+| 函数 | 行为 | 触发时机 |
+|------|------|----------|
+| `loadDashboard()` | 只读本地 `edmmailanalyzer.json`，快速加载 | 首次进入看板页面、300s 自动刷新 |
+| `refreshDashboard()` | 先 `POST /api/edm/dashboard/refresh` 从 GitHub 拉取最新数据，再 `GET /api/edm/dashboard` 加载渲染 | 手动点击"刷新"按钮 |
+
+**后端 API**：
+
+| 端点 | 说明 |
+|------|------|
+| `GET /api/edm/dashboard` | 读取本地 JSON → `build_conversations()` → 返回分组数据 |
+| `POST /api/edm/dashboard/refresh` | 调用 `do_refresh()`，按优先级：git clone (SSH→HTTPS) → HTTP 直接 → 代理 (ghproxy) → 本地文件回退，成功后覆盖本地 JSON |
+| `GET /api/edm/dashboard/export` | 导出 CSV |
+
+**刷新按钮状态**：
+- 请求中 → 禁用 + `<spinner> 刷新中...`
+- GitHub 成功 → 绿色"✓ 已更新"，3 秒后恢复
+- 本地缓存（GitHub 不可达）→ 黄色"⚠ 本地缓存"，3 秒后恢复
 
 点击 Process 按钮，后台异步执行 3 步流程：
 
