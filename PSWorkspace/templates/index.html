@@ -139,10 +139,16 @@
         <div class="card-subtitle">EDM 邮件处理进度跟踪</div>
       </div>
       <div style="display:flex; gap:8px;">
-        <button class="btn btn-secondary btn-sm" onclick="loadDashboard()">&#128260; 刷新</button>
+        <button class="btn btn-secondary btn-sm" id="btn-refresh-dashboard" onclick="refreshDashboard()">&#128260; 刷新</button>
         <button class="btn btn-secondary btn-sm" onclick="exportDashboardCSV()">&#128190; 导出 CSV</button>
       </div>
     </div>
+
+    <!-- Debug Log -->
+    <div id="dashboard-debug-log" style="margin-top:8px; padding:8px 12px; background:#1e1e1e; color:#0f0; font-family:Consolas,monospace; font-size:11px; border-radius:6px; max-height:150px; overflow-y:auto; white-space:pre-wrap;"></div>
+
+    <!-- Toggle Debug Button -->
+    <button class="btn btn-sm" onclick="var d=document.getElementById('dashboard-debug-log');d.style.display=d.style.display==='none'?'block':'none';var b=document.getElementById('dashboard-debug-btn');b.style.display=b.style.display==='none'?'block':'none'" id="dashboard-debug-btn" style="margin-top:4px; display:none;">Debug Log (隐藏)</button>
 
     <!-- Overview Cards -->
     <div class="stats-row" id="overview-cards">
@@ -842,17 +848,96 @@ function loadHistory() {
 
 /* ─── EDM Dashboard Functions ───────────────────────────── */
 var dashboardData = null;
+var dashboardDebugLog = [];
+function _debugLog(msg) {
+  var ts = new Date().toLocaleTimeString();
+  dashboardDebugLog.push('[' + ts + '] ' + msg);
+  var el = document.getElementById('dashboard-debug-log');
+  if (el) {
+    el.style.display = 'block';
+    el.textContent = dashboardDebugLog.join('\n');
+    el.scrollTop = el.scrollHeight;
+  }
+}
 function loadDashboard() {
+  // Fast load from local cache only — no GitHub pull
+  _debugLog('>>> loadDashboard() called (local only)');
   pswp.authenticatedFetch("/api/edm/dashboard")
     .then(function(r) { return r.json(); })
     .then(function(data) {
+      _debugLog('JSON parsed. total=' + data.total + ', in_progress=' + data.in_progress + ', completed=' + data.completed);
+      _debugLog('conversations count: ' + (data.conversations ? data.conversations.length : 0));
       dashboardData = data;
       renderDashboard("all");
       renderSteps();
+      _debugLog('Done! (本地加载) ✓');
     })
     .catch(function(e) {
+      _debugLog('ERROR: ' + e.message);
       document.getElementById("dashboard-content").innerHTML =
         '<div class="alert alert-error">加载失败: ' + e.message + '</div>';
+    });
+}
+
+/* Manual refresh: pull latest from GitHub, then reload dashboard */
+function refreshDashboard() {
+  _debugLog('>>> refreshDashboard() called (GitHub pull)');
+
+  var contentEl = document.getElementById("dashboard-content");
+  contentEl.innerHTML =
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;">' +
+    '<div class="spinner"></div>' +
+    '<p style="margin-top:16px;color:var(--color-text-secondary);font-size:14px;">正在从 GitHub 获取最新数据...</p>' +
+    '</div>';
+
+  var btn = document.getElementById("btn-refresh-dashboard");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 刷新中...'; }
+
+  _debugLog('Calling /api/edm/dashboard/refresh (GitHub pull) ...');
+  pswp.authenticatedFetch("/api/edm/dashboard/refresh", { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(refreshResult) {
+      var src = refreshResult.remoteOk ? 'github ✓ (已保存本地)' : (refreshResult.source === 'local' ? '本地缓存 (GitHub 不可达)' : 'unknown');
+      _debugLog('Refresh result: ' + src + ', ' + refreshResult.count + ' records, ' + refreshResult.conversations + ' conversations');
+      if (!refreshResult.ok) {
+        throw new Error('刷新失败: ' + refreshResult.source);
+      }
+      _debugLog('Loading dashboard data ...');
+      return pswp.authenticatedFetch("/api/edm/dashboard").then(function(r) {
+        return r.json().then(function(data) { return { refresh: refreshResult, data: data }; });
+      });
+    })
+    .then(function(result) {
+      var rr = result.refresh;
+      var data = result.data;
+      _debugLog('JSON parsed. total=' + data.total + ', in_progress=' + data.in_progress + ', completed=' + data.completed);
+      dashboardData = data;
+      renderDashboard("all");
+      renderSteps();
+      _debugLog('Done! (' + rr.source + ', ' + rr.count + ' records) ✓');
+      if (btn) {
+        btn.disabled = false;
+        if (rr.remoteOk) {
+          btn.innerHTML = '&#10004; 已更新';
+          btn.style.background = '#22c55e';
+          btn.style.color = 'white';
+        } else {
+          btn.innerHTML = '&#9888; 本地缓存';
+          btn.style.background = '#f59e0b';
+          btn.style.color = 'white';
+        }
+        setTimeout(function() {
+          btn.innerHTML = '&#128260; 刷新';
+          btn.style.background = '';
+          btn.style.color = '';
+        }, 3000);
+      }
+    })
+    .catch(function(e) {
+      _debugLog('ERROR: ' + e.message);
+      document.getElementById("dashboard-content").innerHTML =
+        '<div class="alert alert-error">加载失败: ' + e.message + '</div>';
+      if (btn) { btn.disabled = false; btn.innerHTML = '&#128260; 刷新'; btn.style.background = ''; btn.style.color = ''; }
     });
 }
 function renderDashboard(filter) {
@@ -1517,26 +1602,83 @@ function loadOnCall() {
   pswp.authenticatedFetch("/api/icm/oncall")
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data.ok && data.data) {
-        if (typeof data.data === "object" && !Array.isArray(data.data)) {
-          resultEl.innerHTML = '<div class="log-output">' + escapeHtml(JSON.stringify(data.data, null, 2)) + '</div>';
-          return;
-        }
-        var html = '<table><thead><tr><th>团队</th><th>值班人</th><th>轮班</th></tr></thead><tbody>';
-        var items = Array.isArray(data.data) ? data.data : (data.data.value || []);
-        for (var i = 0; i < items.length; i++) {
-          var item = items[i];
-          html += '<tr><td>' + escapeHtml(item.teamName || item.TeamName || "-") + '</td>' +
-            '<td>' + escapeHtml(item.personName || item.PersonName || (item.person && item.person.displayName) || "-") + '</td>' +
-            '<td>' + escapeHtml(item.shiftName || item.ShiftName || "-") + '</td></tr>';
-        }
-        html += '</tbody></table>';
-        resultEl.innerHTML = html;
-      } else if (data.ok && data.raw) {
-        resultEl.innerHTML = '<div class="log-output">' + escapeHtml(data.raw) + '</div>';
-      } else {
+      if (!data.ok || !data.data) {
         resultEl.innerHTML = '<div class="alert alert-error">查询失败: ' + escapeHtml(data.error || "Unknown") + '</div>';
+        return;
       }
+      var apiData = data.data;
+      var teams = Array.isArray(apiData) ? apiData : (apiData.value || []);
+      if (!teams.length) {
+        resultEl.innerHTML = '<div class="empty-state"><p>暂无值班信息</p></div>';
+        return;
+      }
+      var html = '';
+      for (var t = 0; t < teams.length; t++) {
+        var team = teams[t];
+        var teamName = team.TeamName || team.teamName || 'Team ' + team.TeamId;
+        var teamEmail = team.TeamEmailAddress || team.teamEmailAddress || '';
+        html += '<div style="background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:8px;padding:16px;margin-bottom:12px;">';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">';
+        html += '<span style="font-size:20px;">🏢</span>';
+        html += '<span style="font-size:15px;font-weight:600;">' + escapeHtml(teamName) + '</span>';
+        if (teamEmail) {
+          html += '<a href="mailto:' + escapeHtml(teamEmail) + '" style="font-size:12px;color:var(--color-accent);margin-left:auto;text-decoration:none;">📧 ' + escapeHtml(teamEmail) + '</a>';
+        }
+        html += '</div>';
+        // Shifts
+        var shifts = team.ShiftCurrentOnCalls || team.shiftCurrentOnCalls || [];
+        for (var s = 0; s < shifts.length; s++) {
+          var shift = shifts[s];
+          var shiftName = shift.ShiftName || shift.shiftName || '';
+          html += '<div style="margin-bottom:10px;">';
+          html += '<div style="font-size:12px;color:var(--color-text-dim);margin-bottom:8px;">🔄 ' + escapeHtml(shiftName) + '</div>';
+          var contacts = shift.CurrentOnCallContacts || shift.currentOnCallContacts || [];
+          for (var c = 0; c < contacts.length; c++) {
+            var person = contacts[c];
+            var role = c === 0 ? 'primary' : 'secondary';
+            var roleIcon = c === 0 ? '⭐' : '🔹';
+            var roleName = c === 0 ? 'Primary' : 'Secondary';
+            var firstName = person.FirstName || person.firstName || '';
+            var lastName = person.LastName || person.lastName || '';
+            var fullName = firstName + ' ' + lastName;
+            var alias = person.Alias || person.alias || '';
+            var emails = person.ContactMechanism && person.ContactMechanism.EmailAddresses ? person.ContactMechanism.EmailAddresses : [];
+            var phones = person.ContactMechanism && person.ContactMechanism.PhoneNumbers ? person.ContactMechanism.PhoneNumbers : [];
+            var bg = role === 'primary' ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' : 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)';
+            var borderCol = role === 'primary' ? '#f59e0b' : '#6366f1';
+            html += '<div style="border:1px solid ' + borderCol + ';border-left:4px solid ' + borderCol + ';border-radius:8px;padding:12px;background:' + bg + ';margin-bottom:8px;">';
+            html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">';
+            html += '<span style="font-size:16px;">' + roleIcon + '</span>';
+            html += '<span style="font-weight:600;font-size:14px;">' + escapeHtml(fullName) + '</span>';
+            html += '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:' + borderCol + ';color:white;">' + roleName + '</span>';
+            html += '</div>';
+            if (alias) {
+              html += '<div style="font-size:11px;color:var(--color-text-dim);margin-bottom:4px;">👤 ' + escapeHtml(alias) + '</div>';
+            }
+            // Phone - take Cell or first number
+            var cellPhone = '';
+            for (var p = 0; p < phones.length; p++) {
+              var pl = phones[p].PhoneLabel || '';
+              if (pl === 'Cell') { cellPhone = phones[p].Number; break; }
+            }
+            if (!cellPhone && phones.length > 0) cellPhone = phones[0].Number;
+            if (cellPhone) {
+              html += '<div style="font-size:12px;">📱 ' + escapeHtml(cellPhone) + '</div>';
+            }
+            // Email
+            if (emails.length > 0) {
+              html += '<div style="font-size:12px;"><a href="mailto:' + escapeHtml(emails[0]) + '" style="color:inherit;text-decoration:none;">📧 ' + escapeHtml(emails[0]) + '</a></div>';
+            }
+            html += '</div>';
+          }
+          if (!contacts.length) {
+            html += '<div style="font-size:12px;color:var(--color-text-dim);">暂无值班人员</div>';
+          }
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+      resultEl.innerHTML = html;
     })
     .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
 }

@@ -326,7 +326,7 @@ def _extract_text_body(mime_bytes: bytes) -> str:
 
 def _extract_sn_from_subject(subject: str):
     """Extract SN-xxxxx from subject line."""
-    m = re.search(r"SN-?(\d+)", subject)
+    m = re.search(r"SN\s*-\s*(\d+)", subject)
     return f"SN-{m.group(1)}" if m else None
 
 
@@ -710,83 +710,47 @@ def dashboard():
         return jsonify({"error": "Dashboard data file not found", "data": _empty_dashboard()})
 
     try:
-        with open(data_file, 'r', encoding='utf-8') as f:
+        with open(data_file, 'r', encoding='utf-8-sig') as f:
             emails = json.load(f)
     except (json.JSONDecodeError, IOError) as e:
         return jsonify({"error": f"Failed to load data: {e}", "data": _empty_dashboard()})
 
-    # Load handlers
+    # ── Delegate to original edm_dashboard.py build_conversations() ───
+    from utils import task_queue as _tq
+    _tq._edm_dashboard_handlers = set()
     handlers_file = os.path.join(project_root, config['paths']['edm_handlers'])
-    handlers = []
     try:
-        with open(handlers_file, 'r', encoding='utf-8') as f:
-            handlers = json.load(f)
+        with open(handlers_file, 'r', encoding='utf-8-sig') as f:
+            raw_handlers = json.load(f)
+        _tq._edm_dashboard_handlers = {h.lower() for h in raw_handlers.get("handlers", [])}
     except Exception:
         pass
 
-    # Group by conversation_id, cap at 7 steps
-    cutoff = datetime(2026, 5, 26)
-    conversations = {}
-    topic_map = {}
+    # Import original function — it uses global _handlers
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(project_root, ".claude/skills/edm-dashboard"))
+    import importlib as _lib
+    _edm_dash = _lib.import_module("edm_dashboard")
+    _edm_dash._handlers = _tq._edm_dashboard_handlers
+    convs = _edm_dash.build_conversations(emails)
 
-    for email in emails:
-        conv_id = email.get("conversation_id", "")
-        if not conv_id:
-            continue
-
-        email_date = email.get("date", "")
-        try:
-            dt = datetime.fromisoformat(email_date.replace("Z", "+00:00")).replace(tzinfo=None)
-            if dt < cutoff:
-                continue
-        except (ValueError, AttributeError):
-            pass
-
-        subject = email.get("subject", "")
-        if subject.startswith("[EDM test and distribution]"):
-            sn = _extract_sn_from_subject(subject)
-            topic_map[conv_id] = {"subject": subject, "sn": sn}
-
-        if conv_id not in conversations:
-            conversations[conv_id] = []
-        conversations[conv_id].append(email)
-
-    valid_convs = {k: v for k, v in conversations.items() if k in topic_map}
-
+    # ── Transform original output to Flask frontend format ───
     result = []
-    for conv_id, conv_emails in valid_convs.items():
-        step_count = min(len(conv_emails), 7)
+    for c in convs:
+        step_count = len(c.get("emails", []))
         is_done = step_count >= 7
-
-        conv_emails.sort(key=lambda e: e.get("date", ""))
-
-        topic = topic_map.get(conv_id, {})
-        sn = topic.get("sn", "")
-        subject = topic.get("subject", "")
-
-        handler = ""
-        for em in reversed(conv_emails):
-            sender = em.get("sender", "")
-            for h in handlers:
-                if h.lower() in sender.lower():
-                    handler = h
-                    break
-            if handler:
-                break
-
-        dates = [e.get("date", "") for e in conv_emails if e.get("date")]
+        dates = [e.get("date", "") for e in c.get("emails", []) if e.get("date")]
         latest = max(dates) if dates else ""
-
         result.append({
-            "conversation_id": conv_id,
-            "sn": sn,
-            "subject": subject,
+            "conversation_id": c["conversation_id"],
+            "sn": c.get("sn", ""),
+            "subject": c.get("subject", ""),
             "step": step_count,
             "total_steps": 7,
             "is_done": is_done,
-            "handler": handler,
+            "handler": c.get("firstSender", ""),
             "latest_date": latest,
-            "email_count": len(conv_emails),
+            "email_count": len(c.get("emails", [])),
         })
 
     result.sort(key=lambda x: x.get("latest_date", ""), reverse=True)
@@ -800,6 +764,38 @@ def dashboard():
     }
 
     return jsonify(summary)
+
+
+@edm_bp.route('/dashboard/refresh', methods=['POST'])
+@require_auth
+def dashboard_refresh():
+    """POST /api/edm/dashboard/refresh - Fetch latest data from GitHub and save locally."""
+    project_root = _get_project_root()
+    config = _load_config()
+    json_file = os.path.join(project_root, config['paths']['edm_dashboard_data'])
+
+    # Import and run do_refresh from edm_dashboard.py
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(project_root, ".claude/skills/edm-dashboard"))
+    import importlib as _lib
+    _edm_dash = _lib.import_module("edm_dashboard")
+    _edm_dash._handlers = set()
+    handlers_file = os.path.join(project_root, config['paths']['edm_handlers'])
+    try:
+        from utils import task_queue as _tq
+        _tq._edm_dashboard_handlers = set()
+        with open(handlers_file, 'r', encoding='utf-8-sig') as f:
+            raw_handlers = json.load(f)
+        _edm_dash._handlers = {h.lower() for h in raw_handlers.get("handlers", [])}
+    except Exception:
+        pass
+
+    result = _edm_dash.do_refresh(
+        json_file,
+        _edm_dash.GITHUB_RAW_URL,
+        _edm_dash.GITHUB_PROXY_URL,
+    )
+    return jsonify(result)
 
 
 @edm_bp.route('/dashboard/export', methods=['GET'])
