@@ -36,7 +36,7 @@ EXCLUDE_DIRS = [
 ]
 
 INCLUDE_DIRS = ["PSWorkspace", "EWS", "IcMHelper", "IcMHelperPS", ".claude"]
-INCLUDE_FILES = ["ews_streaming.ps1", "xlsx_search_dir.json"]
+INCLUDE_FILES = ["ews_streaming.ps1", "xlsx_search_dir.json", "Tokenmapping.json"]
 
 
 def should_exclude(rel_path, full_path):
@@ -96,45 +96,23 @@ def main():
                 shutil.copy2(src, staging_path / file_name)
                 print(f"  {file_name}")
 
-        # --- Generate config templates ---
-        print("[3/5] 生成配置模板...")
-
-        ews_example = {
-            "ews": {
-                "url": "https://outlook.office365.com/EWS/Exchange.asmx",
-                "domain_user": "YOUR_DOMAIN\\YOUR_USERNAME",
-                "password": "YOUR_PASSWORD",
-                "folder_name": "EDM"
-            }
-        }
-        write_json(staging_path / ".edm_agent_config.json.example", ews_example)
-        print("  .edm_agent_config.json.example")
-
-        ps_config_example = {
-            "server": {"host": "0.0.0.0", "port": 9000},
-            "paths": {
-                "project_root": "{{PROJECT_ROOT}}",
-                "icm_ps": "IcMHelperPS/IcmApi.ps1",
-                "icm_config": "IcMHelperPS/icm_config.json",
-                "edm_temp": "EDM/Temp",
-                "edm_process": ".claude/skills/edm-process/edm_process.py",
-                "edm_dashboard_data": "edmmailanalyzer.json",
-                "edm_handlers": ".claude/skills/edm-dashboard/handlers.json",
-                "eml_to_msg": ".claude/skills/eml-to-msg/eml_to_msg.py"
-            },
-            "auth": {"domain": "bj-oe.21vianet.com", "token_expiry_hours": 1},
-            "tfs": {"organization": "21via", "project": "PS", "pat": "", "base_url": "https://dev.azure.com/21via"},
-            "webhook": {"secret": ""}
-        }
-        write_json(staging_path / "PSWorkspace" / "ps_workspace_config.json.example", ps_config_example)
-        print("  ps_workspace_config.json.example")
-
-        icm_example = {
-            "access_token": "", "token_obtained_at": "", "token_expires_at": "",
-            "cookie_string": "", "cookie_expires": ""
-        }
-        write_json(staging_path / "IcMHelperPS" / "icm_config.json.example", icm_example)
-        print("  icm_config.json.example (IcMHelperPS)")
+        # --- Copy real config files as-is (preserve all credentials, paths, etc.) ---
+        print("[3/5] 复制配置文件（保留真实信息）...")
+        real_configs = [
+            ".edm_agent_config.json",
+            "PSWorkspace/ps_workspace_config.json",
+            "IcMHelperPS/icm_config.json",
+            "xlsx_search_dir.json",
+        ]
+        for cfg in real_configs:
+            src = PROJECT_ROOT / cfg
+            if src.exists():
+                dest = staging_path / cfg
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dest)
+                print(f"  {cfg} (真实配置)")
+            else:
+                print(f"  {cfg} (不存在，跳过)")
 
         # --- Generate start.ps1 ---
         print("[4/5] 生成启动脚本...")
@@ -177,117 +155,102 @@ def write_json(path, data):
 def generate_start_ps1():
     return r"""<#
 .SYNOPSIS
-    PS Workspace 启动脚本 - 双击运行
+    PS Workspace Launcher - Right-click and "Run with PowerShell"
 #>
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = $PSScriptRoot
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  PS Workspace 启动脚本" -ForegroundColor Cyan
+Write-Host "  PS Workspace Launcher" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. 检查 EWS 配置
-Write-Host "[检查] 配置文件..." -ForegroundColor Yellow
-$EwsConfig = Join-Path $ProjectRoot ".edm_agent_config.json"
-if (-not (Test-Path $EwsConfig)) {
-    $Example = Join-Path $ProjectRoot ".edm_agent_config.json.example"
-    if (Test-Path $Example) {
-        Write-Host "[警告] 未找到 .edm_agent_config.json" -ForegroundColor Red
-        Write-Host "       请从模板 .edm_agent_config.json.example 复制并填入 EWS 凭据" -ForegroundColor Red
-        Write-Host ""
-        Read-Host "按回车退出"
-        exit
-    }
+# 1. Check config files
+Write-Host "[Check] Config files..." -ForegroundColor Yellow
+$Missing = $false
+$cfg1 = Join-Path $ProjectRoot ".edm_agent_config.json"
+if (Test-Path $cfg1) {
+    Write-Host "  [OK] .edm_agent_config.json" -ForegroundColor Green
+} else {
+    Write-Host "  [MISSING] .edm_agent_config.json" -ForegroundColor Red
+    $Missing = $true
+}
+$cfg2 = Join-Path (Join-Path $ProjectRoot "PSWorkspace") "ps_workspace_config.json"
+if (Test-Path $cfg2) {
+    Write-Host "  [OK] ps_workspace_config.json" -ForegroundColor Green
+} else {
+    Write-Host "  [MISSING] ps_workspace_config.json" -ForegroundColor Red
+    $Missing = $true
 }
 
-# 2. 检查 PS Workspace 配置
-$PsConfig = Join-Path $ProjectRoot "PSWorkspace" "ps_workspace_config.json"
-if (-not (Test-Path $PsConfig)) {
-    $Example = Join-Path $ProjectRoot "PSWorkspace" "ps_workspace_config.json.example"
-    if (Test-Path $Example) {
-        Write-Host "[警告] 未找到 ps_workspace_config.json" -ForegroundColor Red
-        Write-Host "是否从模板创建？(Y/N)" -ForegroundColor Yellow
-        $Answer = Read-Host ""
-        if ($Answer -eq 'Y' -or $Answer -eq 'y') {
-            Copy-Item $Example $PsConfig
-            $Content = Get-Content $PsConfig -Raw
-            $Content = $Content -replace '{{PROJECT_ROOT}}', $ProjectRoot
-            Set-Content $PsConfig $Content -Encoding utf8
-            Write-Host "[OK] 已从模板创建 (project_root = $ProjectRoot)" -ForegroundColor Green
-        } else {
-            Write-Host "需要配置文件才能运行。" -ForegroundColor Red
-            Read-Host "按回车退出"
-            exit
-        }
-    }
-}
-
-# 3. 检查 ICM 配置
-$IcmConfig = Join-Path $ProjectRoot "IcMHelperPS" "icm_config.json"
+# ICM config is optional
+$IcmConfig = Join-Path (Join-Path $ProjectRoot "IcMHelperPS") "icm_config.json"
 if (-not (Test-Path $IcmConfig)) {
-    $Example = Join-Path $ProjectRoot "IcMHelperPS" "icm_config.json.example"
-    if (Test-Path $Example) {
-        Write-Host "[提示] 创建空 ICM 配置 (Token 将在运行时自动获取)" -ForegroundColor Yellow
-        Copy-Item $Example $IcmConfig
-    }
+    Write-Host "  [INFO] icm_config.json not found — Token will be auto-fetched at runtime" -ForegroundColor Yellow
 }
 
-# 4. 检查 Python
+if ($Missing) {
+    Write-Host ""
+    Write-Host "[ERROR] Required config files are missing. Cannot start." -ForegroundColor Red
+    Read-Host "Press Enter to exit"
+    exit
+}
+
+# 2. Check Python
 Write-Host "" -ForegroundColor Cyan
-Write-Host "[检查] Python 环境..." -ForegroundColor Yellow
+Write-Host "[Check] Python environment..." -ForegroundColor Yellow
 try {
     $PyVersion = python --version 2>&1
     Write-Host "  $PyVersion" -ForegroundColor Gray
 } catch {
-    Write-Host "[错误] 未找到 Python，请先安装 Python 3.10+" -ForegroundColor Red
-    Read-Host "按回车退出"
+    Write-Host "[ERROR] Python not found. Please install Python 3.10+ first." -ForegroundColor Red
+    Read-Host "Press Enter to exit"
     exit
 }
 
-# 5. 检查依赖包
-Write-Host "[检查] Python 依赖包..." -ForegroundColor Yellow
-$ReqFile = Join-Path $ProjectRoot "PSWorkspace" "requirements.txt"
+# 3. Check Python dependencies
+Write-Host "[Check] Python dependencies..." -ForegroundColor Yellow
+$ReqFile = Join-Path (Join-Path $ProjectRoot "PSWorkspace") "requirements.txt"
 if (Test-Path $ReqFile) {
-    $Result = python -m pip list 2>$null
-    $Missing = @()
+    $Result = python -m pip list 2>$null -ErrorAction SilentlyContinue
+    $MissingPkgs = @()
     $Packages = Get-Content $ReqFile | Where-Object { $_ -notmatch '^\s*#' -and $_ -notmatch '^\s*$' -and $_ -notmatch '^-' }
     foreach ($pkg in $Packages) {
         $Name = $pkg -replace '[>=<].*', ''
         if ($Result -notmatch [regex]::Escape($Name)) {
-            $Missing += $Name
+            $MissingPkgs += $Name
         }
     }
-    if ($Missing.Count -gt 0) {
-        Write-Host "  [提示] 缺少依赖包: $($Missing -join ', ')" -ForegroundColor Yellow
-        $Answer = Read-Host "  是否现在安装？(Y/N)"
+    if ($MissingPkgs.Count -gt 0) {
+        Write-Host "  [INFO] Missing packages: $($MissingPkgs -join ', ')" -ForegroundColor Yellow
+        $Answer = Read-Host "  Install now? (Y/N)"
         if ($Answer -eq 'Y' -or $Answer -eq 'y') {
-            Write-Host "  安装中..." -ForegroundColor Yellow
+            Write-Host "  Installing..." -ForegroundColor Yellow
             python -m pip install -r $ReqFile
-            Write-Host "  [OK] 依赖包安装完成" -ForegroundColor Green
+            Write-Host "  [OK] Dependencies installed" -ForegroundColor Green
         }
     } else {
-        Write-Host "  [OK] 所有依赖包已安装" -ForegroundColor Green
+        Write-Host "  [OK] All dependencies installed" -ForegroundColor Green
     }
 }
 
-# 6. 检查关键文件
+# 4. Check key files
 Write-Host "" -ForegroundColor Cyan
-Write-Host "[检查] 关键文件..." -ForegroundColor Yellow
+Write-Host "[Check] Key files..." -ForegroundColor Yellow
 foreach ($f in @("PSWorkspace/app.py", "EWS/lib/40/Microsoft.Exchange.WebServices.dll", "ews_streaming.ps1")) {
     $Path = Join-Path $ProjectRoot $f
     if (Test-Path $Path) {
         Write-Host "  [OK] $f" -ForegroundColor Green
     } else {
-        Write-Host "  [缺失] $f" -ForegroundColor Red
+        Write-Host "  [MISSING] $f" -ForegroundColor Red
     }
 }
 
-# 7. 启动
+# 5. Launch
 Write-Host "" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  启动 PS Workspace..." -ForegroundColor Cyan
-Write-Host "  访问: http://localhost:9000" -ForegroundColor Cyan
+Write-Host "  Starting PS Workspace..." -ForegroundColor Cyan
+Write-Host "  URL: http://localhost:9000" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "" -ForegroundColor Cyan
 
@@ -298,19 +261,19 @@ python app.py
 
 
 def generate_readme():
-    return """# PS Workspace - 移植包
+    return """# PS Workspace - 完整打包
 
 ## 首次运行
 
 右键 `start.ps1` -> 使用 PowerShell 运行
 
-首次运行会自动检查：配置文件、Python、依赖包、关键文件
+启动脚本会自动检查：配置文件、Python、依赖包、关键文件
 
-## 需要手动配置的文件
+## 配置文件（已包含，无需手动创建）
 
-1. **`.edm_agent_config.json`** - 从 `.edm_agent_config.json.example` 复制并填入 EWS 凭据
-2. **`PSWorkspace/ps_workspace_config.json`** - 从模板创建，确认 project_root 路径正确
-3. **`IcMHelperPS/icm_config.json`** - 首次运行自动创建空配置，Token 自动刷新获取
+- `.edm_agent_config.json` — EWS 凭据及 EDM 监听配置（已包含真实信息）
+- `PSWorkspace/ps_workspace_config.json` — Flask 应用配置（已包含真实路径）
+- `IcMHelperPS/icm_config.json` — ICM Token 配置（如不存在，Token 将在运行时自动获取）
 
 ## 前置条件
 

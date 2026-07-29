@@ -6,7 +6,7 @@ PS Team 统一 Web 工作平台，集成 EDM 监听、EDM 看板、TFS 工单、
 
 - Flask Web 应用，运行在 **http://localhost:9000**
 - SPA 前端，模板在 `templates/`，JS 在 `static/app.js`，CSS 在 `static/style.css`
-- Blueprint 模块化：`routes/auth.py`, `routes/edm.py`, `routes/tfs.py`, `routes/icm.py`, `routes/task.py`
+- Blueprint 模块化：`routes/auth.py`, `routes/edm_eml.py`（当前活跃）, `routes/edm.py`（旧流程）, `routes/tfs.py`, `routes/icm.py`, `routes/task.py`
 
 ## 启动
 
@@ -27,7 +27,7 @@ cd PSWorkspace && python app.py
 | `edm_events` | EDM 监听检测事件（连接、新邮件、成功、错误），重启不丢失 |
 | `icm_token_history` | ICM Token 刷新/验证历史记录（分页查询，含 Cookie 续期信息） |
 
-- `utils/task_queue.processed_eml_files()` — 从 tasks 表查询 `edm-process-*` 且 `status=completed` 的记录，返回 `{filename: completed_at}`
+- `utils/task_queue.processed_eml_files()` — 从 tasks 表查询每个 .eml 文件名**最新一次**的 `edm-process-*` 任务状态，仅当最新为 `completed` 才返回 `{filename: latest_completed_at}`
 - `temp_files` API 返回 `processed` 和 `processed_at` 字段，`history` API 返回 SN 的 `processed` 字段
 - 前端不再用 JS 变量记忆处理状态，从后端 API 获取
 
@@ -49,43 +49,56 @@ cd PSWorkspace && python app.py
 
 ## EDM Process 处理流程
 
-### EDM 看板刷新机制
+### 流程 A：原流程（依赖 Outlook COM）— `routes/edm.py`（已弃用）
 
-看板数据来自 GitHub 仓库 `bluemct/docs/master/edmmailanalyzer.json`，后端复用 `.claude/skills/edm-dashboard/edm_dashboard.py` 的 `do_refresh()` 函数。
-
-**前端两个函数**：
-
-| 函数 | 行为 | 触发时机 |
-|------|------|----------|
-| `loadDashboard()` | 只读本地 `edmmailanalyzer.json`，快速加载 | 首次进入看板页面、300s 自动刷新 |
-| `refreshDashboard()` | 先 `POST /api/edm/dashboard/refresh` 从 GitHub 拉取最新数据，再 `GET /api/edm/dashboard` 加载渲染 | 手动点击"刷新"按钮 |
-
-**后端 API**：
-
-| 端点 | 说明 |
-|------|------|
-| `GET /api/edm/dashboard` | 读取本地 JSON → `build_conversations()` → 返回分组数据 |
-| `POST /api/edm/dashboard/refresh` | 调用 `do_refresh()`，按优先级：git clone (SSH→HTTPS) → HTTP 直接 → 代理 (ghproxy) → 本地文件回退，成功后覆盖本地 JSON |
-| `GET /api/edm/dashboard/export` | 导出 CSV |
-
-**刷新按钮状态**：
-- 请求中 → 禁用 + `<spinner> 刷新中...`
-- GitHub 成功 → 绿色"✓ 已更新"，3 秒后恢复
-- 本地缓存（GitHub 不可达）→ 黄色"⚠ 本地缓存"，3 秒后恢复
+⚠ 此流程已弃用，仅保留作为参考。切回方式：将 `app.py` 的 blueprint 注册从 `routes.edm_eml` 改回 `routes.edm`。
 
 点击 Process 按钮，后台异步执行 3 步流程：
 
 | Step | 操作 | 参考 |
 |------|------|------|
-| 1/3 | `.eml` → `.msg`（eml_to_msg.py） | `PSWorkspace/routes/edm.py` `_process()` |
-| 2/3 | 从 MSG 正文提取 xlsx 文件名（SharePoint URL）→ 本地精确匹配搜索 → 复制到 Temp/ | `PSWorkspace/routes/edm.py` `_discover_xlsx()` |
-| 3/3 | 运行 edm_process.py（`--file` 参数指定 .msg，处理 .msg + .xlsx → SN 文件夹） | `.claude/skills/edm-process/edm_process.py` |
+| 1/3 | `.eml` → `.msg`（eml_to_msg.py，需要 Outlook COM CreateItem+SaveAs） | `PSWorkspace/routes/edm.py` `_process()` |
+| 2/3 | 从 MSG HTMLBody 提取 xlsx 文件名（SharePoint URL）→ 本地精确匹配搜索 → 复制到 Temp/ | `PSWorkspace/routes/edm.py` `_discover_xlsx()` |
+| 3/3 | 运行 edm_process.py（`--file` 参数指定 .msg，需要 Outlook COM OpenSharedItem 读 HTMLBody） | `.claude/skills/edm-process/edm_process.py` |
 
 **xlsx 发现逻辑**（`_discover_xlsx`）：
 - 从 MSG HTMLBody 提取 SharePoint URL 中的 `.xlsx` 文件名
 - 读取 `xlsx_search_dir.json` 获取本地搜索目录
 - **精确文件名匹配**（忽略大小写），找不到则返回 None（不做模糊匹配 fallback）
 - 未提取到文件名时，才用 SN 号匹配文件夹作为兜底
+
+### 流程 B：纯 Python 流程（无需 Outlook COM）— `routes/edm_eml.py`
+
+直接处理 `.eml`，跳过 `.msg` 转换，**零 Outlook COM 依赖**。
+
+| Step | 操作 | 参考 |
+|------|------|------|
+| 1/2 | 从 .eml 的 text/html 提取 xlsx 文件名（SharePoint URL）→ 本地搜索 → 复制到 Temp/ | `PSWorkspace/routes/edm_eml.py` `_discover_xlsx()` |
+| 2/2 | 运行 edm_process_eml.py（纯 Python：从 .eml MIME 结构提取 EDM template HTML + Token 替换） | `.claude/skills/edm-process/edm_process_eml.py` |
+
+**流程 B 核心逻辑**：
+- 解析 .eml MIME 结构，找到 `message/rfc822` 中无 To/Cc 收件人的子邮件（EDM template）
+- 从 EDM template 的 `text/html` 部分提取 HTML body
+- Token 替换（`Tokenmapping.json`）、插入 Subject 行、清理 `_MailOriginal` 锚点
+- 保存嵌套邮件为 `.eml` 参考文件
+- 处理 xlsx → CSV → formal/test CSV
+
+**何时使用流程 B**：新机器 Outlook COM 不可用时（如 McAfee 拦截、DCOM 权限不足等），将 `app.py` 的 blueprint 注册从 `routes.edm` 改为 `routes.edm_eml` 即可切换。
+
+**产出文件**（两种流程一致）：
+```
+EDM/SN-xxxxx/
+├── EDM_template.html           ← 含 Token 替换 + Subject 行
+├── 嵌套邮件 (.msg 或 .eml)    ← 参考用
+├── .xlsx                       ← 联系人列表
+├── .csv                        ← xlsx 转换
+├── formal_*.csv                ← 正式版（全部行）
+└── test_*.csv                  ← 测试版（每测试邮箱一行）
+```
+
+### EDM 看板刷新机制
+
+看板数据来自 GitHub 仓库 `bluemct/docs/master/edmmailanalyzer.json`，后端复用 `.claude/skills/edm-dashboard/edm_dashboard.py` 的 `do_refresh()` 函数。
 
 **处理结果弹窗**：完成/失败后弹出模态对话框，展示 3 步状态（✓ 成功/⚠ 警告/✗ 失败）及详情。
 - xlsx 未找到 → `ok="warn"`，显示 ⚠ 橙色警告图标

@@ -668,7 +668,6 @@ function showProcessResultDialog(stdout, failed, errMsg) {
 
   // Parse steps from log
   var steps = [
-    { label: "EML → MSG 转换", ok: false, detail: "" },
     { label: "XLSX 发现", ok: false, detail: "" },
     { label: "EDM Process", ok: false, detail: "" },
   ];
@@ -676,19 +675,16 @@ function showProcessResultDialog(stdout, failed, errMsg) {
   var lines = log.split("\n");
   for (var i = 0; i < lines.length; i++) {
     var l = lines[i];
-    if (l.indexOf("[STEP 1/3]") >= 0 || l.indexOf("[EML2MSG]") >= 0) {
-      steps[0].ok = !failed || steps[0].ok;
-      if (l.indexOf("[EML2MSG]") >= 0) steps[0].detail = l.replace(/[\[\]]/g, '').trim();
+    if (l.indexOf("[STEP 1/2]") >= 0 || l.indexOf("[XLSX]") >= 0) {
+      if (l.indexOf("✓") >= 0) steps[0].ok = true;
+      else if (l.indexOf("⚠") >= 0) steps[0].ok = "warn";
+      if (l.indexOf("[XLSX]") >= 0) steps[0].detail = l.replace(/[\[\]]/g, '').trim();
     }
-    if (l.indexOf("[STEP 2/3]") >= 0 || l.indexOf("[XLSX]") >= 0) {
-      if (l.indexOf("✓") >= 0) steps[1].ok = true;
-      else if (l.indexOf("[XLSX]") >= 0) steps[1].ok = "warn";  // xlsx 未找到
-      if (l.indexOf("[XLSX]") >= 0) steps[1].detail = l.replace(/[\[\]]/g, '').trim();
+    if (l.indexOf("[STEP 2/2]") >= 0 || l.indexOf("[SN]") >= 0 || l.indexOf("[HTML]") >= 0 || l.indexOf("[CSV") >= 0) {
+      if (l.indexOf("[HTML]") >= 0 || l.indexOf("[CSV") >= 0) steps[1].ok = true;
+      if (l.indexOf("[SN]") >= 0) steps[1].detail = l.replace(/[\[\]]/g, '').trim();
     }
-    if (l.indexOf("[STEP 3/3]") >= 0 || l.indexOf("[SN]") >= 0 || l.indexOf("[HTML]") >= 0 || l.indexOf("[CSV") >= 0) {
-      if (l.indexOf("[HTML]") >= 0 || l.indexOf("[CSV") >= 0) steps[2].ok = true;
-      if (l.indexOf("[SN]") >= 0) steps[2].detail = l.replace(/[\[\]]/g, '').trim();
-    }
+    if (l.indexOf("[DONE]") >= 0) steps[1].ok = true;
   }
   // For completed tasks: give missing steps a default detail, keep their ok state as-is
   if (!failed) {

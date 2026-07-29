@@ -18,7 +18,7 @@ sys.path.insert(0, PROJECT_ROOT)
 os.makedirs(os.path.join(PROJECT_ROOT, "Log"), exist_ok=True)
 
 from routes.auth import auth_bp, require_auth, get_current_user
-from routes.edm import edm_bp, _set_project_root
+from routes.edm_eml import edm_eml_bp as edm_bp, _set_project_root
 from routes.tfs import tfs_bp
 from routes.icm import icm_bp, _set_project_root as _set_icm_project_root, _start_auto_refresh
 from routes.task import task_bp

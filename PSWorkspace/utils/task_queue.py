@@ -254,22 +254,35 @@ def list_events(max_items: int = 50) -> list:
 
 
 def processed_eml_files() -> Dict[str, str]:
-    """Return a dict of {eml_filename: completed_at_iso} for successfully processed .eml files."""
+    """Return a dict of {eml_filename: latest_completed_at_iso} for .eml files
+    whose **most recent** processing task completed successfully."""
     with _lock:
         conn = _conn()
         conn.row_factory = sqlite3.Row
+        # Get all EDM process tasks, newest first per filename
         rows = conn.execute(
-            "SELECT name, created_at FROM tasks "
-            "WHERE name LIKE 'edm-process-%' AND status='completed' "
-            "ORDER BY created_at DESC"
+            "SELECT name, status, created_at FROM tasks "
+            "WHERE name LIKE 'edm-process-%' "
+            "ORDER BY name, created_at DESC"
         ).fetchall()
         conn.close()
-    from datetime import datetime
-    result = {}
+
+    seen = set()
+    latest_status = {}
+    latest_created = {}
     for r in rows:
         filename = r["name"].replace("edm-process-", "", 1)
-        completed_at = datetime.fromtimestamp(r["created_at"]).isoformat()
-        result[filename] = completed_at
+        if filename in seen:
+            continue
+        seen.add(filename)
+        latest_status[filename] = r["status"]
+        latest_created[filename] = r["created_at"]
+
+    from datetime import datetime
+    result = {}
+    for filename, status in latest_status.items():
+        if status == "completed":
+            result[filename] = datetime.fromtimestamp(latest_created[filename]).isoformat()
     return result
 
 
