@@ -1,0 +1,1010 @@
+{% extends "base.html" %}
+{% block title %}PS Workspace - 首页{% endblock %}
+
+{% block content %}
+<!-- ═══ Home Section ═══ -->
+<div class="page-section active" id="page-home">
+<div style="max-width: 900px;">
+  <h1 style="font-size:24px; margin-bottom:4px;">欢迎回来, {{ user.get('username','') }}!</h1>
+  <p style="color:var(--color-text-secondary); margin-bottom:24px;">PS Team 统一工作平台</p>
+
+  <!-- Quick Access Cards -->
+  <div class="stats-row">
+    <div class="stat-card" onclick="pswp.navigate('edm-agent')" style="cursor:pointer">
+      <div class="stat-value">&#9993;</div>
+      <div class="stat-label">EDM 监听处理<br><small>扫描、处理 EDM 邮件</small></div>
+    </div>
+    <div class="stat-card" onclick="pswp.navigate('edm-dashboard')" style="cursor:pointer">
+      <div class="stat-value">&#128202;</div>
+      <div class="stat-label">EDM 看板<br><small>查看 EDM 处理进度</small></div>
+    </div>
+    <div class="stat-card" onclick="pswp.navigate('tfs')" style="cursor:pointer">
+      <div class="stat-value">&#128203;</div>
+      <div class="stat-label">TFS Request<br><small>工单处理与更新</small></div>
+    </div>
+    <div class="stat-card" onclick="pswp.navigate('icm')" style="cursor:pointer">
+      <div class="stat-value">&#128737;</div>
+      <div class="stat-label">ICM 工单<br><small>创建、管理 ICM 事件</small></div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">最近任务</div>
+      <button class="btn btn-secondary btn-sm" onclick="loadRecentTasks()">&#128260; 刷新</button>
+    </div>
+    <div id="recent-tasks">
+      <div class="empty-state">
+        <div class="icon">&#128203;</div>
+        <p>暂无任务记录</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coming Soon -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">即将上线</div>
+    </div>
+    <div class="grid-3">
+      <div style="text-align:center; padding:16px; color:var(--color-text-secondary)">
+        <div style="font-size:32px; margin-bottom:8px">&#129302;</div>
+        <strong>AIQC</strong>
+        <p style="font-size:12px; margin-top:4px">AI 驱动的质量检查</p>
+      </div>
+      <div style="text-align:center; padding:16px; color:var(--color-text-secondary)">
+        <div style="font-size:32px; margin-bottom:8px">&#127891;</div>
+        <strong>出题大师</strong>
+        <p style="font-size:12px; margin-top:4px">智能出题系统</p>
+      </div>
+      <div style="text-align:center; padding:16px; color:var(--color-text-secondary)">
+        <div style="font-size:32px; margin-bottom:8px">&#128197;</div>
+        <strong>会议室预定</strong>
+        <p style="font-size:12px; margin-top:4px">会议室预约管理</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ EDM Agent Section ═══ -->
+<div class="page-section" id="page-edm-agent">
+<div style="max-width:900px;">
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title">&#9993; EDM 监听处理</div>
+      <div class="card-subtitle">通过 EWS 监听 EDM 文件夹，自动检测新邮件</div>
+    </div>
+  </div>
+
+  <!-- Listener Controls -->
+  <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
+    <button class="btn btn-primary" id="btn-listener-start" onclick="doListenerStart()">&#9654; 启动监听</button>
+    <button class="btn btn-danger" id="btn-listener-stop" onclick="doListenerStop()" disabled>&#9632; 停止监听</button>
+    <button class="btn btn-secondary" onclick="loadListenerStatus()">&#128260; 刷新状态</button>
+    <span id="listener-status-badge" style="margin-left:auto; font-weight:bold;">未知</span>
+  </div>
+
+  <!-- Listener Rules -->
+  <div class="alert alert-info" style="margin-bottom:16px;">
+    <strong>监听规则：</strong>
+    <span id="listener-rules">加载中...</span>
+  </div>
+
+  <!-- Event Log -->
+  <div style="margin-bottom:20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <div class="card-title" style="font-size:13px;">检测事件</div>
+      <button class="btn btn-secondary btn-sm" onclick="loadListenerEvents()">&#128260; 刷新事件</button>
+    </div>
+    <div id="listener-events" class="log-output" style="max-height:300px; overflow-y:auto; font-size:12px; background:var(--color-bg-secondary); border-radius:6px; padding:10px;">
+      暂无事件
+    </div>
+  </div>
+
+  <!-- Temp Files -->
+  <div class="card" style="box-shadow:none; border:1px solid var(--color-border);">
+    <div class="card-title" style="font-size:14px; margin-bottom:12px;">EDM/Temp/ 文件</div>
+    <div style="margin-bottom:8px;">
+      <button class="btn btn-secondary btn-sm" onclick="loadTempFiles()">&#128260; 刷新 Temp 文件</button>
+    </div>
+    <div id="temp-files">
+      <div class="empty-state"><p>点击 "刷新 Temp 文件" 查看</p></div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="card" style="box-shadow:none; border:1px solid var(--color-border); margin-top:16px;">
+    <div class="card-title" style="font-size:14px; margin-bottom:12px;">已处理 SN</div>
+    <div style="margin-bottom:8px;">
+      <button class="btn btn-secondary btn-sm" onclick="loadHistory()">&#128260; 刷新历史</button>
+    </div>
+    <div id="history">
+      <div class="empty-state"><p>点击 "刷新历史" 查看</p></div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ═══ EDM Dashboard Section ═══ -->
+<div class="page-section" id="page-edm-dashboard">
+<div style="max-width:1100px;">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">&#128202; EDM 处理看板</div>
+        <div class="card-subtitle">EDM 邮件处理进度跟踪</div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="loadDashboard()">&#128260; 刷新</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportDashboardCSV()">&#128190; 导出 CSV</button>
+      </div>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="stats-row" id="overview-cards">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">-</div>
+        <div class="stat-label">总计</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-value" id="stat-progress">-</div>
+        <div class="stat-label">进行中</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-value" id="stat-done">-</div>
+        <div class="stat-label">已完成</div>
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="tabs" id="filter-tabs">
+      <div class="tab active" data-filter="all" onclick="filterConversations('all', this)">全部</div>
+      <div class="tab" data-filter="progress" onclick="filterConversations('progress', this)">进行中</div>
+      <div class="tab" data-filter="done" onclick="filterConversations('done', this)">已完成</div>
+    </div>
+
+    <!-- Conversation List -->
+    <div id="dashboard-content">
+      <div class="empty-state">
+        <div class="spinner"></div>
+        <p>加载看板数据中...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Process Steps Reference -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">处理步骤说明</div>
+    </div>
+    <table id="steps-table">
+      <thead>
+        <tr><th style="width:50px">步骤</th><th>名称</th><th>说明</th></tr>
+      </thead>
+      <tbody id="steps-body"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ═══ TFS Section ═══ -->
+<div class="page-section" id="page-tfs">
+<div style="max-width:1000px;">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">&#128203; TFS Request (Azure DevOps)</div>
+        <div class="card-subtitle">工单处理与更新</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="tfs-tabs">
+      <div class="tab active" onclick="switchTfsTab('webhook', this)">Webhook 日志</div>
+      <div class="tab" onclick="switchTfsTab('labor', this)">更新 Labor Time</div>
+      <div class="tab" onclick="switchTfsTab('query', this)">查询工单</div>
+    </div>
+
+    <!-- Webhook Log Tab -->
+    <div class="tab-content active" id="tfs-webhook">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div class="card-subtitle">Azure DevOps Webhook 自动触发的工单事件</div>
+        <button class="btn btn-secondary btn-sm" onclick="loadWebhooks()">&#128260; 刷新</button>
+      </div>
+      <div id="webhook-log">
+        <div class="empty-state"><p>加载 Webhook 日志...</p></div>
+      </div>
+    </div>
+
+    <!-- Labor Time Tab -->
+    <div class="tab-content" id="tfs-labor">
+      <div class="card" style="box-shadow:none; border:1px solid var(--color-border);">
+        <div class="card-title" style="font-size:14px; margin-bottom:16px;">更新 Labor Time</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">工单号 (Work Item ID)</label>
+            <input type="number" class="form-input" id="labor-wi-id" placeholder="123456">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Labor Time (小时)</label>
+            <input type="number" class="form-input" id="labor-hours" placeholder="8.0" step="0.5" min="0">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="updateLabor()">更新 Labor Time</button>
+        <div id="labor-result" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <!-- Query Tab -->
+    <div class="tab-content" id="tfs-query">
+      <div class="card" style="box-shadow:none; border:1px solid var(--color-border);">
+        <div class="card-title" style="font-size:14px; margin-bottom:16px;">查询工单详情</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">工单号 (Work Item ID)</label>
+            <input type="number" class="form-input" id="query-wi-id" placeholder="123456">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="queryWorkItem()">查询</button>
+        <div id="query-result" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ ICM Section ═══ -->
+<div class="page-section" id="page-icm">
+<div style="max-width:1100px;">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">&#128737; ICM 工单管理</div>
+        <div class="card-subtitle">Microsoft ICM - 创建、确认、缓解、解决工单</div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="verifyToken()">验证 Token</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="icm-tabs">
+      <div class="tab active" onclick="switchIcmTab('create', this)">创建工单</div>
+      <div class="tab" onclick="switchIcmTab('search', this)">查询工单</div>
+      <div class="tab" onclick="switchIcmTab('action', this)">工单操作</div>
+      <div class="tab" onclick="switchIcmTab('oncall', this)">值班查询</div>
+    </div>
+
+    <!-- Create Tab -->
+    <div class="tab-content active" id="icm-create">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">标题 *</label>
+          <input type="text" class="form-input" id="icm-title" placeholder="Incident title">
+        </div>
+        <div class="form-group">
+          <label class="form-label">严重度</label>
+          <select class="form-select" id="icm-severity">
+            <option value="1">1 - Critical</option>
+            <option value="2">2 - High</option>
+            <option value="3" selected>3 - Medium (默认)</option>
+            <option value="4">4 - Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">描述 *</label>
+        <textarea class="form-textarea" id="icm-description" placeholder="Incident description..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">类型</label>
+          <select class="form-select" id="icm-type">
+            <option value="LiveSite" selected>LiveSite</option>
+            <option value="customerreported">Customer Reported</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">影响位置</label>
+          <input type="text" class="form-input" id="icm-location" value="All Production" placeholder="All Production">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="createIncident()">创建工单</button>
+      <div id="create-result" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- Search Tab -->
+    <div class="tab-content" id="icm-search">
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group">
+          <label class="form-label">过滤条件 (OData Filter)</label>
+          <input type="text" class="form-input" id="icm-filter" placeholder='Severity eq 3'>
+        </div>
+        <div class="form-group">
+          <label class="form-label">最大结果数</label>
+          <input type="number" class="form-input" id="icm-top" value="10" min="1" max="100">
+        </div>
+        <div class="form-group" style="display:flex; align-items:flex-end;">
+          <button class="btn btn-primary" onclick="searchIncidents()">查询</button>
+        </div>
+      </div>
+      <div id="search-result">
+        <div class="empty-state"><p>输入过滤条件后点击查询</p></div>
+      </div>
+    </div>
+
+    <!-- Action Tab -->
+    <div class="tab-content" id="icm-action">
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group">
+          <label class="form-label">ICM 工单 ID *</label>
+          <input type="number" class="form-input" id="icm-action-id" placeholder="Incident ID">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">操作</label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="ackIncident()">&#10004; Ack</button>
+          <button class="btn btn-secondary" onclick="showDiscussionForm()">&#128172; 更新描述</button>
+          <button class="btn btn-warning" style="background:var(--color-warning);color:white" onclick="mitigateIncident()">&#128166; Mitigate</button>
+          <button class="btn btn-danger" onclick="resolveIncident()">&#9940; Resolve</button>
+        </div>
+      </div>
+
+      <div id="action-detail" style="display:none; margin-top:16px;">
+        <div class="form-group">
+          <label class="form-label" id="action-label">内容</label>
+          <textarea class="form-textarea" id="action-text" placeholder="Input text..."></textarea>
+        </div>
+        <button class="btn btn-primary" id="action-submit" onclick="submitAction()">提交</button>
+      </div>
+
+      <div id="action-result" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- On-Call Tab -->
+    <div class="tab-content" id="icm-oncall">
+      <button class="btn btn-primary" onclick="loadOnCall()">查询值班人员</button>
+      <div id="oncall-result" style="margin-top:12px;">
+        <div class="empty-state"><p>点击查询当前值班人员</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ─── Shared Utilities ──────────────────────────────────── */
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function truncate(str, len) {
+  if (!str) return "";
+  return str.length > len ? str.substring(0, len) + "..." : str;
+}
+
+/* ─── Home: Recent Tasks ────────────────────────────────── */
+function loadRecentTasks() {
+  pswp.authenticatedFetch("/api/task/?max=10")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var container = document.getElementById("recent-tasks");
+      var tasks = data.tasks || [];
+      if (!tasks.length) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><p>暂无任务记录</p></div>';
+        return;
+      }
+      var html = '<div class="table-container"><table><thead><tr>' +
+        '<th>任务</th><th>状态</th><th>耗时</th><th>时间</th>' +
+        '</tr></thead><tbody>';
+      for (var i = 0; i < tasks.length; i++) {
+        var t = tasks[i];
+        var statusClass = t.status === "completed" ? "done" : t.status === "failed" ? "error" : "running";
+        var statusText = t.status === "completed" ? "完成" : t.status === "failed" ? "失败" : "运行中";
+        var time = pswp.formatDate(new Date(Date.now() - (t.elapsed || 0) * 1000).toISOString());
+        html += '<tr>' +
+          '<td>' + (t.name || "-") + '</td>' +
+          '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>' +
+          '<td>' + (t.elapsed || 0) + 's</td>' +
+          '<td>' + time + '</td></tr>';
+      }
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    })
+    .catch(function(e) { console.error("Failed to load tasks:", e); });
+}
+document.addEventListener("DOMContentLoaded", loadRecentTasks);
+
+/* ─── EDM Agent Functions ───────────────────────────────── */
+/* Auto-refresh listener status every 10s when visible */
+var listenerRefreshTimer = null;
+var listenerIsRunning = false;
+var lastEventTime = null;  // track latest event time to detect new files
+
+function loadListenerStatus() {
+  pswp.authenticatedFetch("/api/edm/listener/status")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var wasRunning = listenerIsRunning;
+      listenerIsRunning = data.running;
+
+      var badge = document.getElementById("listener-status-badge");
+      if (data.running) {
+        badge.innerHTML = '<span class="status-badge done">监听中</span>';
+      } else {
+        badge.innerHTML = '<span class="status-badge error">已停止</span>';
+      }
+
+      var btnStart = document.getElementById("btn-listener-start");
+      var btnStop = document.getElementById("btn-listener-stop");
+      if (data.running) {
+        btnStart.disabled = true;
+        btnStart.innerHTML = '&#9654; 启动监听';
+        btnStop.disabled = false;
+        btnStop.innerHTML = '&#9632; 停止监听';
+      } else {
+        btnStart.disabled = false;
+        btnStart.innerHTML = '&#9654; 启动监听';
+        btnStop.disabled = true;
+        btnStop.innerHTML = '&#9632; 停止监听';
+      }
+
+      var rules = data.rules;
+      document.getElementById("listener-rules").textContent =
+        '发件人含 ' + escapeHtml(rules.sender) + '，正文含 "' + escapeHtml(rules.keyword) + '"，且有附件（Streaming 实时推送）';
+
+      // Start/stop auto-refresh
+      if (data.running && !wasRunning) {
+        loadListenerEvents();
+        if (listenerRefreshTimer) clearInterval(listenerRefreshTimer);
+        listenerRefreshTimer = setInterval(function() {
+          if (listenerIsRunning) loadListenerEvents();
+        }, 10000);
+      }
+    })
+    .catch(function(e) {
+      document.getElementById("listener-status-badge").innerHTML = '<span class="status-badge error">错误: ' + escapeHtml(e.message) + '</span>';
+    });
+}
+
+function doListenerStart() {
+  var btnStart = document.getElementById("btn-listener-start");
+  var btnStop = document.getElementById("btn-listener-stop");
+  // Disable start button immediately on click
+  btnStart.disabled = true;
+  btnStop.disabled = false;
+
+  pswp.authenticatedFetch("/api/edm/listener/start", { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      alert(data.message);
+      btnStart.innerHTML = '&#9654; 启动监听';
+      btnStop.innerHTML = '&#9632; 停止监听';
+      document.getElementById("listener-status-badge").innerHTML = '<span class="status-badge done">监听中</span>';
+      listenerIsRunning = true;
+      if (listenerRefreshTimer) clearInterval(listenerRefreshTimer);
+      listenerRefreshTimer = setInterval(function() {
+        if (listenerIsRunning) loadListenerEvents();
+      }, 10000);
+      // Quick refresh: load events repeatedly for first 3 seconds to catch connection events
+      var quickLoads = 0;
+      var quickTimer = setInterval(function() {
+        loadListenerEvents();
+        quickLoads++;
+        if (quickLoads >= 3) clearInterval(quickTimer);
+      }, 1000);
+      loadListenerEvents();
+    })
+    .catch(function(e) { alert("启动失败: " + e.message); btnStart.disabled = false; });
+}
+
+function doListenerStop() {
+  var btnStart = document.getElementById("btn-listener-start");
+  var btnStop = document.getElementById("btn-listener-stop");
+  // Disable stop button immediately on click
+  btnStop.disabled = true;
+
+  if (listenerRefreshTimer) { clearInterval(listenerRefreshTimer); listenerRefreshTimer = null; }
+  listenerIsRunning = false;
+
+  pswp.authenticatedFetch("/api/edm/listener/stop", { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btnStart.disabled = false;
+      btnStart.innerHTML = '&#9654; 启动监听';
+      btnStop.innerHTML = '&#9632; 停止监听';
+      document.getElementById("listener-status-badge").innerHTML = '<span class="status-badge error">已停止</span>';
+      loadListenerEvents();
+    })
+    .catch(function(e) { alert("停止失败: " + e.message); btnStop.disabled = false; });
+}
+
+function loadListenerEvents() {
+  pswp.authenticatedFetch("/api/edm/listener/events?max=50")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var el = document.getElementById("listener-events");
+      var events = data.events || [];
+      if (!events.length) {
+        el.innerHTML = '暂无事件';
+        return;
+      }
+
+      // Auto-refresh temp files when new mail detected
+      if (events.length > 0 && events[0].time !== lastEventTime) {
+        lastEventTime = events[0].time;
+        if (events[0].type === 'success') loadTempFiles();
+      }
+
+      var html = '';
+      for (var i = 0; i < events.length; i++) {
+        var ev = events[i];
+        var color = ev.type === 'success' ? '#22c55e' : ev.type === 'error' ? '#ef4444' : '#3b82f6';
+        var icon = ev.type === 'success' ? '&#10004;' : ev.type === 'error' ? '&#10008;' : '&#9679;';
+        var time = pswp.formatDate(ev.time);
+        var msg = escapeHtml(ev.message);
+        if (ev.subject) {
+          msg += '<br>&nbsp;&nbsp;<em>主题: ' + escapeHtml(ev.subject) + '</em>';
+        }
+        if (ev.sn) {
+          msg += ' <strong style="color:#f59e0b">[' + escapeHtml(ev.sn) + ']</strong>';
+        }
+        html += '<div style="color:' + color + '; padding:4px 0; border-bottom:1px solid var(--color-border)">' +
+          '<small style="opacity:0.6">' + time + '</small> ' + icon + ' ' + msg + '</div>';
+      }
+      el.innerHTML = html;
+    })
+    .catch(function(e) { console.error("Failed to load events:", e); });
+}
+function loadTempFiles() {
+  pswp.authenticatedFetch("/api/edm/temp-files")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var container = document.getElementById("temp-files");
+      if (!data.files || !data.files.length) {
+        container.innerHTML = '<div class="empty-state"><p>Temp 目录为空</p></div>';
+        return;
+      }
+      var html = '<table><thead><tr><th>文件名</th><th>大小</th><th>修改时间</th></tr></thead><tbody>';
+      for (var i = 0; i < data.files.length; i++) {
+        var f = data.files[i];
+        html += '<tr><td>' + f.name + '</td><td>' + pswp.formatSize(f.size) + '</td><td>' + pswp.formatDate(f.modified) + '</td></tr>';
+      }
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    })
+    .catch(function(e) { console.error("Failed to load temp files:", e); });
+}
+function loadHistory() {
+  pswp.authenticatedFetch("/api/edm/history")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var container = document.getElementById("history");
+      if (!data.history || !data.history.length) {
+        container.innerHTML = '<div class="empty-state"><p>暂无处理记录</p></div>';
+        return;
+      }
+      var html = '<table><thead><tr><th>SN</th><th>模板</th><th>文件数</th><th>更新时间</th></tr></thead><tbody>';
+      for (var i = 0; i < data.history.length; i++) {
+        var h = data.history[i];
+        html += '<tr><td><strong>' + h.sn + '</strong></td>' +
+          '<td>' + (h.has_template ? '&#10004;' : '&#10060;') + '</td>' +
+          '<td>' + h.file_count + '</td>' +
+          '<td>' + pswp.formatDate(h.updated) + '</td></tr>';
+      }
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    })
+    .catch(function(e) { console.error("Failed to load history:", e); });
+}
+
+/* ─── EDM Dashboard Functions ───────────────────────────── */
+var dashboardData = null;
+function loadDashboard() {
+  pswp.authenticatedFetch("/api/edm/dashboard")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      dashboardData = data;
+      renderDashboard("all");
+      renderSteps();
+    })
+    .catch(function(e) {
+      document.getElementById("dashboard-content").innerHTML =
+        '<div class="alert alert-error">加载失败: ' + e.message + '</div>';
+    });
+}
+function renderDashboard(filter) {
+  if (!dashboardData) return;
+  var total = dashboardData.total || 0;
+  var progress = dashboardData.in_progress || 0;
+  var done = dashboardData.completed || 0;
+  document.getElementById("stat-total").textContent = total;
+  document.getElementById("stat-progress").textContent = progress;
+  document.getElementById("stat-done").textContent = done;
+  var convs = dashboardData.conversations || [];
+  if (filter === "progress") convs = convs.filter(function(c) { return !c.is_done; });
+  else if (filter === "done") convs = convs.filter(function(c) { return c.is_done; });
+  if (!convs.length) {
+    document.getElementById("dashboard-content").innerHTML = '<div class="empty-state"><p>没有匹配的数据</p></div>';
+    return;
+  }
+  var html = '<div class="table-container"><table>' +
+    '<thead><tr><th>SN</th><th>主题</th><th>进度</th><th>状态</th>' +
+    '<th>处理人</th><th>最新时间</th></tr></thead><tbody>';
+  for (var i = 0; i < convs.length; i++) {
+    var c = convs[i];
+    var stepHtml = '<div class="progress-steps">';
+    for (var s = 1; s <= 7; s++) {
+      var cls = s < c.step ? "done" : s === c.step ? "current" : "";
+      stepHtml += '<div class="progress-step ' + cls + '"></div>';
+    }
+    stepHtml += '</div><small>' + c.step + '/7</small>';
+    var statusBadge = c.is_done
+      ? '<span class="status-badge done">已完成</span>'
+      : '<span class="status-badge in-progress">进行中</span>';
+    html += '<tr>' +
+      '<td><strong>' + (c.sn || "-") + '</strong></td>' +
+      '<td title="' + escapeHtml(c.subject) + '">' + truncate(c.subject, 60) + '</td>' +
+      '<td>' + stepHtml + '</td>' +
+      '<td>' + statusBadge + '</td>' +
+      '<td>' + (c.handler || "-") + '</td>' +
+      '<td>' + pswp.formatDate(c.latest_date) + '</td></tr>';
+  }
+  html += '</tbody></table></div>';
+  document.getElementById("dashboard-content").innerHTML = html;
+}
+function renderSteps() {
+  var steps = dashboardData && dashboardData.steps ? dashboardData.steps : [];
+  var html = "";
+  for (var i = 0; i < steps.length; i++) {
+    html += '<tr><td><strong>' + (i + 1) + '</strong></td>' +
+      '<td>' + steps[i].name + '</td>' +
+      '<td>' + steps[i].desc + '</td></tr>';
+  }
+  document.getElementById("steps-body").innerHTML = html;
+}
+function filterConversations(filter, el) {
+  var tabs = document.querySelectorAll("#filter-tabs .tab");
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.remove("active");
+    if (tabs[i].getAttribute("data-filter") === filter) tabs[i].classList.add("active");
+  }
+  renderDashboard(filter);
+}
+function exportDashboardCSV() {
+  var token = localStorage.getItem("psws_token");
+  if (!token) return;
+  fetch("/api/edm/dashboard/export", {
+    headers: { "Authorization": "Bearer " + token }
+  })
+  .then(function(r) {
+    if (r.status === 401) { pswp.clearSession(); throw new Error("Session expired"); }
+    return r.blob();
+  })
+  .then(function(blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "edm_dashboard.csv"; a.click();
+    URL.revokeObjectURL(url);
+  })
+  .catch(function(e) { alert("导出失败: " + e.message); });
+}
+
+/* ─── TFS Functions ─────────────────────────────────────── */
+function switchTfsTab(name, el) {
+  var tabs = document.querySelectorAll("#tfs-tabs .tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  if (el) el.classList.add("active");
+  var contents = document.querySelectorAll("#page-tfs .tab-content");
+  for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
+  var target = document.getElementById("tfs-" + name);
+  if (target) target.classList.add("active");
+}
+function loadWebhooks() {
+  pswp.authenticatedFetch("/api/tfs/recent?max=50")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var webhooks = data.webhooks || [];
+      var container = document.getElementById("webhook-log");
+      if (!webhooks.length) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">&#128276;</div><p>暂无 Webhook 事件<br><small>等待 Azure DevOps 推送</small></p></div>';
+        return;
+      }
+      var html = '<div class="table-container"><table>' +
+        '<thead><tr><th>工单#</th><th>类型</th><th>事件</th><th>标题</th>' +
+        '<th>状态</th><th>处理人</th><th>时间</th></tr></thead><tbody>';
+      for (var i = 0; i < webhooks.length; i++) {
+        var w = webhooks[i];
+        html += '<tr>' +
+          '<td><a href="' + escapeHtml(w.url) + '" target="_blank">' + w.id + '</a></td>' +
+          '<td>' + escapeHtml(w.work_item_type) + '</td>' +
+          '<td>' + escapeHtml(w.event_type) + '</td>' +
+          '<td title="' + escapeHtml(w.description) + '">' + truncate(escapeHtml(w.title), 50) + '</td>' +
+          '<td>' + escapeHtml(w.state) + '</td>' +
+          '<td>' + escapeHtml(w.assigned_to) + '</td>' +
+          '<td>' + pswp.formatDate(w.received_at) + '</td></tr>';
+      }
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    })
+    .catch(function(e) { console.error("Failed to load webhooks:", e); });
+}
+function updateLabor() {
+  var wiId = parseInt(document.getElementById("labor-wi-id").value);
+  var hours = parseFloat(document.getElementById("labor-hours").value);
+  var resultEl = document.getElementById("labor-result");
+  if (!wiId || isNaN(hours)) {
+    resultEl.innerHTML = '<div class="alert alert-error">请输入工单号和 Labor Time</div>';
+    return;
+  }
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 更新中...</div>';
+  pswp.authenticatedFetch("/api/tfs/update-labor", {
+    method: "POST",
+    body: JSON.stringify({ work_item_id: wiId, labor_time: hours })
+  })
+  .then(function(r) { return r.json().then(function(d) { return {ok: r.ok, data: d}; }); })
+  .then(function(result) {
+    if (result.ok) {
+      resultEl.innerHTML = '<div class="alert alert-success">' + result.data.message + '</div>';
+    } else {
+      resultEl.innerHTML = '<div class="alert alert-error">更新失败: ' + escapeHtml(result.data.error) + '</div>';
+    }
+  })
+  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
+}
+function queryWorkItem() {
+  var wiId = parseInt(document.getElementById("query-wi-id").value);
+  var resultEl = document.getElementById("query-result");
+  if (!wiId) {
+    resultEl.innerHTML = '<div class="alert alert-error">请输入工单号</div>';
+    return;
+  }
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 查询中...</div>';
+  pswp.authenticatedFetch("/api/tfs/workitem/" + wiId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        var fields = data.data.fields || {};
+        var html = '<table>' +
+          '<tr><td><strong>工单号</strong></td><td>' + data.data.id + '</td></tr>' +
+          '<tr><td><strong>类型</strong></td><td>' + escapeHtml(fields["System.WorkItemType"] || "") + '</td></tr>' +
+          '<tr><td><strong>标题</strong></td><td>' + escapeHtml(fields["System.Title"] || "") + '</td></tr>' +
+          '<tr><td><strong>状态</strong></td><td>' + escapeHtml(fields["System.State"] || "") + '</td></tr>' +
+          '<tr><td><strong>处理人</strong></td><td>' + escapeHtml(assigneeName(fields)) + '</td></tr>' +
+          '<tr><td><strong>描述</strong></td><td>' + escapeHtml(fields["System.Description"] || "") + '</td></tr>' +
+          '<tr><td><strong>Labor Time</strong></td><td>' + escapeHtml(fields["Hisoft.21ViaNet.TotalLaborTimeShow"] || "未设置") + '</td></tr>' +
+          '</table>';
+        resultEl.innerHTML = html;
+      } else {
+        resultEl.innerHTML = '<div class="alert alert-error">查询失败: ' + escapeHtml(data.error) + '</div>';
+      }
+    })
+    .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
+}
+function assigneeName(fields) {
+  var a = fields["System.AssignedTo"];
+  if (typeof a === "object" && a) return a.displayName || "";
+  return a || "";
+}
+
+/* ─── ICM Functions ─────────────────────────────────────── */
+var currentIcmAction = null;
+function switchIcmTab(name, el) {
+  var tabs = document.querySelectorAll("#icm-tabs .tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  if (el) el.classList.add("active");
+  var contents = document.querySelectorAll("#page-icm .tab-content");
+  for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
+  var target = document.getElementById("icm-" + name);
+  if (target) target.classList.add("active");
+}
+function createIncident() {
+  var title = document.getElementById("icm-title").value.trim();
+  var desc = document.getElementById("icm-description").value.trim();
+  var resultEl = document.getElementById("create-result");
+  if (!title || !desc) {
+    resultEl.innerHTML = '<div class="alert alert-error">请填写标题和描述</div>';
+    return;
+  }
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 创建工单中...</div>';
+  pswp.authenticatedFetch("/api/icm/create", {
+    method: "POST",
+    body: JSON.stringify({
+      title: title, description: desc,
+      severity: parseInt(document.getElementById("icm-severity").value),
+      type: document.getElementById("icm-type").value,
+      occuring_location: document.getElementById("icm-location").value,
+      reported_source: "Customer Reported",
+      impacted_services: [{ "ServiceId": 20284 }],
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.task_id) {
+      resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 任务 ID: ' + data.task_id + '</div><div id="create-log" class="log-output"></div>';
+      pswp.startTask(data.task_id, "create-log");
+    } else {
+      resultEl.innerHTML = '<div class="alert alert-success">创建成功: ' + escapeHtml(JSON.stringify(data)) + '</div>';
+    }
+  })
+  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">创建失败: ' + e.message + '</div>'; });
+}
+function searchIncidents() {
+  var filter = document.getElementById("icm-filter").value.trim();
+  var top = document.getElementById("icm-top").value;
+  var resultEl = document.getElementById("search-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 查询中...</div>';
+  var url = "/api/icm/search?top=" + top;
+  if (filter) url += "&filter=" + encodeURIComponent(filter);
+  pswp.authenticatedFetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok && data.data && data.data.value) {
+        var incidents = data.data.value;
+        var html = '<div class="table-container"><table><thead><tr><th>ID</th><th>标题</th><th>严重度</th><th>状态</th><th>已确认</th></tr></thead><tbody>';
+        for (var i = 0; i < incidents.length; i++) {
+          var inc = incidents[i];
+          html += '<tr><td><strong>' + inc.Id + '</strong></td>' +
+            '<td>' + truncate(escapeHtml(inc.Title || ""), 50) + '</td>' +
+            '<td>' + (inc.Severity || "-") + '</td>' +
+            '<td>' + (inc.State || "-") + '</td>' +
+            '<td>' + (inc.IsAcknowledged ? '&#10004;' : '&#10060;') + '</td></tr>';
+        }
+        html += '</tbody></table></div>';
+        resultEl.innerHTML = html;
+      } else if (data.ok && data.raw) {
+        resultEl.innerHTML = '<div class="log-output">' + escapeHtml(data.raw) + '</div>';
+      } else {
+        resultEl.innerHTML = '<div class="alert alert-error">查询失败: ' + escapeHtml(data.error || "Unknown") + '</div>';
+      }
+    })
+    .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
+}
+function ackIncident() {
+  var id = document.getElementById("icm-action-id").value;
+  if (!id) return alert("请输入 ICM 工单 ID");
+  doIcmAction("/api/icm/" + id + "/ack", "Ack 工单 " + id);
+}
+function showDiscussionForm() {
+  var id = document.getElementById("icm-action-id").value;
+  if (!id) return alert("请输入 ICM 工单 ID");
+  document.getElementById("action-detail").style.display = "block";
+  document.getElementById("action-label").textContent = "新描述内容";
+  document.getElementById("action-text").placeholder = "输入更新描述...";
+  currentIcmAction = { url: "/api/icm/" + id + "/discussion", label: "更新描述" };
+}
+function mitigateIncident() {
+  var id = document.getElementById("icm-action-id").value;
+  if (!id) return alert("请输入 ICM 工单 ID");
+  document.getElementById("action-detail").style.display = "block";
+  document.getElementById("action-label").textContent = "缓解说明";
+  document.getElementById("action-text").placeholder = "输入缓解说明...";
+  currentIcmAction = { url: "/api/icm/" + id + "/mitigate", label: "Mitigate" };
+}
+function resolveIncident() {
+  var id = document.getElementById("icm-action-id").value;
+  if (!id) return alert("请输入 ICM 工单 ID");
+  document.getElementById("action-detail").style.display = "block";
+  document.getElementById("action-label").textContent = "解决说明";
+  document.getElementById("action-text").placeholder = "输入解决说明...";
+  currentIcmAction = { url: "/api/icm/" + id + "/resolve", label: "Resolve" };
+}
+function doIcmAction(url, label) {
+  var resultEl = document.getElementById("action-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> ' + label + ' 执行中...</div>';
+  pswp.authenticatedFetch(url, { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.task_id) {
+        resultEl.innerHTML = '<div class="alert alert-info">任务: ' + data.task_id + '</div><div id="action-log" class="log-output"></div>';
+        pswp.startTask(data.task_id, "action-log");
+      } else if (data.returncode === 0 || data.ok) {
+        resultEl.innerHTML = '<div class="alert alert-success">' + label + ' 成功</div>';
+      } else {
+        resultEl.innerHTML = '<div class="log-output">' + escapeHtml(data.stderr || data.stdout || "") + '</div>';
+      }
+    })
+    .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">执行失败: ' + e.message + '</div>'; });
+}
+function submitAction() {
+  if (!currentIcmAction) return;
+  var text = document.getElementById("action-text").value.trim();
+  if (!text) return alert("请输入内容");
+  var resultEl = document.getElementById("action-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 提交中...</div>';
+  var body = {};
+  if (currentIcmAction.label === "更新描述") body = { description: text };
+  else if (currentIcmAction.label === "Mitigate") body = { message: text };
+  else if (currentIcmAction.label === "Resolve") body = { message: text };
+  pswp.authenticatedFetch(currentIcmAction.url, {
+    method: "POST", body: JSON.stringify(body),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.task_id) {
+      resultEl.innerHTML = '<div class="alert alert-info">任务: ' + data.task_id + '</div><div id="action-log" class="log-output"></div>';
+      pswp.startTask(data.task_id, "action-log");
+    } else if (data.returncode === 0 || data.ok) {
+      resultEl.innerHTML = '<div class="alert alert-success">' + currentIcmAction.label + ' 成功</div>';
+    } else {
+      resultEl.innerHTML = '<div class="log-output">' + escapeHtml(data.stderr || data.stdout || "") + '</div>';
+    }
+  })
+  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">提交失败: ' + e.message + '</div>'; });
+}
+function verifyToken() {
+  pswp.authenticatedFetch("/api/icm/token/verify")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var ok = data.returncode === 0 || data.ok;
+      var msg = ok ? "Token 有效" : "Token 无效: " + (data.stderr || "");
+      alert(msg);
+    })
+    .catch(function(e) { alert("验证失败: " + e.message); });
+}
+function loadOnCall() {
+  var resultEl = document.getElementById("oncall-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 查询中...</div>';
+  pswp.authenticatedFetch("/api/icm/oncall")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok && data.data) {
+        if (typeof data.data === "object" && !Array.isArray(data.data)) {
+          resultEl.innerHTML = '<div class="log-output">' + escapeHtml(JSON.stringify(data.data, null, 2)) + '</div>';
+          return;
+        }
+        var html = '<table><thead><tr><th>团队</th><th>值班人</th><th>轮班</th></tr></thead><tbody>';
+        var items = Array.isArray(data.data) ? data.data : (data.data.value || []);
+        for (var i = 0; i < items.length; i++) {
+          var item = items[i];
+          html += '<tr><td>' + escapeHtml(item.teamName || item.TeamName || "-") + '</td>' +
+            '<td>' + escapeHtml(item.personName || item.PersonName || (item.person && item.person.displayName) || "-") + '</td>' +
+            '<td>' + escapeHtml(item.shiftName || item.ShiftName || "-") + '</td></tr>';
+        }
+        html += '</tbody></table>';
+        resultEl.innerHTML = html;
+      } else if (data.ok && data.raw) {
+        resultEl.innerHTML = '<div class="log-output">' + escapeHtml(data.raw) + '</div>';
+      } else {
+        resultEl.innerHTML = '<div class="alert alert-error">查询失败: ' + escapeHtml(data.error || "Unknown") + '</div>';
+      }
+    })
+    .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
+}
+
+/* ─── Auto-init on section enter ─────────────────────────── */
+var sectionInited = {};
+function initSection(name) {
+  if (sectionInited[name]) return;
+  sectionInited[name] = true;
+  if (name === 'edm-agent') { loadListenerStatus(); loadTempFiles(); }
+  if (name === 'edm-dashboard') loadDashboard();
+  if (name === 'tfs') loadWebhooks();
+}
+
+/* ─── Dashboard auto-refresh ─────────────────────────────── */
+setInterval(function() {
+  var section = document.getElementById("page-edm-dashboard");
+  if (section && section.classList.contains("active")) {
+    loadDashboard();
+  }
+}, 300000);
+
+/* ─── Webhook auto-refresh ────────────────────────────────── */
+setInterval(function() {
+  var section = document.getElementById("page-tfs");
+  if (section && section.classList.contains("active")) {
+    loadWebhooks();
+  }
+}, 30000);
+</script>
+{% endblock %}

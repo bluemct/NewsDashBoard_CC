@@ -51,6 +51,17 @@ python3 test.py
 - 输出: `EDM/SN-xxxxx/` 文件夹（xlsx, csv, .msg, EDM_template.html）
 - 前提: Outlook 运行且已连接 Exchange（win32com 读取 HTMLBody）
 
+### PS Workspace (Flask Web App)
+
+| Skill | 操作 | 说明 |
+|-------|------|------|
+| `ps-workspace` | PS Team 统一工作平台 | EDM 监听、EDM 看板、TFS 工单、ICM 工单管理 |
+
+- 入口: `PSWorkspace/app.py`，运行在 http://localhost:9000
+- 配置: `PSWorkspace/ps_workspace_config.json`
+- EDM Listener 使用 EWS Streaming（非轮询），后台独立运行，不依赖浏览器
+- 修改 Python 代码需重启 Flask；修改 CSS/JS 刷新浏览器即可（no-cache 头已开启）
+
 ## Security Rules
 
 ### 邮件发送
