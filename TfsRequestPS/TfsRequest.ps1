@@ -45,7 +45,7 @@ param(
     [ValidateSet('connect', 'query', 'update', 'resolve', 'batch_resolve', 'dump-fields')]
     [string]$Action,
 
-    [int[]]$WorkItemIds,
+    [string]$WorkItemIds,  # space or comma separated list, split internally
 
     [string]$State,
     [string]$AssignedTo,
@@ -61,6 +61,17 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
+
+function Convert-WorkItemIds {
+    param([string]$Ids)
+    $result = @()
+    if ($Ids) {
+        foreach ($p in $Ids -split '[,\s]+') {
+            if ($p -ne '') { $result += $p }
+        }
+    }
+    return $result
+}
 
 # ─── Config ───────────────────────────────────────────────────
 
@@ -189,6 +200,8 @@ ORDER BY
                 assignedTo  = $wi.Fields["System.AssignedTo"].Value
                 description = $wi.Fields["System.Description"].Value
                 property    = $wi.Fields["Property"].Value
+                solution    = $wi.Fields["Solution"].Value
+                workingHour = $wi.Fields["Hisoft.21ViaNet.TotalLaborTimeShow"].Value
                 tsgLog      = $tsgStr
                 workItemType = $wi.Fields["System.WorkItemType"].Value
                 createdDate = $wi.Fields["System.CreatedDate"].Value.ToString("yyyy-MM-ddTHH:mm:ss")
@@ -334,24 +347,31 @@ function Get-SingleWorkItem {
 try {
     $tfs = Connect-TFS2010
 
+    # Parse WorkItemIds string into array of IDs
+    if ($WorkItemIds) {
+        $WorkItemIdsArr = @(Convert-WorkItemIds -Ids $WorkItemIds)
+    } else {
+        $WorkItemIdsArr = @()
+    }
+
     switch ($Action) {
         'connect' {
             Write-Output (@{ ok = $true; message = "Connected to TFS" } | ConvertTo-Json -Compress)
         }
 
         'query' {
-            $tickets = Query-OpenTickets -TfsCollection $tfs
+            $tickets = @(Query-OpenTickets -TfsCollection $tfs)
             Write-Output (@{ ok = $true; count = $tickets.Count; tickets = $tickets } | ConvertTo-Json -Depth 4 -Compress)
         }
 
         'update' {
-            if ($WorkItemIds.Count -ne 1) {
+            if ($WorkItemIdsArr.Count -ne 1) {
                 Write-Error "Update action requires exactly one WorkItemId"
                 exit 1
             }
             $result = Update-WorkItem `
                 -TfsCollection $tfs `
-                -WorkItemId $WorkItemIds[0] `
+                -WorkItemId $WorkItemIdsArr[0] `
                 -State $State `
                 -AssignedTo $AssignedTo `
                 -Property $Property `
@@ -362,11 +382,11 @@ try {
         }
 
         'resolve' {
-            if ($WorkItemIds.Count -ne 1) {
+            if ($WorkItemIdsArr.Count -ne 1) {
                 Write-Error "Resolve action requires exactly one WorkItemId"
                 exit 1
             }
-            $result = Resolve-WorkItem -TfsCollection $tfs -WorkItemId $WorkItemIds[0]
+            $result = Resolve-WorkItem -TfsCollection $tfs -WorkItemId $WorkItemIdsArr[0]
             Write-Output (@{ ok = $true; result = $result } | ConvertTo-Json -Depth 3 -Compress)
         }
 
@@ -375,7 +395,7 @@ try {
                 [Microsoft.TeamFoundation.WorkItemTracking.Client.WorkItemStore]
             )
             $results = @()
-            foreach ($wid in $WorkItemIds) {
+            foreach ($wid in $WorkItemIdsArr) {
                 $wi = $workItemStore.GetWorkItem($wid)
                 $fields = @()
                 foreach ($f in $wi.Fields) {
@@ -397,7 +417,7 @@ try {
 
         'batch_resolve' {
             $results = @()
-            foreach ($wid in $WorkItemIds) {
+            foreach ($wid in $WorkItemIdsArr) {
                 $r = Resolve-WorkItem -TfsCollection $tfs -WorkItemId $wid
                 $results += $r
             }

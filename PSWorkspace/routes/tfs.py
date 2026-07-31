@@ -249,8 +249,7 @@ def _run_tfs_ps(action, **kwargs):
             "-File", ps1, "-Action", action, "-ConfigPath", config_path]
 
     if kwargs.get("work_item_ids"):
-        for wid in kwargs["work_item_ids"]:
-            args.extend(["-WorkItemIds", str(wid)])
+        args.extend(["-WorkItemIds", ",".join(str(w) for w in kwargs["work_item_ids"])])
     if kwargs.get("state"):
         args.extend(["-State", kwargs["state"]])
     if kwargs.get("assigned_to"):

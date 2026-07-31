@@ -37,26 +37,37 @@ PowerShell query 已读取该字段并作为 `tsgLog` 返回，Python 后端做 
 
 三步走：**获取工单 → AI 分析 → 人工确认后更新**
 
+页面结构：3 个子页签（智能获取 & 处理 / 单个工单编辑 / 批量 Resolve）
+
+### 智能获取 & 处理
+
 ```
-┌─ 获取 Open 工单 ──→ 显示工单列表（ID, 标题, 状态, 指派人, Property, 更新时间）
+┌─ 获取 Open 工单 ──→ 显示工单列表（ID 可点击跳转编辑）
+│                     支持搜索过滤（ID/指派人/Property）
+│                     支持按状态筛选
+│                     支持列头排序（ID/状态/指派人/Property 正反序）
 │
 ├─ AI 智能分析 ──────→ 只分析 "Assigned To Implementer" 的工单
 │                     返回每行工单的 AI 建议（黄色高亮）：
-│                     ├─ 状态：当前状态，标注 ⚠ → In Process Implementer（需改状态）
 │                     ├─ 建议指派人：AI 从邮件 From 提取，对照映射表
-│                     ├─ Property：AI 分类（18 个类别）
+│                     ├─ Property：AI 分类（17 个类别 + PS-Other）
 │                     ├─ Solution：英文解决方案摘要
 │                     └─ 工时：预估工时
 │                     │
-│                     "In Process Implementer" 等状态的工单显示为灰色（跳过，只读）
+│                     "In Process Implementer" 等状态 → 灰色跳过（只读）
 │                     │
-│                     └─ 用户逐行修改 AI 分析结果
-│                        │
-│                        └─ 确认并更新 ──────→ 调用 /batch-apply，写入 TFS
-│                                             只更新 AI 分析的工单，自动改状态
+│                     └─ 用户逐行修改 → 确认并更新 → 写入 TFS
 ```
 
-## AI 分类：Property（18 个类别）
+### 单个工单编辑
+
+点击原始表格 ID 自动跳转：回填工单号、标题（只读）、状态、指派人、Property、Solution、工时。
+
+### 批量 Resolve
+
+自动带入已获取的工单 ID 到工单号列表，一键批量 Resolve。
+
+## AI 分类：Property（17 + PS-Other）
 
 | Property | 场景 |
 |----------|------|
@@ -80,8 +91,6 @@ PowerShell query 已读取该字段并作为 `tsgLog` 返回，Python 后端做 
 
 ## AI 分类：Assign To 映射
 
-AI 从 TSGLog 邮件的 From 字段提取发件人邮箱，对照映射表返回 Assign To 姓名：
-
 | 邮箱 | Assign To |
 |------|-----------|
 | teng.jiangtao@oe.21vianet.com | Jerome Teng |
@@ -94,8 +103,7 @@ AI 从 TSGLog 邮件的 From 字段提取发件人邮箱，对照映射表返回
 ## PowerShell 脚本用法
 
 ```powershell
-# Query open tickets (State != Closed, State != Canceled, Assignee Group = PS)
-# 返回字段：id, title, state, assignedTo, description, property, tsgLog, workItemType, createdDate, changedDate
+# Query open tickets — 返回字段：id, title, state, assignedTo, description, property, solution, workingHour, tsgLog, ...
 .\TfsRequest.ps1 -Action query
 
 # Dump all fields of a work item (debug)
@@ -104,10 +112,8 @@ AI 从 TSGLog 邮件的 From 字段提取发件人邮箱，对照映射表返回
 # Update a single ticket
 .\TfsRequest.ps1 -Action update -WorkItemIds 12345 -State 'In Process Implementer' -AssignedTo 'Michael Ma' -Property 'PS-EDM' -ActionField '1ST Update' -Solution 'Fix EDM issue' -WorkingHour 2
 
-# Resolve a single ticket
+# Resolve / Batch resolve
 .\TfsRequest.ps1 -Action resolve -WorkItemIds 12345
-
-# Batch resolve
 .\TfsRequest.ps1 -Action batch_resolve -WorkItemIds 12345,12346,12347
 ```
 
@@ -115,111 +121,32 @@ AI 从 TSGLog 邮件的 From 字段提取发件人邮箱，对照映射表返回
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/api/tfs/request/tickets` | GET | 获取 PS 队列 Open 工单（含 tsgLog、property） |
+| `/api/tfs/request/tickets` | GET | 获取 PS 队列 Open 工单（含 tsgLog、property、solution、workingHour） |
 | `/api/tfs/request/batch-classify` | POST | 批量 AI 分类（只分析 Assigned To Implementer），**不写 TFS** |
-| `/api/tfs/request/batch-apply` | POST | 逐工单写入 TFS（支持逐工单指派、自动改状态） |
-| `/api/tfs/request/classify` | POST | AI 分类单个描述（body: `{"description": "..."}`） |
+| `/api/tfs/request/batch-apply` | POST | 逐工单写入 TFS（只更新非 skipped 工单） |
+| `/api/tfs/request/classify` | POST | AI 分类单个描述 |
 | `/api/tfs/request/update` | POST | 更新单个工单字段 |
 | `/api/tfs/request/resolve` | POST | Resolve 单个工单 |
-| `/api/tfs/request/batch-resolve` | POST | 批量 Resolve（body: `{"work_item_ids": [...]}`） |
-| `/api/tfs/request/auto-process` | POST | **已废弃**，用 batch-classify + batch-apply 替代 |
+| `/api/tfs/request/batch-resolve` | POST | 批量 Resolve |
 
-### batch-classify 请求/响应
+### batch-classify 响应关键字段
 
-**请求（前端自动传递 tfsTickets 全量，含 tsgLog、property）：**
-```json
-{
-  "tickets": [
-    { "id": 123, "title": "...", "description": "", "property": "PS-EDM", "tsgLog": "<html>...</html>", ... }
-  ]
-}
-```
+- `suggestedAssignedTo`：AI 提取的发件人姓名
+- `needsStateChange`：true = "Assigned To Implementer"，需改状态
+- `skipped`：true = 该工单跳过（非 Assigned To 状态），保留原始值只读展示
 
-**响应：**
-```json
-{
-  "ok": true,
-  "classifications": [
-    {
-      "id": 123,
-      "title": "...",
-      "state": "Assigned To Implementer",
-      "assignedTo": "",
-      "property": "PS-EDM",
-      "solution": "Follow EDM guidance...",
-      "workingHour": 1,
-      "suggestedAssignedTo": "Liu Wenya",
-      "needsStateChange": true,
-      "skipped": false
-    },
-    {
-      "id": 456,
-      "state": "In Process Implementer",
-      "property": "GFS-PKI",
-      "skipped": true
-    }
-  ]
-}
-```
+## PowerShell 5.1 兼容注意点
 
-- `suggestedAssignedTo`：AI 从邮件 TSGLog 提取的发件人姓名
-- `needsStateChange`：true 表示当前为 "Assigned To Implementer"，需改为 "In Process Implementer"
-- `skipped`：true 表示该工单已被跳过（非 Assigned To Implementer 状态），保留原始值只读展示
-
-### batch-apply 请求/响应
-
-**请求（支持逐工单指派，只更新非 skipped 工单）：**
-```json
-{
-  "classifications": [
-    {
-      "id": 123,
-      "property": "PS-EDM",
-      "solution": "...",
-      "workingHour": 1,
-      "assigned_to": "Liu Wenya",
-      "state": "In Process Implementer"
-    }
-  ],
-  "assigned_to": "Michael Ma",    // 默认值，per-ticket 为空时回退
-  "action_field": "1ST Update"
-}
-```
-
-**响应：**
-```json
-{
-  "ok": true,
-  "total": 3,
-  "success": 3,
-  "failed": 0,
-  "results": [
-    { "workItemId": 123, "ok": true, "property": "PS-EDM", "assignedTo": "Liu Wenya" }
-  ]
-}
-```
-
-## 独立测试（不依赖 Flask）
-
-```bash
-python test_tfs_request.py query
-python test_tfs_request.py classify "EDM template token replacement failed"
-python test_tfs_request.py update <工单号>
-python test_tfs_request.py resolve <工单号>
-python test_tfs_request.py batch_resolve <工单号1> <工单号2> ...
-```
-
-需要拷贝：`test_tfs_request.py`、`ps_workspace_config.json`、`.edm_agent_llm_config.json`、`TfsRequestPS/TfsRequest.ps1`
+- `$WorkItemIds` 参数为 `[string]`（不是 `[int[]]`），由 `Convert-WorkItemIds` 函数内部 split 解析
+- 函数返回值需用 `@()` 包裹，防止 PowerShell 5.1 "展开" 单元素数组为标量
+- `_run_tfs_ps()` 传参格式：`-WorkItemIds 123,456,789`（逗号分隔字符串）
 
 ## 常见问题
 
-- **`找不到驱动器` 错误** — PowerShell 脚本找不到配置文件，确保 `ps_workspace_config.json` 包含 `tfsrequest` 区块
-- **AI 分类返回空** — Qwen reasoning model 把输出写到 `reasoning_content` 而非 `content`，代码已处理
-- **`Subprocess error: 'NoneType' object has no attribute 'strip'`** — PowerShell 编码问题，已改为 bytes 模式 UTF-8/GBK 解码
-- **工单 description 为空** — 正常现象，TFS Description 字段为空，分类数据来自 `Hisoft.21ViaNet.Description`
-- **TSGLog 是 HTML** — 后端 `_strip_html()` 自动剥离标签，保留纯文本送入 AI
-- **TSGLog 字段名** — TFS 字段名为 `Hisoft.21ViaNet.Description`（不是 TSGLog）
-- **"In Process Implementer" 工单被跳过** — 预期行为，只分析 "Assigned To Implementer" 的工单
+- **TSGLog 字段名** — 实际字段名为 `Hisoft.21ViaNet.Description`（不是 TSGLog）
+- **"In Process Implementer" 工单被跳过** — 预期行为，只分析 "Assigned To Implementer"
+- **`.Count` 报错** — PowerShell 5.1 函数返回值展开导致，用 `@()` 包裹修复
+- **AI prompt 全英文** — solution 输出英文
 
 ## 依赖
 

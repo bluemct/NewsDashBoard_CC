@@ -208,14 +208,6 @@
       </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs" id="tfs-tabs">
-      <div class="tab active" onclick="switchTfsTab('request', this)">TFS Request 管理</div>
-      <div class="tab" onclick="switchTfsTab('webhook', this)">Webhook 日志</div>
-      <div class="tab" onclick="switchTfsTab('labor', this)">更新 Labor Time</div>
-      <div class="tab" onclick="switchTfsTab('query', this)">查询工单</div>
-    </div>
-
     <!-- ═══ TFS Request 2010 Management Tab ═══ -->
     <div class="tab-content active" id="tfs-request">
       <!-- Sub-tabs -->
@@ -227,21 +219,22 @@
 
       <!-- ── Sub-tab: Fetch → AI Classify → Review → Apply ── -->
       <div class="tab-content active" id="tfsreq-auto">
-        <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
+        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
           <button class="btn btn-primary" id="btn-fetch-tickets" onclick="fetchOpenTickets()">&#128260; 获取 Open 工单</button>
           <button class="btn btn-success" id="btn-ai-classify" onclick="aiClassifyTickets()" disabled>&#129302; AI 智能分析</button>
           <button class="btn btn-secondary" id="btn-confirm-apply" onclick="confirmApply()" disabled>&#9989; 确认并更新</button>
-          <span id="ticket-count-badge" style="margin-left:auto; font-weight:bold; color:var(--color-text-secondary)"></span>
+          <span style="flex:1"></span>
+          <span id="ticket-count-badge" style="font-weight:bold; color:var(--color-text-secondary); margin-right:12px"></span>
+          <span style="font-size:12px; color:var(--color-text-secondary);">Action Field: 1ST Update</span>
         </div>
 
-        <div class="form-row" style="margin-bottom:16px; padding:10px; background:var(--color-bg-tertiary); border-radius:6px; border:1px solid var(--color-border);">
-          <div class="form-group" style="margin:0">
-            <label class="form-label" style="font-size:12px;">Assign To（默认处理人 · AI 会按工单自动建议）</label>
-            <input type="text" class="form-input" id="tfsreq-assign-to" value="Michael Ma" placeholder="Michael Ma">
-          </div>
-          <div class="form-group" style="margin:0">
-            <label class="form-label" style="font-size:12px;">Action Field（默认为 1ST Update）</label>
-            <input type="text" class="form-input" id="tfsreq-action-field" value="1ST Update" placeholder="1ST Update">
+        <div id="tfs-filters" style="display:none; margin-bottom:12px; padding:8px 12px; background:var(--color-bg-tertiary); border-radius:6px; border:1px solid var(--color-border);">
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <span style="font-size:12px; color:var(--color-text-secondary); font-weight:600;">筛选：</span>
+          <input type="text" class="form-input" id="tfs-search-input" placeholder="搜索 ID / 指派人 / Property" style="width:220px; padding:4px 8px; font-size:12px;" oninput="filterTickets()">
+          <select class="form-select" id="tfs-state-filter" style="width:220px; padding:4px 8px; font-size:12px;" onchange="filterTickets()">
+            <option value="">全部状态</option>
+          </select>
           </div>
         </div>
 
@@ -260,7 +253,12 @@
 
           <div class="form-group">
             <label class="form-label">工单号 (Work Item ID) *</label>
-            <input type="number" class="form-input" id="tfsreq-edit-id" placeholder="从上方列表点击工单号自动填入">
+            <input type="number" class="form-input" id="tfsreq-edit-id" placeholder="点击上方列表工单号自动填入" style="background:#f3f4f6;">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">标题</label>
+            <input type="text" class="form-input" id="tfsreq-edit-title" readonly style="background:#f3f4f6; color:var(--color-text-secondary);">
           </div>
 
           <div class="form-row">
@@ -306,18 +304,18 @@
             </div>
             <div class="form-group">
               <label class="form-label">Action Field</label>
-              <input type="text" class="form-input" id="tfsreq-edit-action" placeholder="1ST Update">
+              <input type="text" class="form-input" id="tfsreq-edit-action" placeholder="1ST Update" onfocus="if(!this.value)this.value=this.placeholder">
             </div>
           </div>
 
           <div class="form-group">
             <label class="form-label">Solution (解决方案)</label>
-            <textarea class="form-textarea" id="tfsreq-edit-solution" placeholder="Follow the EDM guidance to implement the solution."></textarea>
+            <textarea class="form-textarea" id="tfsreq-edit-solution" placeholder="Follow the EDM guidance to implement the solution." onfocus="if(!this.value)this.value=this.placeholder"></textarea>
           </div>
 
           <div class="form-group">
             <label class="form-label">Working Hour (工时)</label>
-            <input type="number" class="form-input" id="tfsreq-edit-hour" placeholder="1" min="0" max="100" step="0.5">
+            <input type="number" class="form-input" id="tfsreq-edit-hour" placeholder="1" min="0" max="100" step="0.5" onfocus="if(!this.value)this.value=this.placeholder">
           </div>
 
           <div style="display:flex; gap:8px;">
@@ -350,49 +348,6 @@
     </div>
 
     <!-- Webhook Log Tab -->
-    <div class="tab-content" id="tfs-webhook">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <div class="card-subtitle">Azure DevOps Webhook 自动触发的工单事件</div>
-        <button class="btn btn-secondary btn-sm" onclick="loadWebhooks()">&#128260; 刷新</button>
-      </div>
-      <div id="webhook-log">
-        <div class="empty-state"><p>加载 Webhook 日志...</p></div>
-      </div>
-    </div>
-
-    <!-- Labor Time Tab -->
-    <div class="tab-content" id="tfs-labor">
-      <div class="card" style="box-shadow:none; border:1px solid var(--color-border);">
-        <div class="card-title" style="font-size:14px; margin-bottom:16px;">更新 Labor Time</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">工单号 (Work Item ID)</label>
-            <input type="number" class="form-input" id="labor-wi-id" placeholder="123456">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Labor Time (小时)</label>
-            <input type="number" class="form-input" id="labor-hours" placeholder="8.0" step="0.5" min="0">
-          </div>
-        </div>
-        <button class="btn btn-primary" onclick="updateLabor()">更新 Labor Time</button>
-        <div id="labor-result" style="margin-top:12px;"></div>
-      </div>
-    </div>
-
-    <!-- Query Tab -->
-    <div class="tab-content" id="tfs-query">
-      <div class="card" style="box-shadow:none; border:1px solid var(--color-border);">
-        <div class="card-title" style="font-size:14px; margin-bottom:16px;">查询工单详情</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">工单号 (Work Item ID)</label>
-            <input type="number" class="form-input" id="query-wi-id" placeholder="123456">
-          </div>
-        </div>
-        <button class="btn btn-primary" onclick="queryWorkItem()">查询</button>
-        <div id="query-result" style="margin-top:12px;"></div>
-      </div>
-    </div>
   </div>
 </div>
 </div>
@@ -1151,6 +1106,10 @@ function exportDashboardCSV() {
 var tfsTickets = [];         // raw ticket list from query
 var tfsClassified = [];      // AI classification results (editable)
 var tfsMode = "empty";       // "empty" | "raw" | "classified"
+var tfsSortKey = null;       // sort field: "id" | "state" | "assignedTo" | "property"
+var tfsSortAsc = true;       // sort direction
+var tfsSearch = "";          // text filter (matches id, assignedTo, property)
+var tfsStateFilter = "";     // state filter: "" = all
 
 function switchTfsTab(name, el) {
   var tabs = document.querySelectorAll("#tfs-tabs .tab");
@@ -1171,6 +1130,97 @@ function switchTfsReqTab(name, el) {
   for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
   var target = document.getElementById("tfsreq-" + name);
   if (target) target.classList.add("active");
+  if (name === 'batch') populateBatchResolveIds();
+}
+
+/* ── Populate batch resolve textarea with fetched ticket IDs ── */
+
+function populateBatchResolveIds() {
+  if (tfsTickets.length > 0) {
+    var ids = tfsTickets.map(function(t) { return t.id; }).join('\n');
+    document.getElementById("tfsreq-batch-ids").value = ids;
+  }
+}
+
+/* ── Filter & Sort ── */
+
+function applyFilterSort(tickets) {
+  var filtered = tickets.filter(function(t) {
+    if (tfsSearch) {
+      var s = tfsSearch.toLowerCase();
+      var idMatch = String(t.id).indexOf(s) >= 0;
+      var at = (t.assignedTo || "").toLowerCase();
+      var atMatch = at.indexOf(s) >= 0;
+      var prop = (t.property || "").toLowerCase();
+      var propMatch = prop.indexOf(s) >= 0;
+      if (!idMatch && !atMatch && !propMatch) return false;
+    }
+    if (tfsStateFilter && t.state !== tfsStateFilter) return false;
+    return true;
+  });
+
+  if (!tfsSortKey) return filtered;
+
+  filtered.sort(function(a, b) {
+    var va = a[tfsSortKey] || "";
+    var vb = b[tfsSortKey] || "";
+    if (tfsSortKey === "id") {
+      return tfsSortAsc ? (va - vb) : (vb - va);
+    }
+    va = String(va).toLowerCase();
+    vb = String(vb).toLowerCase();
+    if (va < vb) return tfsSortAsc ? -1 : 1;
+    if (va > vb) return tfsSortAsc ? 1 : -1;
+    return 0;
+  });
+
+  return filtered;
+}
+
+function sortTicket(key) {
+  if (tfsSortKey === key) {
+    tfsSortAsc = !tfsSortAsc;
+  } else {
+    tfsSortKey = key;
+    tfsSortAsc = true;
+  }
+  if (tfsMode === "raw") renderRawTicketTable(tfsTickets);
+}
+
+function filterTickets() {
+  var searchInput = document.getElementById("tfs-search-input");
+  var stateSelect = document.getElementById("tfs-state-filter");
+  if (searchInput) tfsSearch = searchInput.value.trim();
+  if (stateSelect) tfsStateFilter = stateSelect.value;
+  if (tfsMode === "raw") renderRawTicketTable(tfsTickets);
+}
+
+/* ── Open single ticket in edit tab ── */
+
+function openSingleTicketEdit(wid) {
+  var ticket = null;
+  for (var k = 0; k < tfsTickets.length; k++) {
+    if (tfsTickets[k].id === wid) { ticket = tfsTickets[k]; break; }
+  }
+  if (!ticket) return;
+
+  // Switch to edit sub-tab
+  var tabs = document.querySelectorAll("#tfs-request-tabs .tab");
+  for (var i = 0; i < tabs.length; i++) {
+    if (tabs[i].textContent.indexOf("编辑") >= 0) {
+      tabs[i].click();
+      break;
+    }
+  }
+
+  // Fill form
+  document.getElementById("tfsreq-edit-id").value = ticket.id;
+  document.getElementById("tfsreq-edit-title").value = ticket.title || "";
+  document.getElementById("tfsreq-edit-state").value = ticket.state || "";
+  document.getElementById("tfsreq-edit-assigned").value = ticket.assignedTo || "";
+  document.getElementById("tfsreq-edit-property").value = ticket.property || "";
+  document.getElementById("tfsreq-edit-solution").value = ticket.solution || "";
+  document.getElementById("tfsreq-edit-hour").value = ticket.workingHour || "";
 }
 
 /* ── Step 1: Fetch Open Tickets ── */
@@ -1190,6 +1240,23 @@ function fetchOpenTickets() {
       tfsTickets = data.tickets || [];
       tfsClassified = [];
       tfsMode = "raw";
+      tfsSortKey = null;
+      tfsSortAsc = true;
+      tfsSearch = "";
+      tfsStateFilter = "";
+      // Reset filter inputs
+      document.getElementById("tfs-search-input").value = "";
+      // Build state filter dropdown from unique states
+      var states = [];
+      for (var k = 0; k < tfsTickets.length; k++) {
+        if (tfsTickets[k].state && states.indexOf(tfsTickets[k].state) < 0) states.push(tfsTickets[k].state);
+      }
+      states.sort();
+      var stateSel = document.getElementById("tfs-state-filter");
+      stateSel.innerHTML = '<option value="">全部状态</option>' + states.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');
+      stateSel.value = "";
+      // Show filters
+      document.getElementById("tfs-filters").style.display = "block";
       renderRawTicketTable(tfsTickets);
       document.getElementById("ticket-count-badge").textContent = data.count + " 条 Open 工单";
       document.getElementById("btn-ai-classify").disabled = false;
@@ -1206,20 +1273,34 @@ function fetchOpenTickets() {
 
 function renderRawTicketTable(tickets) {
   var container = document.getElementById("ticket-table-container");
+  var filtered = applyFilterSort(tickets);
   if (!tickets.length) {
     container.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><p>没有 Open 工单</p></div>';
     return;
   }
+
+  // Sort indicator
+  function sortArrow(key) {
+    if (tfsSortKey !== key) return ' <span style="font-size:10px;color:#ccc">↕</span>';
+    return ' <span style="font-size:10px;color:var(--color-primary)">' + (tfsSortAsc ? '▲' : '▼') + '</span>';
+  }
+
+  var countText = filtered.length === tickets.length ? '' : ' (过滤: ' + filtered.length + '/' + tickets.length + ')';
   var html = '<div class="table-container"><table>' +
     '<thead><tr>' +
-    '<th>ID</th><th>标题</th><th>状态</th><th>指派人</th>' +
-    '<th>Property</th><th>更新时间</th><th>操作</th>' +
+    '<th onclick="sortTicket(\'id\')" style="cursor:pointer">ID' + sortArrow('id') + '</th>' +
+    '<th>标题</th>' +
+    '<th onclick="sortTicket(\'state\')" style="cursor:pointer">状态' + sortArrow('state') + '</th>' +
+    '<th onclick="sortTicket(\'assignedTo\')" style="cursor:pointer">指派人' + sortArrow('assignedTo') + '</th>' +
+    '<th onclick="sortTicket(\'property\')" style="cursor:pointer">Property' + sortArrow('property') + '</th>' +
+    '<th>更新时间</th><th>操作</th>' +
     '</tr></thead><tbody>';
-  for (var i = 0; i < tickets.length; i++) {
-    var t = tickets[i];
+
+  for (var i = 0; i < filtered.length; i++) {
+    var t = filtered[i];
     var stateColor = t.state === 'Open' ? '#3b82f6' : t.state === 'Resolved' ? '#22c55e' : '#f59e0b';
     html += '<tr>' +
-      '<td><strong>' + t.id + '</strong></td>' +
+      '<td><strong style="color:var(--color-primary); cursor:pointer" onclick="openSingleTicketEdit(' + t.id + ')">' + t.id + '</strong></td>' +
       '<td title="' + escapeHtml(t.title) + '">' + truncate(escapeHtml(t.title), 50) + '</td>' +
       '<td><span style="color:' + stateColor + ';font-weight:bold">' + escapeHtml(t.state) + '</span></td>' +
       '<td>' + escapeHtml(t.assignedTo || "-") + '</td>' +
@@ -1228,7 +1309,13 @@ function renderRawTicketTable(tickets) {
       '<td><button class="btn btn-sm" onclick="resolveTicketFromTable(' + t.id + ')">Resolve</button></td>' +
       '</tr>';
   }
+
+  if (!filtered.length) {
+    html += '<tr><td colspan="7" style="text-align:center; color:#9ca3af; padding:20px;">无匹配结果</td></tr>';
+  }
+
   html += '</tbody></table></div>';
+  if (countText) html = '<div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:6px;">' + countText + '</div>' + html;
   container.innerHTML = html;
 }
 
@@ -1363,8 +1450,7 @@ function confirmApply() {
     return;
   }
 
-  var defaultAssignedTo = document.getElementById("tfsreq-assign-to").value.trim();
-  var actionField = document.getElementById("tfsreq-action-field").value.trim();
+  var defaultAssignedTo = "Michael Ma";  // fallback if per-row is empty
 
   // Collect current values from editable table — only AI-analyzed (non-skipped) tickets
   var classifications = [];
@@ -1386,8 +1472,8 @@ function confirmApply() {
     });
   }
 
-  if (!defaultAssignedTo) {
-    alert("请输入默认处理人 (Assign To)");
+  if (!classifications.length) {
+    alert("没有可更新的工单");
     return;
   }
 
@@ -1406,7 +1492,7 @@ function confirmApply() {
     body: JSON.stringify({
       classifications: classifications,
       assigned_to: defaultAssignedTo,
-      action_field: actionField || "1ST Update",
+      action_field: "1ST Update",
     })
   })
   .then(function(r) { return r.json(); })
@@ -1480,7 +1566,7 @@ function updateSingleTicket() {
     state: document.getElementById("tfsreq-edit-state").value || null,
     assigned_to: document.getElementById("tfsreq-edit-assigned").value.trim() || null,
     property: document.getElementById("tfsreq-edit-property").value || null,
-    action_field: document.getElementById("tfsreq-edit-action").value.trim() || null,
+    action_field: document.getElementById("tfsreq-edit-action").value.trim() || "1ST Update",
     solution: document.getElementById("tfsreq-edit-solution").value.trim() || null,
     working_hour: parseInt(document.getElementById("tfsreq-edit-hour").value) || null,
   };
