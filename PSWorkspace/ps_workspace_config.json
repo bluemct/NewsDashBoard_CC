@@ -24,6 +24,12 @@
     "pat": "",
     "base_url": "https://dev.azure.com/21vianet-azure"
   },
+  "tfsrequest": {
+    "server_url": "http://tfs-request.21vbluecloud.com:8080/tfs",
+    "collection": "DefaultCollection",
+    "assignee_group": "PS",
+    "default_assignee": "Michael Ma"
+  },
   "webhook": {
     "secret": ""
   }

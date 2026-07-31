@@ -4,7 +4,7 @@
 {% block content %}
 <!-- ═══ Home Section ═══ -->
 <div class="page-section active" id="page-home">
-<div style="max-width: 900px;">
+<div style="width:100%; max-width:1500px;">
   <h1 style="font-size:24px; margin-bottom:4px;">欢迎回来, {{ user.get('username','') }}!</h1>
   <p style="color:var(--color-text-secondary); margin-bottom:24px;">PS Team 统一工作平台</p>
 
@@ -70,7 +70,7 @@
 
 <!-- ═══ EDM Agent Section ═══ -->
 <div class="page-section" id="page-edm-agent">
-<div style="max-width:900px;">
+<div style="width:100%; max-width:1500px;">
 <div class="card">
   <div class="card-header">
     <div>
@@ -131,7 +131,7 @@
 
 <!-- ═══ EDM Dashboard Section ═══ -->
 <div class="page-section" id="page-edm-dashboard">
-<div style="max-width:1100px;">
+<div style="width:100%; max-width:1500px;">
   <div class="card">
     <div class="card-header">
       <div>
@@ -199,7 +199,7 @@
 
 <!-- ═══ TFS Section ═══ -->
 <div class="page-section" id="page-tfs">
-<div style="max-width:1000px;">
+<div style="width:100%; max-width:1500px;">
   <div class="card">
     <div class="card-header">
       <div>
@@ -210,13 +210,147 @@
 
     <!-- Tabs -->
     <div class="tabs" id="tfs-tabs">
-      <div class="tab active" onclick="switchTfsTab('webhook', this)">Webhook 日志</div>
+      <div class="tab active" onclick="switchTfsTab('request', this)">TFS Request 管理</div>
+      <div class="tab" onclick="switchTfsTab('webhook', this)">Webhook 日志</div>
       <div class="tab" onclick="switchTfsTab('labor', this)">更新 Labor Time</div>
       <div class="tab" onclick="switchTfsTab('query', this)">查询工单</div>
     </div>
 
+    <!-- ═══ TFS Request 2010 Management Tab ═══ -->
+    <div class="tab-content active" id="tfs-request">
+      <!-- Sub-tabs -->
+      <div class="tabs" id="tfs-request-tabs">
+        <div class="tab active" onclick="switchTfsReqTab('auto', this)">🤖 智能获取 & 处理</div>
+        <div class="tab" onclick="switchTfsReqTab('edit', this)">✏️ 单个工单编辑</div>
+        <div class="tab" onclick="switchTfsReqTab('batch', this)">📦 批量 Resolve</div>
+      </div>
+
+      <!-- ── Sub-tab: Fetch → AI Classify → Review → Apply ── -->
+      <div class="tab-content active" id="tfsreq-auto">
+        <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
+          <button class="btn btn-primary" id="btn-fetch-tickets" onclick="fetchOpenTickets()">&#128260; 获取 Open 工单</button>
+          <button class="btn btn-success" id="btn-ai-classify" onclick="aiClassifyTickets()" disabled>&#129302; AI 智能分析</button>
+          <button class="btn btn-secondary" id="btn-confirm-apply" onclick="confirmApply()" disabled>&#9989; 确认并更新</button>
+          <span id="ticket-count-badge" style="margin-left:auto; font-weight:bold; color:var(--color-text-secondary)"></span>
+        </div>
+
+        <div class="form-row" style="margin-bottom:16px; padding:10px; background:var(--color-bg-tertiary); border-radius:6px; border:1px solid var(--color-border);">
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:12px;">Assign To（默认处理人 · AI 会按工单自动建议）</label>
+            <input type="text" class="form-input" id="tfsreq-assign-to" value="Michael Ma" placeholder="Michael Ma">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label" style="font-size:12px;">Action Field（默认为 1ST Update）</label>
+            <input type="text" class="form-input" id="tfsreq-action-field" value="1ST Update" placeholder="1ST Update">
+          </div>
+        </div>
+
+        <div id="ticket-table-container">
+          <div class="empty-state">
+            <div class="icon">&#128203;</div>
+            <p>点击 "获取 Open 工单" 开始</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Sub-tab: Single Ticket Edit ── -->
+      <div class="tab-content" id="tfsreq-edit">
+        <div class="card" style="box-shadow:none; border:1px solid var(--color-border);">
+          <div class="card-title" style="font-size:14px; margin-bottom:16px;">编辑单个工单</div>
+
+          <div class="form-group">
+            <label class="form-label">工单号 (Work Item ID) *</label>
+            <input type="number" class="form-input" id="tfsreq-edit-id" placeholder="从上方列表点击工单号自动填入">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">State (状态)</label>
+              <select class="form-select" id="tfsreq-edit-state">
+                <option value="">不修改</option>
+                <option value="Open">Open</option>
+                <option value="In Process Implementer">In Process Implementer</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Assigned To</label>
+              <input type="text" class="form-input" id="tfsreq-edit-assigned" placeholder="Michael Ma">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Property</label>
+              <select class="form-select" id="tfsreq-edit-property">
+                <option value="">不修改</option>
+                <option value="GFS-Active Directory">GFS-Active Directory</option>
+                <option value="GFS-ADFS">GFS-ADFS</option>
+                <option value="GFS-PKI">GFS-PKI</option>
+                <option value="GFS-Monitoring">GFS-Monitoring</option>
+                <option value="GFS-Definitive Software Library">GFS-Definitive Software Library</option>
+                <option value="GFS-Imaging">GFS-Imaging</option>
+                <option value="GFS-WebProxy">GFS-WebProxy</option>
+                <option value="PS-AAD">PS-AAD</option>
+                <option value="PS-DSTS">PS-DSTS</option>
+                <option value="PS-EDM">PS-EDM</option>
+                <option value="PS-HYPERV">PS-HYPERV</option>
+                <option value="PS-Nethop">PS-Nethop</option>
+                <option value="PS-PAW">PS-PAW</option>
+                <option value="PS-Other">PS-Other</option>
+                <option value="PS-Secret Store">PS-Secret Store</option>
+                <option value="PS-Server Security">PS-Server Security</option>
+                <option value="PS-SNMPX">PS-SNMPX</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Action Field</label>
+              <input type="text" class="form-input" id="tfsreq-edit-action" placeholder="1ST Update">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Solution (解决方案)</label>
+            <textarea class="form-textarea" id="tfsreq-edit-solution" placeholder="Follow the EDM guidance to implement the solution."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Working Hour (工时)</label>
+            <input type="number" class="form-input" id="tfsreq-edit-hour" placeholder="1" min="0" max="100" step="0.5">
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary" onclick="updateSingleTicket()">&#128260; 更新工单</button>
+            <button class="btn btn-danger" onclick="resolveSingleTicket()">&#9940; Resolve</button>
+          </div>
+
+          <div id="edit-result" style="margin-top:12px;"></div>
+        </div>
+      </div>
+
+      <!-- ── Sub-tab: Batch Resolve ── -->
+      <div class="tab-content" id="tfsreq-batch">
+        <div class="card" style="box-shadow:none; border:1px solid var(--color-border);">
+          <div class="card-title" style="font-size:14px; margin-bottom:16px;">批量 Resolve 工单</div>
+
+          <div class="alert alert-info" style="margin-bottom:16px;">
+            <strong>说明：</strong>下方输入工单号（每行一个），点击 "批量 Resolve" 后会将所有工单状态设为 Resolved。
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">工单号列表（每行一个，或逗号/空格分隔）</label>
+            <textarea class="form-textarea" id="tfsreq-batch-ids" rows="6" placeholder="12345&#10;12346&#10;12347"></textarea>
+          </div>
+
+          <button class="btn btn-danger" onclick="batchResolveTickets()">&#9940; 批量 Resolve</button>
+          <div id="batch-result" style="margin-top:12px;"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Webhook Log Tab -->
-    <div class="tab-content active" id="tfs-webhook">
+    <div class="tab-content" id="tfs-webhook">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <div class="card-subtitle">Azure DevOps Webhook 自动触发的工单事件</div>
         <button class="btn btn-secondary btn-sm" onclick="loadWebhooks()">&#128260; 刷新</button>
@@ -265,7 +399,7 @@
 
 <!-- ═══ ICM Section ═══ -->
 <div class="page-section" id="page-icm">
-<div style="max-width:1100px;">
+<div style="width:100%; max-width:1500px;">
   <div class="card">
     <div class="card-header">
       <div>
@@ -1014,14 +1148,433 @@ function exportDashboardCSV() {
 }
 
 /* ─── TFS Functions ─────────────────────────────────────── */
+var tfsTickets = [];         // raw ticket list from query
+var tfsClassified = [];      // AI classification results (editable)
+var tfsMode = "empty";       // "empty" | "raw" | "classified"
+
 function switchTfsTab(name, el) {
   var tabs = document.querySelectorAll("#tfs-tabs .tab");
   for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
   if (el) el.classList.add("active");
-  var contents = document.querySelectorAll("#page-tfs .tab-content");
+  var contents = document.querySelectorAll("#page-tfs > .card > .tab-content");
   for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
   var target = document.getElementById("tfs-" + name);
   if (target) target.classList.add("active");
+  if (name === 'webhook') loadWebhooks();
+}
+
+function switchTfsReqTab(name, el) {
+  var tabs = document.querySelectorAll("#tfs-request-tabs .tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  if (el) el.classList.add("active");
+  var contents = document.querySelectorAll("#tfs-request > .tab-content");
+  for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
+  var target = document.getElementById("tfsreq-" + name);
+  if (target) target.classList.add("active");
+}
+
+/* ── Step 1: Fetch Open Tickets ── */
+
+function fetchOpenTickets() {
+  var btn = document.getElementById("btn-fetch-tickets");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 获取中...';
+
+  pswp.authenticatedFetch("/api/tfs/request/tickets")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok) {
+        alert("获取失败: " + (data.error || "未知错误"));
+        return;
+      }
+      tfsTickets = data.tickets || [];
+      tfsClassified = [];
+      tfsMode = "raw";
+      renderRawTicketTable(tfsTickets);
+      document.getElementById("ticket-count-badge").textContent = data.count + " 条 Open 工单";
+      document.getElementById("btn-ai-classify").disabled = false;
+      document.getElementById("btn-confirm-apply").disabled = true;
+    })
+    .catch(function(e) { alert("网络错误: " + e.message); })
+    .finally(function() {
+      btn.disabled = false;
+      btn.innerHTML = '&#128260; 获取 Open 工单';
+    });
+}
+
+/* ── Render: Raw ticket list (before AI classify) ── */
+
+function renderRawTicketTable(tickets) {
+  var container = document.getElementById("ticket-table-container");
+  if (!tickets.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><p>没有 Open 工单</p></div>';
+    return;
+  }
+  var html = '<div class="table-container"><table>' +
+    '<thead><tr>' +
+    '<th>ID</th><th>标题</th><th>状态</th><th>指派人</th>' +
+    '<th>Property</th><th>更新时间</th><th>操作</th>' +
+    '</tr></thead><tbody>';
+  for (var i = 0; i < tickets.length; i++) {
+    var t = tickets[i];
+    var stateColor = t.state === 'Open' ? '#3b82f6' : t.state === 'Resolved' ? '#22c55e' : '#f59e0b';
+    html += '<tr>' +
+      '<td><strong>' + t.id + '</strong></td>' +
+      '<td title="' + escapeHtml(t.title) + '">' + truncate(escapeHtml(t.title), 50) + '</td>' +
+      '<td><span style="color:' + stateColor + ';font-weight:bold">' + escapeHtml(t.state) + '</span></td>' +
+      '<td>' + escapeHtml(t.assignedTo || "-") + '</td>' +
+      '<td>' + escapeHtml(t.property || "-") + '</td>' +
+      '<td>' + pswp.formatDate(t.changedDate) + '</td>' +
+      '<td><button class="btn btn-sm" onclick="resolveTicketFromTable(' + t.id + ')">Resolve</button></td>' +
+      '</tr>';
+  }
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+}
+
+/* ── Step 2: AI Classify ── */
+
+function aiClassifyTickets() {
+  if (tfsTickets.length === 0) {
+    alert("请先获取 Open 工单");
+    return;
+  }
+
+  var btn = document.getElementById("btn-ai-classify");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> AI 分析中...';
+  document.getElementById("ticket-count-badge").textContent = "AI 分析中，请稍候...";
+
+  pswp.authenticatedFetch("/api/tfs/request/batch-classify", {
+    method: "POST",
+    body: JSON.stringify({ tickets: tfsTickets })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data.ok) {
+      alert("分析失败: " + (data.error || "未知错误"));
+      return;
+    }
+    tfsClassified = data.classifications || [];
+    tfsMode = "classified";
+    renderClassifiedTable(tfsClassified);
+    document.getElementById("ticket-count-badge").textContent =
+      tfsClassified.length + " 条工单 · AI 分析完成 · 请确认后更新";
+    document.getElementById("btn-confirm-apply").disabled = false;
+  })
+  .catch(function(e) { alert("网络错误: " + e.message); })
+  .finally(function() {
+    btn.disabled = false;
+    btn.innerHTML = '&#129302; AI 智能分析';
+  });
+}
+
+/* ── Render: Classified results (editable table) ── */
+
+function renderClassifiedTable(classified) {
+  var container = document.getElementById("ticket-table-container");
+  if (!classified.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><p>没有分析结果</p></div>';
+    return;
+  }
+
+  var propertyList = ['GFS-Active Directory','GFS-ADFS','GFS-PKI','GFS-Monitoring',
+                      'GFS-Definitive Software Library','GFS-Imaging','GFS-WebProxy',
+                      'PS-AAD','PS-DSTS','PS-EDM','PS-HYPERV','PS-Nethop',
+                      'PS-PAW','PS-Other','PS-Secret Store','PS-Server Security','PS-SNMPX'];
+  var propertyOptions = propertyList
+    .map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
+
+  var aiHl = 'style="background:#fff3cd"';  // AI-analyzed (editable)
+  var skipHl = 'style="background:#f3f4f6; color:#9ca3af;"';  // Skipped (read-only)
+
+  var analyzedCount = classified.filter(function(c){return !c.skipped}).length;
+  var skippedCount = classified.filter(function(c){return c.skipped}).length;
+
+  var infoRow = '<div style="margin-bottom:8px; font-size:13px; color:var(--color-text-secondary);">' +
+    '🟡 黄色 = AI 分析的工单（Assigned To Implementer，可编辑）' +
+    ' | ⚪ 灰色 = 已跳过（In Process Implementer 等其他状态，只读）' +
+    ' | 共 ' + analyzedCount + ' 条 AI 分析，' + skippedCount + ' 条已跳过</div>';
+
+  var html = infoRow +
+    '<div class="table-container"><table>' +
+    '<thead><tr>' +
+    '<th style="width:60px">ID</th>' +
+    '<th style="min-width:180px">标题</th>' +
+    '<th style="width:160px">当前状态</th>' +
+    '<th style="width:130px">建议指派人</th>' +
+    '<th style="width:160px">Property</th>' +
+    '<th style="min-width:250px">Solution (English)</th>' +
+    '<th style="width:70px">工时</th>' +
+    '</tr></thead><tbody>';
+
+  for (var i = 0; i < classified.length; i++) {
+    var c = classified[i];
+    var stateText = c.state || "-";
+    var stateBadge = '';
+    if (c.needsStateChange) {
+      stateBadge = '<span style="display:block;font-size:11px;color:#f59e0b;font-weight:bold;">⚠ → In Process Implementer</span>';
+    }
+    var assignedTo = c.suggestedAssignedTo || c.assignedTo || "";
+
+    if (c.skipped) {
+      // Skipped — show existing values as plain text, no edit
+      html += '<tr id="classify-row-' + i + '" style="opacity:0.6">' +
+        '<td><strong>' + c.id + '</strong></td>' +
+        '<td title="' + escapeHtml(c.title) + '" style="color:#9ca3af">' + truncate(escapeHtml(c.title), 35) + '</td>' +
+        '<td><span style="font-size:12px;color:#9ca3af">' + escapeHtml(stateText) + '</span></td>' +
+        '<td ' + skipHl + '>' + escapeHtml(assignedTo) + '</td>' +
+        '<td ' + skipHl + '>' + escapeHtml(c.property || "-") + '</td>' +
+        '<td ' + skipHl + '>Skipped (already in process)</td>' +
+        '<td ' + skipHl + '>-</td>' +
+        '</tr>';
+    } else {
+      // AI analyzed — editable with yellow highlight
+      html += '<tr id="classify-row-' + i + '">' +
+        '<td><strong style="color:var(--color-primary)">' + c.id + '</strong></td>' +
+        '<td title="' + escapeHtml(c.title) + '">' + truncate(escapeHtml(c.title), 35) + '</td>' +
+        '<td>' +
+          '<span style="font-size:12px;">' + escapeHtml(stateText) + '</span>' +
+          stateBadge +
+        '</td>' +
+        '<td ' + aiHl + '>' +
+          '<input type="text" class="form-input" id="cls-at-' + i + '" value="' + escapeHtml(assignedTo) + '" style="min-width:110px" placeholder="默认处理人">' +
+        '</td>' +
+        '<td ' + aiHl + '>' +
+          '<select class="form-select" style="min-width:140px" id="cls-prop-' + i + '">' +
+            propertyOptions.replace('value="' + c.property + '"', 'value="' + c.property + '" selected') +
+          '</select>' +
+        '</td>' +
+        '<td ' + aiHl + '><input type="text" class="form-input" id="cls-sol-' + i + '" value="' + escapeHtml(c.solution) + '" style="min-width:220px"></td>' +
+        '<td ' + aiHl + '><input type="number" class="form-input" id="cls-wh-' + i + '" value="' + c.workingHour + '" min="0" max="100" step="0.5" style="width:60px"></td>' +
+        '</tr>';
+    }
+  }
+
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+}
+
+/* ── Step 3: Confirm & Apply ── */
+
+function confirmApply() {
+  if (tfsClassified.length === 0) {
+    alert("请先 AI 分析工单");
+    return;
+  }
+
+  var defaultAssignedTo = document.getElementById("tfsreq-assign-to").value.trim();
+  var actionField = document.getElementById("tfsreq-action-field").value.trim();
+
+  // Collect current values from editable table — only AI-analyzed (non-skipped) tickets
+  var classifications = [];
+  for (var i = 0; i < tfsClassified.length; i++) {
+    if (tfsClassified[i].skipped) continue;  // skip already-in-process tickets
+
+    var atInput = document.getElementById("cls-at-" + i);
+    var assignedTo = atInput ? atInput.value.trim() : "";
+    // If per-row assignedTo is empty, fall back to default
+    if (!assignedTo) assignedTo = defaultAssignedTo;
+
+    classifications.push({
+      id: tfsClassified[i].id,
+      property: document.getElementById("cls-prop-" + i).value,
+      solution: document.getElementById("cls-sol-" + i).value,
+      workingHour: parseFloat(document.getElementById("cls-wh-" + i).value) || 1,
+      assigned_to: assignedTo,
+      state: "In Process Implementer",  // always change from "Assigned To Implementer"
+    });
+  }
+
+  if (!defaultAssignedTo) {
+    alert("请输入默认处理人 (Assign To)");
+    return;
+  }
+
+  var summaryText = classifications.map(function(c) {
+    return "WI#" + c.id + " → " + c.property + " (" + c.assigned_to + ")";
+  }).join("\n");
+  if (!confirm("确认更新 " + classifications.length + " 条工单到 TFS？\n\n" + summaryText)) return;
+
+  var btn = document.getElementById("btn-confirm-apply");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 更新中...';
+  document.getElementById("ticket-count-badge").textContent = "正在更新 TFS...";
+
+  pswp.authenticatedFetch("/api/tfs/request/batch-apply", {
+    method: "POST",
+    body: JSON.stringify({
+      classifications: classifications,
+      assigned_to: defaultAssignedTo,
+      action_field: actionField || "1ST Update",
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data.ok) {
+      alert("更新失败: " + (data.error || "未知错误"));
+      return;
+    }
+    var ok = data.success || 0;
+    var fail = data.failed || 0;
+    document.getElementById("ticket-count-badge").textContent =
+      data.total + " 条工单 · " + ok + " 成功 · " + fail + " 失败";
+
+    if (fail > 0) {
+      var errors = (data.results || []).filter(function(r) { return !r.ok; });
+      var errMsg = errors.map(function(e) { return "WI#" + e.workItemId + ": " + e.error; }).join("\n");
+      alert("部分失败:\n" + errMsg);
+    } else {
+      alert("全部更新完成！" + ok + " 条工单已写入 TFS。");
+    }
+
+    // Reset to fetch mode
+    tfsClassified = [];
+    tfsMode = "empty";
+    document.getElementById("btn-ai-classify").disabled = true;
+    document.getElementById("btn-confirm-apply").disabled = true;
+    document.getElementById("ticket-table-container").innerHTML =
+      '<div class="empty-state"><div class="icon">&#9989;</div><p>更新完成<br><small>点击 "获取 Open 工单" 继续</small></p></div>';
+  })
+  .catch(function(e) { alert("网络错误: " + e.message); })
+  .finally(function() {
+    btn.disabled = false;
+    btn.innerHTML = '&#9989; 确认并更新';
+  });
+}
+
+function resolveTicketFromTable(id) {
+  if (!confirm("确定要 Resolve 工单 #" + id + " ?")) return;
+
+  pswp.authenticatedFetch("/api/tfs/request/resolve", {
+    method: "POST",
+    body: JSON.stringify({ work_item_id: id })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      alert("工单 #" + id + " 已 Resolve");
+      fetchOpenTickets();
+    } else {
+      alert("Resolve 失败: " + (data.error || "未知错误"));
+    }
+  })
+  .catch(function(e) { alert("网络错误: " + e.message); });
+}
+
+/* ── Feature 2: Single Ticket Edit ── */
+
+function fillEditId(id) {
+  document.getElementById("tfsreq-edit-id").value = id;
+  // Switch to edit tab
+  var editTab = document.querySelectorAll("#tfs-request-tabs .tab")[1];
+  switchTfsReqTab('edit', editTab);
+}
+
+function updateSingleTicket() {
+  var wiId = parseInt(document.getElementById("tfsreq-edit-id").value);
+  if (!wiId) { alert("请输入工单号"); return; }
+
+  var body = {
+    work_item_id: wiId,
+    state: document.getElementById("tfsreq-edit-state").value || null,
+    assigned_to: document.getElementById("tfsreq-edit-assigned").value.trim() || null,
+    property: document.getElementById("tfsreq-edit-property").value || null,
+    action_field: document.getElementById("tfsreq-edit-action").value.trim() || null,
+    solution: document.getElementById("tfsreq-edit-solution").value.trim() || null,
+    working_hour: parseInt(document.getElementById("tfsreq-edit-hour").value) || null,
+  };
+
+  var resultEl = document.getElementById("edit-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 更新中...</div>';
+
+  pswp.authenticatedFetch("/api/tfs/request/update", {
+    method: "POST",
+    body: JSON.stringify(body)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      resultEl.innerHTML = '<div class="alert alert-success">✓ 工单 #' + wiId + ' 更新成功</div>';
+    } else {
+      resultEl.innerHTML = '<div class="alert alert-error">更新失败: ' + escapeHtml(data.error) + '</div>';
+    }
+  })
+  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
+}
+
+function resolveSingleTicket() {
+  var wiId = parseInt(document.getElementById("tfsreq-edit-id").value);
+  if (!wiId) { alert("请输入工单号"); return; }
+  if (!confirm("确定要 Resolve 工单 #" + wiId + " ?")) return;
+
+  var resultEl = document.getElementById("edit-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> Resolve 中...</div>';
+
+  pswp.authenticatedFetch("/api/tfs/request/resolve", {
+    method: "POST",
+    body: JSON.stringify({ work_item_id: wiId })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      resultEl.innerHTML = '<div class="alert alert-success">✓ 工单 #' + wiId + ' 已 Resolve</div>';
+    } else {
+      resultEl.innerHTML = '<div class="alert alert-error">Resolve 失败: ' + escapeHtml(data.error) + '</div>';
+    }
+  })
+  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
+}
+
+/* ── Feature 3: Batch Resolve ── */
+
+function batchResolveTickets() {
+  var raw = document.getElementById("tfsreq-batch-ids").value.trim();
+  if (!raw) { alert("请输入工单号"); return; }
+
+  // Parse: support comma, space, newline separated
+  var ids = raw.split(/[,;\s\n]+/).filter(function(s) { return /^\d+$/.test(s.trim()) }).map(function(s) { return parseInt(s.trim()); });
+  if (ids.length === 0) { alert("没有有效的工单号"); return; }
+  if (!confirm("确定要批量 Resolve " + ids.length + " 条工单？\n" + ids.join(", "))) return;
+
+  var resultEl = document.getElementById("batch-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 正在批量 Resolve ' + ids.length + ' 条工单...</div>';
+
+  pswp.authenticatedFetch("/api/tfs/request/batch-resolve", {
+    method: "POST",
+    body: JSON.stringify({ work_item_ids: ids })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data.ok) {
+      resultEl.innerHTML = '<div class="alert alert-error">失败: ' + escapeHtml(data.error) + '</div>';
+      return;
+    }
+    var ok = data.success || 0;
+    var fail = data.failed || 0;
+    var icon = fail === 0 ? '✓' : '⚠';
+    var color = fail === 0 ? '#22c55e' : '#f59e0b';
+    var title = fail === 0 ? "执行完成" : "部分成功";
+    var html = '<div style="padding:10px 14px; background:' + (fail === 0 ? '#f0fdf4' : '#fffbeb') +
+      '; border:1px solid ' + (fail === 0 ? '#bbf7d0' : '#fde68a') +
+      '; border-radius:6px; font-size:13px;">' +
+      '<strong style="color:' + color + '">' + icon + ' ' + title + '</strong> · ' +
+      ok + ' 成功 / ' + fail + ' 失败';
+    if (fail > 0 && data.results) {
+      html += '</div><div style="margin-top:8px; font-size:12px; color:#991b1b; background:#fef2f2; border:1px solid #fecaca; padding:8px; border-radius:4px;">';
+      for (var i = 0; i < data.results.length; i++) {
+        var r = data.results[i];
+        if (r && r.error) {
+          html += '✗ WI#' + r.workItemId + ': ' + escapeHtml(r.error) + '<br>';
+        }
+      }
+      html += '</div>';
+    } else {
+      html += '</div>';
+    }
+    resultEl.innerHTML = html;
+  })
+  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
 }
 function loadWebhooks() {
   pswp.authenticatedFetch("/api/tfs/recent?max=50")
@@ -1686,7 +2239,6 @@ function initSection(name) {
   sectionInited[name] = true;
   if (name === 'edm-agent') { loadListenerStatus(); loadTempFiles(); }
   if (name === 'edm-dashboard') loadDashboard();
-  if (name === 'tfs') loadWebhooks();
 }
 
 /* ─── Dashboard auto-refresh ─────────────────────────────── */

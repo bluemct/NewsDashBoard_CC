@@ -5,3 +5,4 @@ pyjwt>=2.0
 extract-msg
 openpyxl
 olefile
+litellm

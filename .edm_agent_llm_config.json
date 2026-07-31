@@ -2,6 +2,6 @@
   "model": "openai/Qwen3.5-27B",
   "api_base": "http://172.31.0.103:20261/v1",
   "api_key": "sk-proj-9aB3cD5eF7gH9iJ1kL3mN5oP7qR9sT1uV3wX5yZ7",
-  "timeout": 10,
+  "timeout": 30,
   "note": "支持任何 litellm 格式的 model 名称，例如 openai/gpt-4, anthropic/claude-sonnet-4-6"
 }
