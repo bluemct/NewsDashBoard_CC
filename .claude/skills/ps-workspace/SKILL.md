@@ -1,12 +1,12 @@
 # PS Workspace
 
-PS Team 统一 Web 工作平台，集成 EDM 监听、EDM 看板、TFS 工单、ICM 工单管理等功能。
+PS Team 统一 Web 工作平台，集成 EDM 监听、EDM 看板、TFS 工单、ICM 工单管理、统一设置等功能。
 
 ## 架构
 
 - Flask Web 应用，运行在 **http://localhost:9000**
 - SPA 前端，模板在 `templates/`，JS 在 `static/app.js`，CSS 在 `static/style.css`
-- Blueprint 模块化：`routes/auth.py`, `routes/edm_eml.py`（当前活跃）, `routes/edm.py`（旧流程）, `routes/tfs.py`, `routes/icm.py`, `routes/task.py`
+- Blueprint 模块化：`routes/auth.py`, `routes/edm_eml.py`（当前活跃）, `routes/edm.py`（旧流程）, `routes/tfs.py`, `routes/icm.py`, `routes/task.py`, `routes/settings.py`
 
 ## 启动
 
@@ -223,12 +223,43 @@ ICM 模块：**所有操作已转为纯 Python**（Token 验证、搜索、创�
 
 | 文件 | 说明 |
 |------|------|
-| `PSWorkspace/utils/task_queue.py` | SQLite 任务队列（tasks + edm_events + icm_token_history 表），`run_task()` 支持 generator 进度，`list_icm_token_history(page, size)` 分页查询 |
+| `PSWorkspace/utils/task_queue.py` | SQLite 任务队列（tasks + edm_events + icm_token_history + activity_log 表），`run_task()` 支持 generator 进度，`list_icm_token_history(page, size)` 分页查询，`save_activity(category, title, detail, status)` / `list_activities(max)` 跨模块活动日志 |
 | `PSWorkspace/utils/script_runner.py` | PowerShell/Python 脚本运行器（ICM 模块已不再使用） |
 | `PSWorkspace/routes/edm.py` | EDM 路由，`_process()` 编排 3 步流程，`_discover_xlsx()` xlsx 精确发现 |
-| `PSWorkspace/routes/icm.py` | ICM 路由，纯 Python `_icm_*` 辅助函数 + 共享 Helper + 自动 Token 刷新 |
-| `PSWorkspace/static/app.js` | 前端公用 JS，`startTask()` 任务轮询，`pollTask()` 异步轮询 |
-| `PSWorkspace/templates/index.html` | 前端模板，ICM 搜索过滤、批量操作、创建模板 JS、Token 刷新按钮 |
+| `PSWorkspace/routes/icm.py` | ICM 路由，纯 Python `_icm_*` 辅助函数 + 共享 Helper + 自动 Token 刷新 + activity 日志 |
+| `PSWorkspace/routes/settings.py` | 配置管理 API，读取/写入 EDM（`.edm_agent_config.json`、`xlsx_search_dir.json`）、ICM（`IcMHelperPS/icm_config.json`）、AI（`.edm_agent_llm_config.json`）配置，敏感字段脱敏 |
+| `PSWorkspace/routes/task.py` | 异步任务 API，新增 `GET /api/task/activities` 跨模块活动查询 |
 | `IcMHelper/icm_config.json` | ICM Token/Cookie 配置文件（手动更新源，Cookie 过期时从此文件更新） |
 | `IcMHelperPS/icm_config.json` | PS Workspace 使用的 ICM 配置（自动同步，刷新时自动更新） |
 | `IcMHelperPS/IcmApi.ps1` | ICM API PowerShell 封装（已弃用，ICM 模块已转为纯 Python） |
+
+## 设置页面（Settings）
+
+顶栏 ⚙️ 按钮 + 侧边栏「设置」入口，SPA 页面 `page-settings`，三个 Tab：
+
+| Tab | 管理的 JSON 文件 | 字段 |
+|-----|------------------|------|
+| EDM 配置 | `.edm_agent_config.json` + `xlsx_search_dir.json` | EWS URL、域账号、密码、邮箱、文件夹名、监听规则（sender/subject/body keywords）、输出目录、XLSX 检索目录 |
+| ICM Token & Cookie | `IcMHelperPS/icm_config.json` + `IcMHelper/icm_config.json` | Access Token（只读脱敏）、Cookie String、Cookie 过期时间 |
+| AI Model | `.edm_agent_llm_config.json` | Model、API Base、API Key、Timeout |
+
+- 密码/API Key 等敏感字段返回时脱敏（`_mask()`），写入时空值不覆盖原值
+- ICM 配置保存时双写到 `IcMHelper/` 和 `IcMHelperPS/`
+- 每次保存自动记录到 `activity_log` 表
+
+## 活动日志（Activity Log）
+
+`activity_log` SQLite 表，统一记录跨模块操作，首页"最近任务"展示。
+
+| 字段 | 说明 |
+|------|------|
+| category | 模块标签：`edm`, `icm`, `tfs`, `settings`, `dashboard` |
+| title | 活动标题，如 "EDM Process SN-55247" |
+| detail | 可选详情 |
+| status | `ok` / `warn` / `error` |
+| created_at | UNIX 时间戳 |
+
+**API**：`GET /api/task/activities?max=15` → `{activities: [...]}`
+**写入**：`task_queue.save_activity(category, title, detail, status)`
+
+**当前记录点**：EDM Process 完成、ICM Token 验证/刷新/创建工单、TFS 批量更新/Resolve、Dashboard 刷新、Settings 保存

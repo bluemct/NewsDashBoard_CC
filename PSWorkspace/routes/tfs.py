@@ -1118,6 +1118,9 @@ def request_batch_apply():
 
     success_count = sum(1 for r in results if r["ok"])
     fail_count = len(results) - success_count
+    status_str = "ok" if fail_count == 0 else "warn"
+    task_queue.save_activity("tfs", f"TFS 批量更新 {success_count} 条工单",
+                             f"成功 {success_count} / 失败 {fail_count}", status_str)
 
     return jsonify({
         "ok": True,
@@ -1270,7 +1273,13 @@ def request_batch_resolve():
 
     data, err = _run_tfs_ps("batch_resolve", work_item_ids=work_item_ids)
     if err:
+        task_queue.save_activity("tfs", f"TFS 批量 Resolve 失败", err, "error")
         return jsonify({"ok": False, "error": err}), 500
+    total = data.get("total", 0)
+    succ = data.get("success", 0)
+    fail = data.get("failed", 0)
+    task_queue.save_activity("tfs", f"TFS 批量 Resolve {total} 条工单",
+                             f"成功 {succ} / 失败 {fail}", "ok" if fail == 0 else "warn")
     return jsonify({
         "ok": True,
         "total": data.get("total", 0),

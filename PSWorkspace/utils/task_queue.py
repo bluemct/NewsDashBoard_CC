@@ -69,6 +69,20 @@ def init(db_path: str):
             conn.commit()
         except Exception:
             pass  # columns already exist
+
+        # Activity log table — unified activity feed across all modules
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS activity_log (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                category   TEXT NOT NULL DEFAULT '',
+                title      TEXT NOT NULL DEFAULT '',
+                detail     TEXT NOT NULL DEFAULT '',
+                status     TEXT NOT NULL DEFAULT 'ok',
+                created_at REAL NOT NULL
+            )
+        """)
+        conn.commit()
+        conn.close()
         conn.close()
     logger.info(f"[task_queue] SQLite initialized at {db_path}")
 
@@ -329,3 +343,47 @@ def list_icm_token_history(page: int = 1, page_size: int = 20) -> dict:
         conn.close()
     return {"total": total, "page": page, "page_size": page_size,
             "pages": pages, "data": [dict(r) for r in rows]}
+
+
+# ─── Activity Log ─────────────────────────────────────────────
+
+
+def save_activity(category: str, title: str, detail: str = "", status: str = "ok"):
+    """Save an activity record.
+
+    Args:
+        category: Module tag, e.g. 'edm', 'icm', 'tfs', 'settings', 'dashboard'
+        title: Short activity title, e.g. 'EDM Process SN-55247'
+        detail: Optional detail text
+        status: 'ok' | 'warn' | 'error'
+    """
+    import time
+    with _lock:
+        conn = _conn()
+        conn.execute(
+            "INSERT INTO activity_log (category, title, detail, status, created_at) VALUES (?,?,?,?,?)",
+            (category, title, detail, status, time.time()),
+        )
+        conn.commit()
+        conn.close()
+
+
+def list_activities(max_items: int = 50) -> list:
+    """List recent activities across all modules, newest first."""
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT * FROM activity_log ORDER BY id DESC LIMIT ?",
+            (max_items,),
+        ).fetchall()
+        conn.close()
+    results = []
+    for r in rows:
+        d = dict(r)
+        from datetime import datetime
+        ts = d.get("created_at", 0)
+        d["created_at_str"] = datetime.fromtimestamp(ts).isoformat()
+        d["elapsed_sec"] = round(time.time() - ts, 0)
+        results.append(d)
+    return results

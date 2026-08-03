@@ -43,6 +43,7 @@
     "edm-dashboard": "page-edm-dashboard",
     "tfs": "page-tfs",
     "icm": "page-icm",
+    "settings": "page-settings",
   };
 
   function setActiveNav(page) {

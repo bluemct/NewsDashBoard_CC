@@ -22,6 +22,7 @@ from routes.edm_eml import edm_eml_bp as edm_bp, _set_project_root
 from routes.tfs import tfs_bp
 from routes.icm import icm_bp, _set_project_root as _set_icm_project_root, _start_auto_refresh
 from routes.task import task_bp
+from routes.settings import settings_bp
 from utils import task_queue
 
 # ─── Logging ──────────────────────────────────────────────────
@@ -75,6 +76,7 @@ def create_app() -> Flask:
     app.register_blueprint(tfs_bp)
     app.register_blueprint(icm_bp)
     app.register_blueprint(task_bp)
+    app.register_blueprint(settings_bp)
 
     # Disable browser cache for all pages and static files in development
     @app.after_request

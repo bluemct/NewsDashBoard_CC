@@ -17,6 +17,7 @@
     <div class="topbar-user">
       <div class="avatar" id="user-avatar"></div>
       <span id="user-display"></span>
+      <button class="topbar-icon-btn" onclick="pswp.navigate('settings')" title="设置">&#9881;</button>
       <button class="logout-btn" onclick="pswp.clearSession()">登出</button>
     </div>
   </div>
@@ -60,6 +61,12 @@
       <span class="icon">&#128197;</span>
       <span>会议室预定</span>
       <span class="coming-soon">开发中</span>
+    </a>
+
+    <div class="sidebar-section" style="margin-top:12px;">系统</div>
+    <a class="sidebar-item" data-page="settings" onclick="pswp.navigate('settings')">
+      <span class="icon">&#9881;</span>
+      <span>设置</span>
     </a>
   </nav>
 

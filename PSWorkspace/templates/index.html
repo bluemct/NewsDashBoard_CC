@@ -527,6 +527,145 @@
 </div>
 </div>
 
+<!-- ═══ Settings Section ═══ -->
+<div class="page-section" id="page-settings">
+<div style="width:100%; max-width:1500px;">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">&#9881; 设置</div>
+        <div class="card-subtitle">管理 EDM、ICM Token、AI Model 配置</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="settings-tabs">
+      <div class="tab active" onclick="switchSettingsTab('edm', this)">&#9993; EDM 配置</div>
+      <div class="tab" onclick="switchSettingsTab('icm', this)">&#128737; ICM Token & Cookie</div>
+      <div class="tab" onclick="switchSettingsTab('ai', this)">&#129302; AI Model</div>
+    </div>
+
+    <!-- EDM Config Tab -->
+    <div class="tab-content active" id="settings-edm">
+      <div class="card" style="box-shadow:none; border:1px solid var(--color-border); margin-bottom:16px;">
+        <div class="card-title" style="font-size:14px; margin-bottom:16px;">&#128233; EWS 监听邮箱</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">EWS URL</label>
+            <input type="text" class="form-input" id="edm-ews-url" placeholder="https://mail.21vianet.com/EWS/Exchange.asmx">
+          </div>
+          <div class="form-group">
+            <label class="form-label">域账号</label>
+            <input type="text" class="form-input" id="edm-domain-user" placeholder="21vianet\ps-tier2.support">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">密码</label>
+            <input type="password" class="form-input" id="edm-password" placeholder="密码">
+          </div>
+          <div class="form-group">
+            <label class="form-label">邮箱地址</label>
+            <input type="text" class="form-input" id="edm-mailbox" placeholder="ps-tier2.support@oe.21vianet.com">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">文件夹名称</label>
+          <input type="text" class="form-input" id="edm-folder-name" placeholder="EDM">
+        </div>
+      </div>
+
+      <div class="card" style="box-shadow:none; border:1px solid var(--color-border); margin-bottom:16px;">
+        <div class="card-title" style="font-size:14px; margin-bottom:16px;">&#128269; 监听规则（逗号分隔）</div>
+        <div class="form-group">
+          <label class="form-label">发件人</label>
+          <input type="text" class="form-input" id="edm-sender" placeholder="ma.chuntao@oe.21vianet.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">主题关键词</label>
+          <input type="text" class="form-input" id="edm-subject-keywords" placeholder="edm">
+        </div>
+        <div class="form-group">
+          <label class="form-label">正文关键词</label>
+          <input type="text" class="form-input" id="edm-body-keywords" placeholder="EDM Agent">
+        </div>
+      </div>
+
+      <div class="card" style="box-shadow:none; border:1px solid var(--color-border); margin-bottom:16px;">
+        <div class="card-title" style="font-size:14px; margin-bottom:16px;">&#128193; 路径配置</div>
+        <div class="form-group">
+          <label class="form-label">EDM 输出基础目录</label>
+          <input type="text" class="form-input" id="edm-output-base" placeholder="C:\Users\SI-Agent\Desktop\EDM">
+        </div>
+        <div class="form-group">
+          <label class="form-label">XLSX 检索目录</label>
+          <input type="text" class="form-input" id="edm-xlsx-search-dir" placeholder="本地搜索目录">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-primary" onclick="saveEdmSettings()">💾 保存 EDM 配置</button>
+        <span id="edm-save-status"></span>
+      </div>
+    </div>
+
+    <!-- ICM Config Tab -->
+    <div class="tab-content" id="settings-icm">
+      <div class="alert alert-info" style="margin-bottom:16px;">
+        <strong>说明：</strong>ICM Token/Cookie 配置对应 <code>IcMHelperPS/icm_config.json</code>。修改 Cookie 后，程序需在运行中才能通过自动刷新线程续期。
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Access Token（只读）</label>
+        <input type="text" class="form-input" id="icm-token" readonly style="background:#f3f4f6; color:var(--color-text-secondary); font-family:Consolas,monospace; font-size:12px;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cookie String（完整 Cookie 字符串）</label>
+        <textarea class="form-textarea" id="icm-cookie-string" rows="4" placeholder="CloudESAuthCookie=xxx" style="font-family:Consolas,monospace; font-size:12px;"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cookie 过期时间</label>
+        <input type="text" class="form-input" id="icm-cookie-expires" placeholder="2026-08-31T23:20:35+00:00" style="font-family:Consolas,monospace; font-size:12px;">
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-primary" onclick="saveIcmSettings()">💾 保存 ICM 配置</button>
+        <span id="icm-save-status"></span>
+      </div>
+    </div>
+
+    <!-- AI Model Tab -->
+    <div class="tab-content" id="settings-ai">
+      <div class="alert alert-info" style="margin-bottom:16px;">
+        <strong>说明：</strong>AI Model 配置对应 <code>.edm_agent_llm_config.json</code>。支持 litellm 格式的 model 名称，如 <code>openai/gpt-4</code>、<code>anthropic/claude-sonnet-4-6</code>。
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Model</label>
+        <input type="text" class="form-input" id="ai-model" placeholder="openai/Qwen3.5-27B">
+      </div>
+      <div class="form-group">
+        <label class="form-label">API Base</label>
+        <input type="text" class="form-input" id="ai-api-base" placeholder="http://172.31.0.103:20261/v1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">API Key</label>
+        <input type="password" class="form-input" id="ai-api-key" placeholder="sk-xxx">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Timeout（秒）</label>
+        <input type="number" class="form-input" id="ai-timeout" value="30" min="1" max="300">
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-primary" onclick="saveAiSettings()">💾 保存 AI 配置</button>
+        <span id="ai-save-status"></span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -543,33 +682,50 @@ function truncate(str, len) {
 
 /* ─── Home: Recent Tasks ────────────────────────────────── */
 function loadRecentTasks() {
-  pswp.authenticatedFetch("/api/task/?max=10")
+  pswp.authenticatedFetch("/api/task/activities?max=15")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var container = document.getElementById("recent-tasks");
-      var tasks = data.tasks || [];
-      if (!tasks.length) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><p>暂无任务记录</p></div>';
+      var activities = data.activities || [];
+      if (!activities.length) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><p>暂无活动记录</p></div>';
         return;
       }
+      var catIcons = {
+        edm: '✉',
+        dashboard: '⌨',
+        tfs: '✍',
+        icm: '🔒',
+        settings: '⚙'
+      };
+      var catLabels = {
+        edm: 'EDM',
+        dashboard: '看板',
+        tfs: 'TFS',
+        icm: 'ICM',
+        settings: '设置'
+      };
       var html = '<div class="table-container"><table><thead><tr>' +
-        '<th>任务</th><th>状态</th><th>耗时</th><th>时间</th>' +
+        '<th>模块</th><th>活动</th><th>详情</th><th>状态</th><th>时间</th>' +
         '</tr></thead><tbody>';
-      for (var i = 0; i < tasks.length; i++) {
-        var t = tasks[i];
-        var statusClass = t.status === "completed" ? "done" : t.status === "failed" ? "error" : "running";
-        var statusText = t.status === "completed" ? "完成" : t.status === "failed" ? "失败" : "运行中";
-        var time = pswp.formatDate(new Date(Date.now() - (t.elapsed || 0) * 1000).toISOString());
+      for (var i = 0; i < activities.length; i++) {
+        var a = activities[i];
+        var cat = a.category || 'other';
+        var icon = catIcons[cat] || '▶';
+        var label = catLabels[cat] || cat;
+        var statusClass = a.status === 'ok' ? 'done' : a.status === 'error' ? 'error' : 'in-progress';
+        var statusText = a.status === 'ok' ? '正常' : a.status === 'error' ? '失败' : '警告';
         html += '<tr>' +
-          '<td>' + (t.name || "-") + '</td>' +
+          '<td><span title="' + label + '">' + icon + ' ' + escapeHtml(label) + '</span></td>' +
+          '<td>' + escapeHtml(a.title || '-') + '</td>' +
+          '<td title="' + escapeHtml(a.detail || '') + '">' + truncate(escapeHtml(a.detail || '-'), 50) + '</td>' +
           '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>' +
-          '<td>' + (t.elapsed || 0) + 's</td>' +
-          '<td>' + time + '</td></tr>';
+          '<td>' + pswp.formatDate(a.created_at_str) + '</td></tr>';
       }
       html += '</tbody></table></div>';
       container.innerHTML = html;
     })
-    .catch(function(e) { console.error("Failed to load tasks:", e); });
+    .catch(function(e) { console.error("Failed to load activities:", e); });
 }
 document.addEventListener("DOMContentLoaded", loadRecentTasks);
 
@@ -2325,6 +2481,7 @@ function initSection(name) {
   sectionInited[name] = true;
   if (name === 'edm-agent') { loadListenerStatus(); loadTempFiles(); }
   if (name === 'edm-dashboard') loadDashboard();
+  if (name === 'settings') { loadEdmSettings(); loadIcmSettings(); loadAiSettings(); }
 }
 
 /* ─── Dashboard auto-refresh ─────────────────────────────── */
@@ -2342,5 +2499,134 @@ setInterval(function() {
     loadWebhooks();
   }
 }, 30000);
+
+/* ─── Settings Functions ──────────────────────────────────── */
+function switchSettingsTab(name, el) {
+  var tabs = document.querySelectorAll("#settings-tabs .tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  if (el) el.classList.add("active");
+  var contents = document.querySelectorAll("#page-settings .tab-content");
+  for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
+  var target = document.getElementById("settings-" + name);
+  if (target) target.classList.add("active");
+}
+
+function showSaveStatus(elementId, ok, message) {
+  var el = document.getElementById(elementId);
+  if (!el) return;
+  var cls = ok ? "success" : "error";
+  var icon = ok ? "✓" : "✗";
+  el.innerHTML = '<span class="save-status ' + cls + '">' + icon + " " + escapeHtml(message) + '</span>';
+  setTimeout(function() { el.innerHTML = ""; }, 3000);
+}
+
+/* ── EDM Settings ── */
+function loadEdmSettings() {
+  pswp.authenticatedFetch("/api/settings/edm")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var ews = data.ews || {};
+      document.getElementById("edm-ews-url").value = ews.url || "";
+      document.getElementById("edm-domain-user").value = ews.domain_user || "";
+      document.getElementById("edm-password").value = "";
+      document.getElementById("edm-mailbox").value = ews.mailbox || "";
+      document.getElementById("edm-folder-name").value = ews.folder_name || "";
+      var fr = data.filter_rules || {};
+      document.getElementById("edm-sender").value = fr.sender || "";
+      document.getElementById("edm-subject-keywords").value = fr.subject_keywords || "";
+      document.getElementById("edm-body-keywords").value = fr.body_keywords || "";
+      document.getElementById("edm-output-base").value = data.output_base || "";
+      document.getElementById("edm-xlsx-search-dir").value = data.xlsx_search_directory || "";
+    })
+    .catch(function(e) { console.error("Failed to load EDM settings:", e); });
+}
+
+function saveEdmSettings() {
+  pswp.authenticatedFetch("/api/settings/edm", {
+    method: "POST",
+    body: JSON.stringify({
+      ews: {
+        url: document.getElementById("edm-ews-url").value,
+        domain_user: document.getElementById("edm-domain-user").value,
+        password: document.getElementById("edm-password").value || undefined,
+        mailbox: document.getElementById("edm-mailbox").value,
+        folder_name: document.getElementById("edm-folder-name").value,
+      },
+      filter_rules: {
+        sender: document.getElementById("edm-sender").value,
+        subject_keywords: document.getElementById("edm-subject-keywords").value,
+        body_keywords: document.getElementById("edm-body-keywords").value,
+      },
+      output_base: document.getElementById("edm-output-base").value,
+      xlsx_search_directory: document.getElementById("edm-xlsx-search-dir").value,
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    showSaveStatus("edm-save-status", data.ok !== false, data.message || (data.ok ? "保存成功" : "保存失败"));
+  })
+  .catch(function(e) { showSaveStatus("edm-save-status", false, e.message); });
+}
+
+/* ── ICM Settings ── */
+function loadIcmSettings() {
+  pswp.authenticatedFetch("/api/settings/icm")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById("icm-token").value = data.access_token || "";
+      document.getElementById("icm-cookie-string").value = data.cookie_string || "";
+      document.getElementById("icm-cookie-expires").value = data.cookie_expires || "";
+    })
+    .catch(function(e) { console.error("Failed to load ICM settings:", e); });
+}
+
+function saveIcmSettings() {
+  pswp.authenticatedFetch("/api/settings/icm", {
+    method: "POST",
+    body: JSON.stringify({
+      cookie_string: document.getElementById("icm-cookie-string").value,
+      cookie_expires: document.getElementById("icm-cookie-expires").value,
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    showSaveStatus("icm-save-status", data.ok !== false, data.message || (data.ok ? "保存成功" : "保存失败"));
+    loadIcmSettings(); // reload to show updated token
+  })
+  .catch(function(e) { showSaveStatus("icm-save-status", false, e.message); });
+}
+
+/* ── AI Settings ── */
+function loadAiSettings() {
+  pswp.authenticatedFetch("/api/settings/ai")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById("ai-model").value = data.model || "";
+      document.getElementById("ai-api-base").value = data.api_base || "";
+      document.getElementById("ai-api-key").value = "";
+      document.getElementById("ai-timeout").value = data.timeout || 30;
+    })
+    .catch(function(e) { console.error("Failed to load AI settings:", e); });
+}
+
+function saveAiSettings() {
+  var body = {
+    model: document.getElementById("ai-model").value,
+    api_base: document.getElementById("ai-api-base").value,
+    timeout: parseInt(document.getElementById("ai-timeout").value) || 30,
+  };
+  var apiKey = document.getElementById("ai-api-key").value;
+  if (apiKey) body.api_key = apiKey;
+
+  pswp.authenticatedFetch("/api/settings/ai", {
+    method: "POST",
+    body: JSON.stringify(body)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    showSaveStatus("ai-save-status", data.ok !== false, data.message || (data.ok ? "保存成功" : "保存失败"));
+  })
+  .catch(function(e) { showSaveStatus("ai-save-status", false, e.message); });
+}
 </script>
 {% endblock %}

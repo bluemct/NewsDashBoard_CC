@@ -106,6 +106,22 @@ body {
   background: rgba(255,255,255,0.25);
 }
 
+.topbar-user .topbar-icon-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: background var(--transition);
+}
+
+.topbar-user .topbar-icon-btn:hover {
+  background: rgba(255,255,255,0.25);
+}
+
 /* ─── Sidebar ──────────────────────────────────────────────── */
 
 .sidebar {
@@ -756,6 +772,37 @@ tbody tr:hover {
 
 .tooltip:hover::after {
   opacity: 1;
+}
+
+/* ─── Save Status Toast ────────────────────────────────────── */
+
+.save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 8px;
+  animation: fadeInOut 2.5s ease forwards;
+}
+
+.save-status.success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.save-status.error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-8px); }
+  10% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* ─── Page Sections (SPA Navigation) ───────────────────────── */

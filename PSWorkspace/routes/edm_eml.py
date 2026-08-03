@@ -655,6 +655,11 @@ def process_file(filename):
         logger.info(f"[edm-process] Done processing {filename}")
         yield f"\n[DONE] 处理完成（无需 Outlook COM）"
 
+        # Extract SN for activity log
+        sn_match = re.search(r"SN-\d+", filename)
+        task_queue.save_activity("edm", f"EDM Process {sn_match.group(0) if sn_match else filename}",
+                                 f"处理完成: {filename}", "ok")
+
     task_id = run_task(f"edm-process-{filename}", _process())
     return jsonify({"task_id": task_id, "filename": filename})
 
@@ -764,6 +769,9 @@ def dashboard_refresh():
         _edm_dash.GITHUB_RAW_URL,
         _edm_dash.GITHUB_PROXY_URL,
     )
+    status_str = "ok" if result.get("ok") else "warn"
+    task_queue.save_activity("dashboard", "EDM 看板刷新",
+                             f"来源: {result.get('source', 'unknown')}, {result.get('count', 0)} 条记录", status_str)
     return jsonify(result)
 
 

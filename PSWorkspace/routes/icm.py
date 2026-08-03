@@ -321,9 +321,12 @@ def token_refresh():
     result = _do_token_refresh()
     _record_token_history(result, "manual")
     if result["ok"]:
+        task_queue.save_activity("icm", "ICM Token 手动刷新",
+                                 f"剩余 {result['remaining_min']:.0f} 分钟", "ok")
         return jsonify({"ok": True, "message": result["message"],
                         "remaining_minutes": round(result["remaining_min"], 1)})
     else:
+        task_queue.save_activity("icm", "ICM Token 刷新失败", result["message"], "error")
         return jsonify({"ok": False, "error": result["message"]}), 500
 
 
@@ -338,6 +341,12 @@ def _save_verify_history(success, obtained_at, expires_at, remaining_min, error_
         remaining_min=remaining_min, error_message=error_message,
         detail=json.dumps(detail, ensure_ascii=False) if detail else "",
         cookie_expires_at=cookie_expires_at)
+    if success:
+        task_queue.save_activity("icm", "ICM Token 验证",
+                                 f"剩余 {remaining_min:.0f} 分钟", "ok")
+    else:
+        task_queue.save_activity("icm", "ICM Token 验证失败",
+                                 error_message or "未知错误", "error")
 
 
 def _record_token_history(result, source):
@@ -524,6 +533,9 @@ def create():
 
         url = "https://prod.microsofticm.com/api2/incidentapi/incidents"
         resp_data, status = _icm_post(url, body)
+        incident_id = resp_data.get("Id", "") if isinstance(resp_data, dict) else ""
+        task_queue.save_activity("icm", f"ICM 创建工单 #{incident_id}",
+                                 data.get("title", ""), "ok")
         return json.dumps(resp_data, ensure_ascii=False), "", 0
 
     task_id = task_queue.submit(_do_create, name="ICM Create")
