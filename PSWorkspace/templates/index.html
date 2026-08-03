@@ -215,6 +215,7 @@
         <div class="tab active" onclick="switchTfsReqTab('auto', this)">🤖 智能获取 & 处理</div>
         <div class="tab" onclick="switchTfsReqTab('edit', this)">✏️ 单个工单编辑</div>
         <div class="tab" onclick="switchTfsReqTab('batch', this)">📦 批量 Resolve</div>
+        <div class="tab" onclick="switchTfsReqTab('feedback', this)">📊 反馈历史</div>
       </div>
 
       <!-- ── Sub-tab: Fetch → AI Classify → Review → Apply ── -->
@@ -343,6 +344,19 @@
 
           <button class="btn btn-danger" onclick="batchResolveTickets()">&#9940; 批量 Resolve</button>
           <div id="batch-result" style="margin-top:12px;"></div>
+        </div>
+      </div>
+
+      <!-- ── Sub-tab: Feedback History ── -->
+      <div class="tab-content" id="tfsreq-feedback">
+        <div class="card" style="box-shadow:none; border:1px solid var(--color-border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div class="card-title" style="font-size:14px;">反馈历史</div>
+            <div id="tfs-feedback-stats" style="font-size:12px; color:var(--color-text-secondary);"></div>
+          </div>
+          <div id="tfs-feedback-container">
+            <div class="empty-state"><div class="icon">&#128203;</div><p>切换到此标签页自动加载</p></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1276,6 +1290,7 @@ function switchTfsReqTab(name, el) {
   var target = document.getElementById("tfsreq-" + name);
   if (target) target.classList.add("active");
   if (name === 'batch') populateBatchResolveIds();
+  if (name === 'feedback') loadFeedbackHistory();
 }
 
 /* ── Populate batch resolve textarea with fetched ticket IDs ── */
@@ -1526,7 +1541,8 @@ function renderClassifiedTable(classified) {
   var infoRow = '<div style="margin-bottom:8px; font-size:13px; color:var(--color-text-secondary);">' +
     '🟡 黄色 = AI 分析的工单（Assigned To Implementer，可编辑）' +
     ' | ⚪ 灰色 = 已跳过（In Process Implementer 等其他状态，只读）' +
-    ' | 共 ' + analyzedCount + ' 条 AI 分析，' + skippedCount + ' 条已跳过</div>';
+    ' | 共 ' + analyzedCount + ' 条 AI 分析，' + skippedCount + ' 条已跳过' +
+    ' | ✅ 点击 "确认并更新" 后自动记录反馈，AI 将持续学习</div>';
 
   var html = infoRow +
     '<div class="table-container"><table>' +
@@ -1538,6 +1554,7 @@ function renderClassifiedTable(classified) {
     '<th style="width:160px">Property</th>' +
     '<th style="min-width:250px">Solution (English)</th>' +
     '<th style="width:70px">工时</th>' +
+    '<th style="width:60px">反馈</th>' +
     '</tr></thead><tbody>';
 
   for (var i = 0; i < classified.length; i++) {
@@ -1559,6 +1576,7 @@ function renderClassifiedTable(classified) {
         '<td ' + skipHl + '>' + escapeHtml(c.property || "-") + '</td>' +
         '<td ' + skipHl + '>Skipped (already in process)</td>' +
         '<td ' + skipHl + '>-</td>' +
+        '<td ' + skipHl + '>-</td>' +
         '</tr>';
     } else {
       // AI analyzed — editable with yellow highlight
@@ -1579,12 +1597,50 @@ function renderClassifiedTable(classified) {
         '</td>' +
         '<td ' + aiHl + '><input type="text" class="form-input" id="cls-sol-' + i + '" value="' + escapeHtml(c.solution) + '" style="min-width:220px"></td>' +
         '<td ' + aiHl + '><input type="number" class="form-input" id="cls-wh-' + i + '" value="' + c.workingHour + '" min="0" max="100" step="0.5" style="width:60px"></td>' +
+        '<td style="text-align:center;font-size:12px;"><span id="cls-fb-' + i + '" style="color:#9ca3af;">✓ 确认</span></td>' +
         '</tr>';
     }
   }
 
   html += '</tbody></table></div>';
   container.innerHTML = html;
+
+  // Attach input listeners to detect changes and update feedback indicator
+  setTimeout(function() {
+    for (var i = 0; i < classified.length; i++) {
+      if (classified[i].skipped) continue;
+      var inputs = [
+        document.getElementById("cls-prop-" + i),
+        document.getElementById("cls-sol-" + i),
+        document.getElementById("cls-wh-" + i),
+        document.getElementById("cls-at-" + i)
+      ];
+      for (var j = 0; j < inputs.length; j++) {
+        if (!inputs[j]) continue;
+        inputs[j].addEventListener("input", (function(idx, el) {
+          return function() { _updateFeedbackIndicator(idx); };
+        })(i, inputs[j]));
+      }
+    }
+  }, 0);
+}
+
+function _updateFeedbackIndicator(i) {
+  if (tfsClassified[i].skipped) return;
+  var fbEl = document.getElementById("cls-fb-" + i);
+  if (!fbEl) return;
+  var orig = tfsClassified[i];
+  var curProp = document.getElementById("cls-prop-" + i).value;
+  var curSol = document.getElementById("cls-sol-" + i).value;
+  var curWh = document.getElementById("cls-wh-" + i).value;
+  var isChanged = (curProp !== orig.property) ||
+                  (curSol !== orig.solution) ||
+                  (String(curWh) !== String(orig.workingHour));
+  if (isChanged) {
+    fbEl.innerHTML = '<span style="color:#16a34a;font-weight:bold;">● 已修改</span>';
+  } else {
+    fbEl.innerHTML = '<span style="color:#9ca3af;">✓ 确认</span>';
+  }
 }
 
 /* ── Step 3: Confirm & Apply ── */
@@ -1648,15 +1704,51 @@ function confirmApply() {
     }
     var ok = data.success || 0;
     var fail = data.failed || 0;
+
+    // ── Submit feedback for AI learning ──
+    var feedbackBatch = [];
+    var correctedCount = 0;
+    var agreedCount = 0;
+    for (var i = 0; i < tfsClassified.length; i++) {
+      if (tfsClassified[i].skipped) continue;
+
+      var humanProp = document.getElementById("cls-prop-" + i).value;
+      var humanSol = document.getElementById("cls-sol-" + i).value;
+      var humanWh = parseFloat(document.getElementById("cls-wh-" + i).value) || 1;
+      var diff = (humanProp !== tfsClassified[i].property) ||
+                 (humanSol !== tfsClassified[i].solution);
+
+      feedbackBatch.push(pswp.authenticatedFetch("/api/tfs/request/feedback", {
+        method: "POST",
+        body: JSON.stringify({
+          ticket_id: tfsClassified[i].id,
+          title: tfsClassified[i].title,
+          content: tfsClassified[i].description || "",
+          ai_property: tfsClassified[i].property,
+          ai_solution: tfsClassified[i].solution,
+          ai_working_hour: tfsClassified[i].workingHour,
+          human_property: humanProp,
+          human_solution: humanSol,
+          human_working_hour: humanWh,
+          diff_flag: diff ? 1 : 0
+        })
+      }));
+      if (diff) correctedCount++;
+      else agreedCount++;
+    }
+
+    Promise.all(feedbackBatch).catch(function(){}); // non-blocking, best-effort
+
     document.getElementById("ticket-count-badge").textContent =
-      data.total + " 条工单 · " + ok + " 成功 · " + fail + " 失败";
+      data.total + " 条工单 · " + ok + " 成功 · " + fail + " 失败 · 反馈已记录 (" +
+      correctedCount + " 修正, " + agreedCount + " 确认)";
 
     if (fail > 0) {
       var errors = (data.results || []).filter(function(r) { return !r.ok; });
       var errMsg = errors.map(function(e) { return "WI#" + e.workItemId + ": " + e.error; }).join("\n");
       alert("部分失败:\n" + errMsg);
     } else {
-      alert("全部更新完成！" + ok + " 条工单已写入 TFS。");
+      alert("全部更新完成！" + ok + " 条工单已写入 TFS。\n\n反馈已记录：" + correctedCount + " 条修正 + " + agreedCount + " 条确认，AI 将持续学习。");
     }
 
     // Reset to fetch mode
@@ -1806,6 +1898,99 @@ function batchResolveTickets() {
     resultEl.innerHTML = html;
   })
   .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
+}
+
+/* ─── TFS Feedback History ─────────────────────────────────── */
+
+var _tfsFeedbackPage = 1;
+
+function loadFeedbackHistory() {
+  var container = document.getElementById("tfs-feedback-container");
+  var statsEl = document.getElementById("tfs-feedback-stats");
+  container.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 加载中...</div>';
+
+  Promise.all([
+    pswp.authenticatedFetch("/api/tfs/request/feedback?page=" + _tfsFeedbackPage + "&size=20")
+      .then(function(r) { return r.json(); }),
+    pswp.authenticatedFetch("/api/tfs/request/feedback/stats")
+      .then(function(r) { return r.json(); })
+  ])
+  .then(function(results) {
+    var data = results[0];
+    var stats = results[1];
+
+    if (stats.ok) {
+      statsEl.textContent = "总反馈 " + stats.total + " 条 · 修正 " + stats.diff_count + " 条 · 确认 " + stats.agree_count + " 条";
+    }
+
+    if (!data.ok || !data.data || data.data.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">&#128203;</div><p>暂无反馈记录</p></div>';
+      return;
+    }
+
+    var html = '<div class="table-container"><table>' +
+      '<thead><tr>' +
+      '<th style="width:100px">时间</th>' +
+      '<th style="width:60px">工单ID</th>' +
+      '<th style="min-width:160px">标题</th>' +
+      '<th style="width:140px">AI 分类</th>' +
+      '<th style="width:140px">人工分类</th>' +
+      '<th style="width:50px">操作</th>' +
+      '</tr></thead><tbody>';
+
+    for (var i = 0; i < data.data.length; i++) {
+      var fb = data.data[i];
+      var timeStr = (fb.created_at_str || "").split(".")[0];
+      var isDiff = fb.diff_flag === 1;
+      var diffStyle = isDiff ? 'color:#dc2626;font-weight:bold;' : '';
+      var aiProp = fb.ai_property || "-";
+      var huProp = fb.human_property || "-";
+      var arrow = isDiff ? ' → ' : '';
+      var icon = isDiff ? '●' : '✓';
+
+      html += '<tr>' +
+        '<td style="font-size:11px;color:#6b7280;">' + timeStr + '</td>' +
+        '<td><strong>' + fb.ticket_id + '</strong></td>' +
+        '<td title="' + escapeHtml(fb.title) + '">' + truncate(escapeHtml(fb.title), 40) + '</td>' +
+        '<td style="font-size:12px;">' + icon + ' ' + escapeHtml(aiProp) + '</td>' +
+        '<td style="font-size:12px; ' + diffStyle + '">' + escapeHtml(aiProp) + arrow + escapeHtml(huProp) + '</td>' +
+        '<td><button class="btn btn-danger btn-sm" onclick="deleteFeedback(' + fb.id + ')" style="padding:2px 6px;font-size:11px;">✕</button></td>' +
+        '</tr>';
+    }
+
+    html += '</tbody></table></div>';
+
+    // Pagination
+    if (data.pages > 1) {
+      html += '<div style="display:flex; gap:6px; margin-top:10px; justify-content:center; font-size:12px;">';
+      html += '<button class="btn btn-secondary btn-sm" onclick="loadFeedbackPage(1)" ' + (_tfsFeedbackPage <= 1 ? 'disabled' : '') + '>首页</button>';
+      html += '<button class="btn btn-secondary btn-sm" onclick="loadFeedbackPage(' + (_tfsFeedbackPage - 1) + ')" ' + (_tfsFeedbackPage <= 1 ? 'disabled' : '') + '>上一页</button>';
+      html += '<span style="padding:4px 10px;color:var(--color-text-secondary);">' + data.page + ' / ' + data.pages + '</span>';
+      html += '<button class="btn btn-secondary btn-sm" onclick="loadFeedbackPage(' + (_tfsFeedbackPage + 1) + ')" ' + (_tfsFeedbackPage >= data.pages ? 'disabled' : '') + '>下一页</button>';
+      html += '<button class="btn btn-secondary btn-sm" onclick="loadFeedbackPage(' + data.pages + ')" ' + (_tfsFeedbackPage >= data.pages ? 'disabled' : '') + '>尾页</button>';
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
+  })
+  .catch(function(e) {
+    container.innerHTML = '<div class="alert alert-error">加载失败: ' + e.message + '</div>';
+  });
+}
+
+function loadFeedbackPage(page) {
+  _tfsFeedbackPage = page;
+  loadFeedbackHistory();
+}
+
+function deleteFeedback(id) {
+  if (!confirm("确定删除此反馈记录？")) return;
+  pswp.authenticatedFetch("/api/tfs/request/feedback/" + id, { method: "DELETE" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) loadFeedbackHistory();
+    })
+    .catch(function(e) { alert("删除失败: " + e.message); });
 }
 /* ─── ICM Functions ─────────────────────────────────────── */
 var currentIcmAction = null;

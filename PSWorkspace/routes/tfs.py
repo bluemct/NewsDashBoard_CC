@@ -289,10 +289,11 @@ def _build_user_content(description):
 {description}"""
 
 
-def _build_batch_user_content(tickets):
+def _build_batch_user_content(tickets, examples=None):
     """Build user content for batch AI classify.
 
     tickets: list of {"id": int, "title": str, "text": str}
+    examples: list of feedback dicts from get_similar_feedback(), or None
     """
     lines = [
         _AI_CATEGORY_DESC,
@@ -301,11 +302,29 @@ def _build_batch_user_content(tickets):
         "",
         _AI_ASSIGNEE_RULES,
         "",
-        f"Classify the following {len(tickets)} tickets. Return a JSON array:",
-        'Each ticket: {"id": <id>, "property": "...", "solution": "<English summary>", "working_hour": <int>, "assigned_to": "<name or empty string>"}',
-        "Return ONLY the JSON array, nothing else.",
-        "",
     ]
+
+    # Inject few-shot examples from human-confirmed feedback
+    if examples:
+        lines.append("Reference the following confirmed classification examples before classifying:")
+        lines.append("")
+        for idx, ex in enumerate(examples):
+            ai_prop = ex.get("ai_property", "")
+            human_prop = ex.get("human_property", "")
+            note = f"(AI said {ai_prop}, human corrected to {human_prop})" if ai_prop != human_prop else f"(confirmed {human_prop})"
+            lines.append(f"Example {idx+1} {note}:")
+            lines.append(f"  Title: \"{ex.get('title', '')}\"")
+            ex_content = (ex.get("content", "") or "")[:300]
+            if ex_content:
+                lines.append(f"  Content: {ex_content}")
+            lines.append(f"  Correct classification: {human_prop}")
+            lines.append("")
+        lines.append("---")
+
+    lines.append(f"Classify the following {len(tickets)} tickets. Return a JSON array:")
+    lines.append('Each ticket: {"id": <id>, "property": "...", "solution": "<English summary>", "working_hour": <int>, "assigned_to": "<name or empty string>"}')
+    lines.append("Return ONLY the JSON array, nothing else.")
+    lines.append("")
     for i, t in enumerate(tickets):
         text = t["text"][:2000]
         lines.append(f"=== Ticket {i+1} / {len(tickets)} (ID: {t['id']}) ===")
@@ -350,7 +369,23 @@ def _classify_batch_ai(tickets):
             logger.warning("TFS batch-classify: api_key not set")
             return None
 
-        all_content = _build_batch_user_content(tickets)
+        # ── Gather similar feedback examples from history ──
+        combined_text = " ".join(t["title"] + " " + t["text"] for t in tickets)
+        examples = task_queue.get_similar_feedback(combined_text, limit=5)
+        # Deduplicate by human_property to diversify examples
+        seen_props = set()
+        unique_examples = []
+        for ex in examples:
+            hp = ex.get("human_property", "")
+            if hp not in seen_props:
+                seen_props.add(hp)
+                unique_examples.append(ex)
+            if len(unique_examples) >= 5:
+                break
+        if unique_examples:
+            logger.info(f"[AI-classify-batch] Injecting {len(unique_examples)} feedback examples: {[e.get('human_property') for e in unique_examples]}")
+
+        all_content = _build_batch_user_content(tickets, examples=unique_examples)
         MAX_INPUT_CHARS = 8000
 
         if len(all_content) <= MAX_INPUT_CHARS:
@@ -378,7 +413,7 @@ def _classify_batch_ai(tickets):
             batch_num = batch_idx + 1
             total_batches = len(batches)
 
-            user_content = _build_batch_user_content(batch)
+            user_content = _build_batch_user_content(batch, examples=unique_examples)
             logger.info(f"[AI-classify-batch] === Batch {batch_num}/{total_batches}: count={len(batch)} content_len={len(user_content)} ===")
             logger.info(f"[AI-classify-batch] --- SYSTEM PROMPT ({len(_AI_SYSTEM_PROMPT)} chars) ---")
             logger.info(f"[AI-classify-batch] {_AI_SYSTEM_PROMPT}")
@@ -1056,3 +1091,80 @@ def request_get(work_item_id):
             return jsonify({"ok": True, "ticket": t})
 
     return jsonify({"ok": False, "error": f"Work item #{work_item_id} not found in open tickets"}), 404
+
+
+# ═══════════════════════════════════════════════════════════════
+# ─── Feedback Learning APIs ──────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+
+@tfs_bp.route('/request/feedback', methods=['POST'])
+@require_auth
+def feedback_submit():
+    """POST /api/tfs/request/feedback — Submit classification feedback.
+
+    Body: {
+        "ticket_id": int,
+        "title": str,
+        "content": str,
+        "ai_property": str,
+        "ai_solution": str,
+        "ai_working_hour": float,
+        "human_property": str,
+        "human_solution": str,
+        "human_working_hour": float,
+        "diff_flag": int  (0=agreed, 1=corrected)
+    }
+    """
+    body = request.get_json()
+    if not body or not body.get("ticket_id"):
+        return jsonify({"error": "ticket_id is required"}), 400
+
+    task_queue.save_tfs_feedback(
+        ticket_id=body["ticket_id"],
+        title=body.get("title", ""),
+        content=body.get("content", "")[:2000],
+        ai_property=body.get("ai_property", ""),
+        ai_solution=body.get("ai_solution", ""),
+        ai_working_hour=float(body.get("ai_working_hour", 1)),
+        human_property=body.get("human_property", ""),
+        human_solution=body.get("human_solution", ""),
+        human_working_hour=float(body.get("human_working_hour", 1)),
+        diff_flag=int(body.get("diff_flag", 0)),
+    )
+    return jsonify({"ok": True})
+
+
+@tfs_bp.route('/request/feedback', methods=['GET'])
+@require_auth
+def feedback_list():
+    """GET /api/tfs/request/feedback — List feedback history with pagination."""
+    page = request.args.get("page", 1, type=int)
+    size = request.args.get("size", 20, type=int)
+    result = task_queue.list_tfs_feedback(page, size)
+    return jsonify({"ok": True, **result})
+
+
+@tfs_bp.route('/request/feedback/stats', methods=['GET'])
+@require_auth
+def feedback_stats():
+    """GET /api/tfs/request/feedback/stats — Feedback statistics."""
+    stats = task_queue.tfs_feedback_stats()
+    return jsonify({"ok": True, **stats})
+
+
+@tfs_bp.route('/request/feedback/similar', methods=['GET'])
+@require_auth
+def feedback_similar():
+    """GET /api/tfs/request/feedback/similar — Find similar feedback for a ticket."""
+    content = request.args.get("content", "")
+    limit = request.args.get("limit", 5, type=int)
+    results = task_queue.get_similar_feedback(content, limit=limit)
+    return jsonify({"ok": True, "count": len(results), "data": results})
+
+
+@tfs_bp.route('/request/feedback/<int:feedback_id>', methods=['DELETE'])
+@require_auth
+def feedback_delete(feedback_id):
+    """DELETE /api/tfs/request/feedback/<id> — Delete a feedback record."""
+    task_queue.delete_tfs_feedback(feedback_id)
+    return jsonify({"ok": True})

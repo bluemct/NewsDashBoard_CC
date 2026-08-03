@@ -81,8 +81,24 @@ def init(db_path: str):
                 created_at REAL NOT NULL
             )
         """)
+        # TFS classification feedback table — stores human corrections for AI learning
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS tfs_classify_feedback (
+                id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket_id          INTEGER NOT NULL,
+                title              TEXT NOT NULL DEFAULT '',
+                content            TEXT NOT NULL DEFAULT '',
+                ai_property        TEXT NOT NULL DEFAULT '',
+                ai_solution        TEXT NOT NULL DEFAULT '',
+                ai_working_hour    REAL DEFAULT 1,
+                human_property     TEXT NOT NULL DEFAULT '',
+                human_solution     TEXT NOT NULL DEFAULT '',
+                human_working_hour REAL DEFAULT 1,
+                diff_flag          INTEGER NOT NULL DEFAULT 1,
+                created_at         REAL NOT NULL
+            )
+        """)
         conn.commit()
-        conn.close()
         conn.close()
     logger.info(f"[task_queue] SQLite initialized at {db_path}")
 
@@ -387,3 +403,126 @@ def list_activities(max_items: int = 50) -> list:
         d["elapsed_sec"] = round(time.time() - ts, 0)
         results.append(d)
     return results
+
+
+# ─── TFS Classification Feedback ─────────────────────────────
+
+
+def save_tfs_feedback(ticket_id: int, title: str, content: str,
+                      ai_property: str, ai_solution: str, ai_working_hour: float,
+                      human_property: str, human_solution: str, human_working_hour: float,
+                      diff_flag: int):
+    """Save a TFS classification feedback record."""
+    with _lock:
+        conn = _conn()
+        conn.execute(
+            "INSERT INTO tfs_classify_feedback "
+            "(ticket_id, title, content, ai_property, ai_solution, ai_working_hour, "
+            " human_property, human_solution, human_working_hour, diff_flag, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (ticket_id, title, content, ai_property, ai_solution, ai_working_hour,
+             human_property, human_solution, human_working_hour, diff_flag, time.time()),
+        )
+        conn.commit()
+        conn.close()
+
+
+def list_tfs_feedback(page: int = 1, page_size: int = 20) -> dict:
+    """List TFS classification feedback with pagination, newest first.
+
+    Returns: {"total": int, "page": int, "page_size": int, "pages": int, "data": [...]}
+    """
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        total = conn.execute("SELECT COUNT(*) FROM tfs_classify_feedback").fetchone()[0]
+        pages = max(1, (total + page_size - 1) // page_size)
+        page = max(1, min(page, pages))
+        offset = (page - 1) * page_size
+        rows = conn.execute(
+            "SELECT * FROM tfs_classify_feedback ORDER BY id DESC LIMIT ? OFFSET ?",
+            (page_size, offset),
+        ).fetchall()
+        conn.close()
+    data = []
+    for r in rows:
+        d = dict(r)
+        d["created_at_str"] = datetime.fromtimestamp(d["created_at"]).isoformat()
+        data.append(d)
+    return {"total": total, "page": page, "page_size": page_size,
+            "pages": pages, "data": data}
+
+
+def delete_tfs_feedback(feedback_id: int):
+    """Delete a single feedback record by id."""
+    with _lock:
+        conn = _conn()
+        conn.execute("DELETE FROM tfs_classify_feedback WHERE id=?", (feedback_id,))
+        conn.commit()
+        conn.close()
+
+
+def get_similar_feedback(content: str, limit: int = 5) -> list:
+    """Find similar feedback records by keyword overlap.
+
+    Only returns diff_flag=1 records (human corrections — the most valuable samples).
+    Returns a list of dicts sorted by score descending, capped at `limit`.
+    """
+    if not content:
+        return []
+
+    # Tokenize input: lowercase, split on whitespace/punctuation
+    import re
+    content_lower = content.lower()
+    # Extract meaningful tokens (words with 2+ chars and chinese chars)
+    input_tokens = set(re.findall(r'[a-z]{2,}|[一-鿿]', content_lower))
+
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        # Only diff_flag=1 (corrections) — these are the valuable learning samples
+        rows = conn.execute(
+            "SELECT * FROM tfs_classify_feedback WHERE diff_flag=1 ORDER BY id DESC LIMIT 200"
+        ).fetchall()
+        conn.close()
+
+    scored = []
+    for r in rows:
+        rd = dict(r)
+        # Combine title + content for matching
+        combined = (rd.get("title", "") + " " + rd.get("content", "")).lower()
+        fb_tokens = set(re.findall(r'[a-z]{2,}|[一-鿿]', combined))
+        # Jaccard-like score: intersection size
+        overlap = len(input_tokens & fb_tokens)
+        if overlap > 0:
+            scored.append((overlap, rd))
+
+    # Sort by overlap descending, then by id descending (newest first for ties)
+    scored.sort(key=lambda x: (x[0], -x[1]["id"]), reverse=True)
+    return [item[1] for item in scored[:limit]]
+
+
+def tfs_feedback_stats() -> dict:
+    """Return feedback statistics."""
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        total = conn.execute("SELECT COUNT(*) FROM tfs_classify_feedback").fetchone()[0]
+        diff_count = conn.execute(
+            "SELECT COUNT(*) FROM tfs_classify_feedback WHERE diff_flag=1"
+        ).fetchone()[0]
+        agree_count = total - diff_count
+
+        # Per-category distribution (human_property)
+        cat_rows = conn.execute(
+            "SELECT human_property, COUNT(*) as cnt FROM tfs_classify_feedback "
+            "GROUP BY human_property ORDER BY cnt DESC"
+        ).fetchall()
+        conn.close()
+
+        categories = [dict(r) for r in cat_rows]
+        return {
+            "total": total,
+            "diff_count": diff_count,   # human corrected
+            "agree_count": agree_count,  # human agreed
+        }

@@ -55,6 +55,22 @@ cd PSWorkspace && python app.py
 - **工作流**：`batch-classify`（AI 分析）→ 人工确认 → `batch-apply`（写回 TFS）
 - **Assign To**：从 TSGLog 提取发件人邮箱，映射到 PS 团队成员
 
+### 反馈学习系统（Feedback Learning）
+
+AI 分类结果经人工审核后，自动记录到反馈库，下次分类时注入相似历史案例作为 few-shot 示例。
+
+- **SQLite 表** `tfs_classify_feedback`：存储 AI 原始值 vs 人工修正值，`diff_flag=1` 表示有修正
+- **自动反馈**：点击"确认并更新"时，每条工单（无论是否修改）自动提交反馈记录
+- **Few-shot 注入**：AI 分类前，从反馈库检索 5 条最相似的历史案例（关键词重叠度匹配）注入 prompt
+- **前端指示器**：分类结果表每行末尾显示反馈状态（✓ 确认 / ● 已修改），实时更新
+- **反馈历史 Tab**：可查看、删除历史反馈，显示统计（总反馈 / 修正 / 确认）
+- **API 路由**：
+  - `POST /api/tfs/request/feedback` — 提交反馈
+  - `GET /api/tfs/request/feedback` — 分页查询
+  - `GET /api/tfs/request/feedback/stats` — 统计
+  - `GET /api/tfs/request/feedback/similar` — 相似检索
+  - `DELETE /api/tfs/request/feedback/<id>` — 删除
+
 ### API 路由
 
 | 路由 | 说明 |
