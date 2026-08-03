@@ -121,7 +121,7 @@ def settings_edm_save():
 def settings_icm_get():
     """GET /api/settings/icm - Read ICM token & cookie config."""
     root = _project_root()
-    cfg = _read_json(os.path.join(root, "IcMHelperPS", "icm_config.json"))
+    cfg = _read_json(os.path.join(root, "IcMHelper", "icm_config.json"))
     return jsonify({
         "ok": True,
         "access_token": _mask(cfg.get("access_token", "")),
@@ -138,9 +138,8 @@ def settings_icm_save():
     data = request.get_json() or {}
 
     # Read original configs
-    orig_path = os.path.join(root, "IcMHelper", "icm_config.json")
-    ps_path = os.path.join(root, "IcMHelperPS", "icm_config.json")
-    orig_cfg = _read_json(orig_path)
+    config_path = os.path.join(root, "IcMHelper", "icm_config.json")
+    orig_cfg = _read_json(config_path)
 
     # Merge only non-empty fields
     if data.get("cookie_string"):
@@ -150,13 +149,11 @@ def settings_icm_save():
     if data.get("access_token"):
         orig_cfg["access_token"] = data["access_token"]
 
-    # Write to both locations
-    _write_json(orig_path, orig_cfg)
-    _write_json(ps_path, orig_cfg)
+    _write_json(config_path, orig_cfg)
 
     logger.info("ICM settings saved")
     task_queue.save_activity("settings", "ICM Cookie/Token 配置更新",
-                             "IcMHelper + IcMHelperPS 已同步", "ok")
+                             "IcMHelper 配置已保存", "ok")
     return jsonify({"ok": True, "message": "ICM 配置已保存"})
 
 

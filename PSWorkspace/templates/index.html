@@ -203,8 +203,8 @@
   <div class="card">
     <div class="card-header">
       <div>
-        <div class="card-title">&#128203; TFS Request (Azure DevOps)</div>
-        <div class="card-subtitle">工单处理与更新</div>
+        <div class="card-title">&#128203; TFS Request</div>
+        <div class="card-subtitle">内网工单处理与更新</div>
       </div>
     </div>
 
@@ -612,7 +612,7 @@
     <!-- ICM Config Tab -->
     <div class="tab-content" id="settings-icm">
       <div class="alert alert-info" style="margin-bottom:16px;">
-        <strong>说明：</strong>ICM Token/Cookie 配置对应 <code>IcMHelperPS/icm_config.json</code>。修改 Cookie 后，程序需在运行中才能通过自动刷新线程续期。
+        <strong>说明：</strong>ICM Token/Cookie 配置对应 <code>IcMHelper/icm_config.json</code>。修改 Cookie 后，程序需在运行中才能通过自动刷新线程续期。
       </div>
 
       <div class="form-group">
@@ -1267,17 +1267,6 @@ var tfsSortAsc = true;       // sort direction
 var tfsSearch = "";          // text filter (matches id, assignedTo, property)
 var tfsStateFilter = "";     // state filter: "" = all
 
-function switchTfsTab(name, el) {
-  var tabs = document.querySelectorAll("#tfs-tabs .tab");
-  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
-  if (el) el.classList.add("active");
-  var contents = document.querySelectorAll("#page-tfs > .card > .tab-content");
-  for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
-  var target = document.getElementById("tfs-" + name);
-  if (target) target.classList.add("active");
-  if (name === 'webhook') loadWebhooks();
-}
-
 function switchTfsReqTab(name, el) {
   var tabs = document.querySelectorAll("#tfs-request-tabs .tab");
   for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
@@ -1818,93 +1807,6 @@ function batchResolveTickets() {
   })
   .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
 }
-function loadWebhooks() {
-  pswp.authenticatedFetch("/api/tfs/recent?max=50")
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var webhooks = data.webhooks || [];
-      var container = document.getElementById("webhook-log");
-      if (!webhooks.length) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">&#128276;</div><p>暂无 Webhook 事件<br><small>等待 Azure DevOps 推送</small></p></div>';
-        return;
-      }
-      var html = '<div class="table-container"><table>' +
-        '<thead><tr><th>工单#</th><th>类型</th><th>事件</th><th>标题</th>' +
-        '<th>状态</th><th>处理人</th><th>时间</th></tr></thead><tbody>';
-      for (var i = 0; i < webhooks.length; i++) {
-        var w = webhooks[i];
-        html += '<tr>' +
-          '<td><a href="' + escapeHtml(w.url) + '" target="_blank">' + w.id + '</a></td>' +
-          '<td>' + escapeHtml(w.work_item_type) + '</td>' +
-          '<td>' + escapeHtml(w.event_type) + '</td>' +
-          '<td title="' + escapeHtml(w.description) + '">' + truncate(escapeHtml(w.title), 50) + '</td>' +
-          '<td>' + escapeHtml(w.state) + '</td>' +
-          '<td>' + escapeHtml(w.assigned_to) + '</td>' +
-          '<td>' + pswp.formatDate(w.received_at) + '</td></tr>';
-      }
-      html += '</tbody></table></div>';
-      container.innerHTML = html;
-    })
-    .catch(function(e) { console.error("Failed to load webhooks:", e); });
-}
-function updateLabor() {
-  var wiId = parseInt(document.getElementById("labor-wi-id").value);
-  var hours = parseFloat(document.getElementById("labor-hours").value);
-  var resultEl = document.getElementById("labor-result");
-  if (!wiId || isNaN(hours)) {
-    resultEl.innerHTML = '<div class="alert alert-error">请输入工单号和 Labor Time</div>';
-    return;
-  }
-  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 更新中...</div>';
-  pswp.authenticatedFetch("/api/tfs/update-labor", {
-    method: "POST",
-    body: JSON.stringify({ work_item_id: wiId, labor_time: hours })
-  })
-  .then(function(r) { return r.json().then(function(d) { return {ok: r.ok, data: d}; }); })
-  .then(function(result) {
-    if (result.ok) {
-      resultEl.innerHTML = '<div class="alert alert-success">' + result.data.message + '</div>';
-    } else {
-      resultEl.innerHTML = '<div class="alert alert-error">更新失败: ' + escapeHtml(result.data.error) + '</div>';
-    }
-  })
-  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
-}
-function queryWorkItem() {
-  var wiId = parseInt(document.getElementById("query-wi-id").value);
-  var resultEl = document.getElementById("query-result");
-  if (!wiId) {
-    resultEl.innerHTML = '<div class="alert alert-error">请输入工单号</div>';
-    return;
-  }
-  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 查询中...</div>';
-  pswp.authenticatedFetch("/api/tfs/workitem/" + wiId)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.ok) {
-        var fields = data.data.fields || {};
-        var html = '<table>' +
-          '<tr><td><strong>工单号</strong></td><td>' + data.data.id + '</td></tr>' +
-          '<tr><td><strong>类型</strong></td><td>' + escapeHtml(fields["System.WorkItemType"] || "") + '</td></tr>' +
-          '<tr><td><strong>标题</strong></td><td>' + escapeHtml(fields["System.Title"] || "") + '</td></tr>' +
-          '<tr><td><strong>状态</strong></td><td>' + escapeHtml(fields["System.State"] || "") + '</td></tr>' +
-          '<tr><td><strong>处理人</strong></td><td>' + escapeHtml(assigneeName(fields)) + '</td></tr>' +
-          '<tr><td><strong>描述</strong></td><td>' + escapeHtml(fields["System.Description"] || "") + '</td></tr>' +
-          '<tr><td><strong>Labor Time</strong></td><td>' + escapeHtml(fields["Hisoft.21ViaNet.TotalLaborTimeShow"] || "未设置") + '</td></tr>' +
-          '</table>';
-        resultEl.innerHTML = html;
-      } else {
-        resultEl.innerHTML = '<div class="alert alert-error">查询失败: ' + escapeHtml(data.error) + '</div>';
-      }
-    })
-    .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
-}
-function assigneeName(fields) {
-  var a = fields["System.AssignedTo"];
-  if (typeof a === "object" && a) return a.displayName || "";
-  return a || "";
-}
-
 /* ─── ICM Functions ─────────────────────────────────────── */
 var currentIcmAction = null;
 function switchIcmTab(name, el) {

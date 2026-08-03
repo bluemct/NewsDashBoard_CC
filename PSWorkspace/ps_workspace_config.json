@@ -9,8 +9,8 @@
     "edm_agent": ".claude/skills/edm-agent-download/edm_agent_download.py",
     "edm_dashboard_data": "edmmailanalyzer.json",
     "edm_handlers": ".claude/skills/edm-dashboard/handlers.json",
-    "icm_ps": "IcMHelperPS/IcmApi.ps1",
-    "icm_config": "IcMHelperPS/icm_config.json",
+    "icm_ps": "IcMHelper/icm_api.py",
+    "icm_config": "IcMHelper/icm_config.json",
     "edm_temp": "EDM/Temp/"
   },
   "auth": {
@@ -18,19 +18,10 @@
     "test_password": "1234",
     "token_expiry_hours": 1
   },
-  "tfs": {
-    "organization": "21vianet-azure",
-    "project": "21ViaNet-Project",
-    "pat": "",
-    "base_url": "https://dev.azure.com/21vianet-azure"
-  },
   "tfsrequest": {
     "server_url": "http://tfs-request.21vbluecloud.com:8080/tfs",
     "collection": "DefaultCollection",
     "assignee_group": "PS",
     "default_assignee": "Michael Ma"
-  },
-  "webhook": {
-    "secret": ""
   }
 }

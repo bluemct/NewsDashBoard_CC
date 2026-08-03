@@ -14,7 +14,7 @@ PS Team 统一 Web 工作平台，集成 EDM 监听、EDM 看板、TFS 工单、
 cd PSWorkspace && python app.py
 ```
 
-配置：`PSWorkspace/ps_workspace_config.json`（端口、TFS PAT、认证等）
+配置：`PSWorkspace/ps_workspace_config.json`（端口、认证等）
 日志：`Log/ps_workspace.log`
 
 ## 持久化存储（SQLite）
@@ -37,8 +37,36 @@ cd PSWorkspace && python app.py
 |------|------|
 | EDM 监听 | EWS Streaming 实时推送，自动检测 EDM 邮件并保存到 `EDM/Temp/` |
 | EDM 看板 | 按 conversation_id 分组展示 EDM 处理进度（7 步流程），数据源来自 GitHub（bluemct/docs） |
-| TFS | Azure DevOps Webhook 日志、更新 Labor Time、查询工单 |
+| TFS | 内网 TFS 2010 Request 工单管理（查询、AI 分类、批量更新/Resolve） |
 | ICM | Microsoft ICM 工单创建/查询/批量操作/值班人员查询 |
+
+## TFS Request 2010 工单管理
+
+**仅保留内网 TFS 2010 Request 操作**，Azure DevOps REST API（Webhook、Labor Time、WorkItem 查询/更新）已移除。
+
+- **凭据来源**：`TfsRequestPS/TfsRequest.ps1` 使用当前 Windows 域账号凭据（NTLM/Kerberos 自动认证），无需手动配置
+- **后端调用**：`routes/tfs.py` → `_run_tfs_ps()` → `subprocess` 调用 PowerShell 脚本，传入 `-ConfigPath` 指向 `ps_workspace_config.json`
+- **配置**：`ps_workspace_config.json` 中的 `tfsrequest` 块（server_url, collection, assignee_group, default_assignee）
+
+### AI 自动分类
+
+- **Tier 1**：litellm + Qwen3.5-27B（支持批量分类，8000 char 分片）
+- **Tier 2**：关键词回退（17 个分类：GFS-PKI, GFS-Monitoring, PS-EDM 等）
+- **工作流**：`batch-classify`（AI 分析）→ 人工确认 → `batch-apply`（写回 TFS）
+- **Assign To**：从 TSGLog 提取发件人邮箱，映射到 PS 团队成员
+
+### API 路由
+
+| 路由 | 说明 |
+|------|------|
+| `GET /api/tfs/request/tickets` | 查询 Open 工单 |
+| `POST /api/tfs/request/classify` | AI 分类单条 |
+| `POST /api/tfs/request/batch-classify` | AI 批量分类 |
+| `POST /api/tfs/request/batch-apply` | 确认并批量更新 TFS |
+| `POST /api/tfs/request/update` | 更新单个工单 |
+| `POST /api/tfs/request/resolve` | Resolve 单条 |
+| `POST /api/tfs/request/batch-resolve` | 批量 Resolve |
+| `GET /api/tfs/request/get/<id>` | 获取单个工单详情 |
 
 ## EDM Agent 页面功能
 
@@ -115,11 +143,13 @@ EDM/SN-xxxxx/
 
 ICM 模块：**所有操作已转为纯 Python**（Token 验证、搜索、创建、单条操作、批量操作、值班查询、Token 刷新），**0 PowerShell 依赖**，速度快且支持中文。
 
+ICM 配置已统一到 `IcMHelper/icm_config.json`，不再使用 `IcMHelperPS/` 目录。
+
 ### 纯 Python API 调用函数
 
 | 函数 | 说明 |
 |------|------|
-| `_get_token()` | 读取 `IcMHelperPS/icm_config.json` 获取 access_token |
+| `_get_token()` | 读取 `IcMHelper/icm_config.json` 获取 access_token |
 | `_icm_get(url)` | GET 请求 api2，返回 `(data, status)`，空 body 返回 `{}` |
 | `_icm_post(url, body)` | POST 请求 api2，`ensure_ascii=False` + `charset=utf-8`，空 body 返回 `{}` |
 | `_icm_patch(url, body)` | PATCH 请求 api2，空 body 返回 `{}` |
@@ -140,10 +170,10 @@ ICM 模块：**所有操作已转为纯 Python**（Token 验证、搜索、创�
 ### Token 管理（自动 + 手动刷新）
 
 **自动刷新**：`_start_auto_refresh()` 在 `app.py` 启动时调用，启动守护线程：
-- 每 **15 分钟**检查 `IcMHelperPS/icm_config.json` 中 Token 的 JWT expiry
+- 每 **15 分钟**检查 `IcMHelper/icm_config.json` 中 Token 的 JWT expiry
 - 剩余时间 **< 1 小时**时自动调用 `_do_token_refresh()` 换新 Token
 - 每 **15 分钟**检查 `cookie_expires`，剩余 **< 48 小时**时主动发起刷新，尝试从 `Set-Cookie` 获取新 Cookie
-- 从 `IcMHelper/icm_config.json` 读取 CloudESAuthCookie → Portal SSO 换新 Token → 写入两个 config 文件
+- 从 `IcMHelper/icm_config.json` 读取 CloudESAuthCookie → Portal SSO 换新 Token → 写入 `IcMHelper/icm_config.json`
 - 日志记录：`ICM token auto-refresh: Token refreshed, expires in X min`
 
 **手动刷新**：前端 ICM 页面「刷新 Token」按钮 → POST `/api/icm/token/refresh`：
@@ -226,12 +256,12 @@ ICM 模块：**所有操作已转为纯 Python**（Token 验证、搜索、创�
 | `PSWorkspace/utils/task_queue.py` | SQLite 任务队列（tasks + edm_events + icm_token_history + activity_log 表），`run_task()` 支持 generator 进度，`list_icm_token_history(page, size)` 分页查询，`save_activity(category, title, detail, status)` / `list_activities(max)` 跨模块活动日志 |
 | `PSWorkspace/utils/script_runner.py` | PowerShell/Python 脚本运行器（ICM 模块已不再使用） |
 | `PSWorkspace/routes/edm.py` | EDM 路由，`_process()` 编排 3 步流程，`_discover_xlsx()` xlsx 精确发现 |
+| `PSWorkspace/routes/edm_eml.py` | EDM 路由（纯 Python 流程，当前使用） |
+| `PSWorkspace/routes/tfs.py` | TFS 2010 Request 工单管理（AI 分类 + PowerShell 调用，无 Azure DevOps REST API） |
 | `PSWorkspace/routes/icm.py` | ICM 路由，纯 Python `_icm_*` 辅助函数 + 共享 Helper + 自动 Token 刷新 + activity 日志 |
-| `PSWorkspace/routes/settings.py` | 配置管理 API，读取/写入 EDM（`.edm_agent_config.json`、`xlsx_search_dir.json`）、ICM（`IcMHelperPS/icm_config.json`）、AI（`.edm_agent_llm_config.json`）配置，敏感字段脱敏 |
+| `PSWorkspace/routes/settings.py` | 配置管理 API，读取/写入 EDM（`.edm_agent_config.json`、`xlsx_search_dir.json`）、ICM（`IcMHelper/icm_config.json`）、AI（`.edm_agent_llm_config.json`）配置，敏感字段脱敏 |
 | `PSWorkspace/routes/task.py` | 异步任务 API，新增 `GET /api/task/activities` 跨模块活动查询 |
-| `IcMHelper/icm_config.json` | ICM Token/Cookie 配置文件（手动更新源，Cookie 过期时从此文件更新） |
-| `IcMHelperPS/icm_config.json` | PS Workspace 使用的 ICM 配置（自动同步，刷新时自动更新） |
-| `IcMHelperPS/IcmApi.ps1` | ICM API PowerShell 封装（已弃用，ICM 模块已转为纯 Python） |
+| `IcMHelper/icm_config.json` | ICM Token/Cookie 配置文件（唯一配置源） |
 
 ## 设置页面（Settings）
 
@@ -240,11 +270,10 @@ ICM 模块：**所有操作已转为纯 Python**（Token 验证、搜索、创�
 | Tab | 管理的 JSON 文件 | 字段 |
 |-----|------------------|------|
 | EDM 配置 | `.edm_agent_config.json` + `xlsx_search_dir.json` | EWS URL、域账号、密码、邮箱、文件夹名、监听规则（sender/subject/body keywords）、输出目录、XLSX 检索目录 |
-| ICM Token & Cookie | `IcMHelperPS/icm_config.json` + `IcMHelper/icm_config.json` | Access Token（只读脱敏）、Cookie String、Cookie 过期时间 |
+| ICM Token & Cookie | `IcMHelper/icm_config.json` | Access Token（只读脱敏）、Cookie String、Cookie 过期时间 |
 | AI Model | `.edm_agent_llm_config.json` | Model、API Base、API Key、Timeout |
 
 - 密码/API Key 等敏感字段返回时脱敏（`_mask()`），写入时空值不覆盖原值
-- ICM 配置保存时双写到 `IcMHelper/` 和 `IcMHelperPS/`
 - 每次保存自动记录到 `activity_log` 表
 
 ## 活动日志（Activity Log）

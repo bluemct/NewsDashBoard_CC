@@ -132,7 +132,7 @@ def _do_token_refresh():
 
         # Write configs
         orig_cfg['access_token'] = new_token
-        ps_config_path = os.path.join(_get_project_root(), 'IcMHelperPS', 'icm_config.json')
+        ps_config_path = os.path.join(_get_project_root(), 'IcMHelper', 'icm_config.json')
         with open(orig_config_path, 'w', encoding='utf-8') as f:
             json.dump(orig_cfg, f, indent=2, ensure_ascii=False)
         with open(ps_config_path, 'w', encoding='utf-8') as f:
@@ -161,7 +161,7 @@ def _icm_auto_refresh_loop():
     cookie_refresh_threshold_hours = 48  # refresh cookie if < 48h remaining
     while True:
         try:
-            ps_config_path = os.path.join(_get_project_root(), 'IcMHelperPS', 'icm_config.json')
+            ps_config_path = os.path.join(_get_project_root(), 'IcMHelper', 'icm_config.json')
             with open(ps_config_path, 'r', encoding='utf-8') as f:
                 cfg = json.load(f)
             token = cfg.get('access_token', '')
@@ -250,7 +250,7 @@ def token_verify():
     cookie_expires_at = None
     try:
         # Load config
-        config_path = os.path.join(_get_project_root(), 'IcMHelperPS', 'icm_config.json')
+        config_path = os.path.join(_get_project_root(), 'IcMHelper', 'icm_config.json')
         with open(config_path, 'r', encoding='utf-8') as f:
             cfg = json.load(f)
 
@@ -388,7 +388,7 @@ def token_history():
 
 def _get_token():
     """Load access_token from config, return it."""
-    config_path = os.path.join(_get_project_root(), 'IcMHelperPS', 'icm_config.json')
+    config_path = os.path.join(_get_project_root(), 'IcMHelper', 'icm_config.json')
     with open(config_path, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
     return cfg.get('access_token', '')
