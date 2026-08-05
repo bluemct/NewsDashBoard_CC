@@ -25,3 +25,8 @@ SN-*/
 
 # ICM credentials (contains token and cookie)
 icm_config.json
+# Session snapshots (large, auto-generated)
+.session_snapshots/
+
+# EWS credentials (contains password)
+ews_config.json
