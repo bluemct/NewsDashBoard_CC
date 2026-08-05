@@ -163,13 +163,17 @@ def settings_icm_save():
 @require_auth
 def settings_ai_get():
     """GET /api/settings/ai - Read AI model config."""
-    root = _project_root()
-    cfg = _read_json(os.path.join(root, ".edm_agent_llm_config.json"))
+    ps_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # PSWorkspace/
+    try:
+        cfg = _read_json(os.path.join(ps_dir, ".edm_agent_llm_config.json"))
+    except FileNotFoundError:
+        cfg = {}
     return jsonify({
         "ok": True,
         "model": cfg.get("model", ""),
         "api_base": cfg.get("api_base", ""),
-        "api_key": _mask(cfg.get("api_key", "")),
+        "api_key": cfg.get("api_key", ""),
+        "api_key_masked": _mask(cfg.get("api_key", "")),
         "timeout": cfg.get("timeout", 30),
     })
 
@@ -178,13 +182,16 @@ def settings_ai_get():
 @require_auth
 def settings_ai_save():
     """POST /api/settings/ai - Save AI model config."""
-    root = _project_root()
+    ps_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # PSWorkspace/
     data = request.get_json() or {}
-    cfg = _read_json(os.path.join(root, ".edm_agent_llm_config.json"))
+    try:
+        cfg = _read_json(os.path.join(ps_dir, ".edm_agent_llm_config.json"))
+    except FileNotFoundError:
+        cfg = {}
 
     _merge(cfg, data)
 
-    _write_json(os.path.join(root, ".edm_agent_llm_config.json"), cfg)
+    _write_json(os.path.join(ps_dir, ".edm_agent_llm_config.json"), cfg)
 
     logger.info("AI model settings saved")
     task_queue.save_activity("settings", "AI Model 配置更新",

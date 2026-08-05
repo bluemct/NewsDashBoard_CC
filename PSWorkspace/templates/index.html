@@ -275,7 +275,15 @@
             </div>
             <div class="form-group">
               <label class="form-label">Assigned To</label>
-              <input type="text" class="form-input" id="tfsreq-edit-assigned" placeholder="Michael Ma">
+              <select class="form-select" id="tfsreq-edit-assigned">
+                <option value="">不修改</option>
+                <option value="Jerome Teng">Jerome Teng</option>
+                <option value="Jancy Qiao">Jancy Qiao</option>
+                <option value="Liu Wenya">Liu Wenya</option>
+                <option value="Michael Ma">Michael Ma</option>
+                <option value="Romy Ouyang">Romy Ouyang</option>
+                <option value="Su Hang3">Su Hang3</option>
+              </select>
             </div>
           </div>
 
@@ -664,7 +672,12 @@
       </div>
       <div class="form-group">
         <label class="form-label">API Key</label>
-        <input type="password" class="form-input" id="ai-api-key" placeholder="sk-xxx">
+        <div style="position:relative;">
+          <input type="password" class="form-input" id="ai-api-key" placeholder="sk-xxx" style="padding-right:40px;">
+          <input type="hidden" id="ai-api-key-full">
+          <button type="button" onclick="toggleApiKeyVisibility()" title="显示/隐藏 API Key"
+                  style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:16px; color:#9ca3af;">👁</button>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Timeout（秒）</label>
@@ -1531,6 +1544,9 @@ function renderClassifiedTable(classified) {
                       'PS-PAW','PS-Other','PS-Secret Store','PS-Server Security','PS-SNMPX'];
   var propertyOptions = propertyList
     .map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
+  var assigneeList = ['Jerome Teng','Jancy Qiao','Liu Wenya','Michael Ma','Romy Ouyang','Su Hang3'];
+  var assigneeOptions = '<option value="">默认 (Michael Ma)</option>' +
+    assigneeList.map(function(n) { return '<option value="' + n + '">' + n + '</option>'; }).join('');
 
   var aiHl = 'style="background:#fff3cd"';  // AI-analyzed (editable)
   var skipHl = 'style="background:#f3f4f6; color:#9ca3af;"';  // Skipped (read-only)
@@ -1588,7 +1604,9 @@ function renderClassifiedTable(classified) {
           stateBadge +
         '</td>' +
         '<td ' + aiHl + '>' +
-          '<input type="text" class="form-input" id="cls-at-' + i + '" value="' + escapeHtml(assignedTo) + '" style="min-width:110px" placeholder="默认处理人">' +
+          '<select class="form-select" style="min-width:110px" id="cls-at-' + i + '">' +
+            assigneeOptions.replace('value="' + assignedTo + '"', 'value="' + assignedTo + '" selected') +
+          '</select>' +
         '</td>' +
         '<td ' + aiHl + '>' +
           '<select class="form-select" style="min-width:140px" id="cls-prop-' + i + '">' +
@@ -1605,21 +1623,29 @@ function renderClassifiedTable(classified) {
   html += '</tbody></table></div>';
   container.innerHTML = html;
 
-  // Attach input listeners to detect changes and update feedback indicator
+  // Attach listeners to detect changes and update feedback indicator
   setTimeout(function() {
     for (var i = 0; i < classified.length; i++) {
       if (classified[i].skipped) continue;
-      var inputs = [
-        document.getElementById("cls-prop-" + i),
+      var textInputs = [
         document.getElementById("cls-sol-" + i),
-        document.getElementById("cls-wh-" + i),
+        document.getElementById("cls-wh-" + i)
+      ];
+      var selectInputs = [
+        document.getElementById("cls-prop-" + i),
         document.getElementById("cls-at-" + i)
       ];
-      for (var j = 0; j < inputs.length; j++) {
-        if (!inputs[j]) continue;
-        inputs[j].addEventListener("input", (function(idx, el) {
+      for (var j = 0; j < textInputs.length; j++) {
+        if (!textInputs[j]) continue;
+        textInputs[j].addEventListener("input", (function(idx) {
           return function() { _updateFeedbackIndicator(idx); };
-        })(i, inputs[j]));
+        })(i));
+      }
+      for (var k = 0; k < selectInputs.length; k++) {
+        if (!selectInputs[k]) continue;
+        selectInputs[k].addEventListener("change", (function(idx) {
+          return function() { _updateFeedbackIndicator(idx); };
+        })(i));
       }
     }
   }, 0);
@@ -1633,9 +1659,12 @@ function _updateFeedbackIndicator(i) {
   var curProp = document.getElementById("cls-prop-" + i).value;
   var curSol = document.getElementById("cls-sol-" + i).value;
   var curWh = document.getElementById("cls-wh-" + i).value;
+  var curAt = document.getElementById("cls-at-" + i).value;
+  var origAssigned = orig.suggestedAssignedTo || orig.assignedTo || "";
   var isChanged = (curProp !== orig.property) ||
                   (curSol !== orig.solution) ||
-                  (String(curWh) !== String(orig.workingHour));
+                  (String(curWh) !== String(orig.workingHour)) ||
+                  (curAt !== origAssigned);
   if (isChanged) {
     fbEl.innerHTML = '<span style="color:#16a34a;font-weight:bold;">● 已修改</span>';
   } else {
@@ -2564,11 +2593,15 @@ function loadOnCall() {
 /* ─── Auto-init on section enter ─────────────────────────── */
 var sectionInited = {};
 function initSection(name) {
+  if (name === 'settings') {
+    // Settings: always reload — user should always see fresh config
+    loadEdmSettings(); loadIcmSettings(); loadAiSettings();
+    return;
+  }
   if (sectionInited[name]) return;
   sectionInited[name] = true;
   if (name === 'edm-agent') { loadListenerStatus(); loadTempFiles(); }
   if (name === 'edm-dashboard') loadDashboard();
-  if (name === 'settings') { loadEdmSettings(); loadIcmSettings(); loadAiSettings(); }
 }
 
 /* ─── Dashboard auto-refresh ─────────────────────────────── */
@@ -2596,6 +2629,10 @@ function switchSettingsTab(name, el) {
   for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
   var target = document.getElementById("settings-" + name);
   if (target) target.classList.add("active");
+  // Always reload data when switching tabs so user always sees fresh values
+  if (name === 'edm') loadEdmSettings();
+  if (name === 'icm') loadIcmSettings();
+  if (name === 'ai') loadAiSettings();
 }
 
 function showSaveStatus(elementId, ok, message) {
@@ -2684,13 +2721,26 @@ function saveIcmSettings() {
 }
 
 /* ── AI Settings ── */
+function toggleApiKeyVisibility() {
+  var input = document.getElementById("ai-api-key");
+  var full = document.getElementById("ai-api-key-full").value;
+  if (input.type === "password") {
+    input.type = "text";
+    input.value = full;  // show full value
+  } else {
+    input.type = "password";
+    input.value = full.substring(0, 6) + "****";  // mask again
+  }
+}
+
 function loadAiSettings() {
   pswp.authenticatedFetch("/api/settings/ai")
     .then(function(r) { return r.json(); })
     .then(function(data) {
       document.getElementById("ai-model").value = data.model || "";
       document.getElementById("ai-api-base").value = data.api_base || "";
-      document.getElementById("ai-api-key").value = "";
+      document.getElementById("ai-api-key").value = data.api_key_masked || "";
+      document.getElementById("ai-api-key-full").value = data.api_key || "";
       document.getElementById("ai-timeout").value = data.timeout || 30;
     })
     .catch(function(e) { console.error("Failed to load AI settings:", e); });
@@ -2703,7 +2753,13 @@ function saveAiSettings() {
     timeout: parseInt(document.getElementById("ai-timeout").value) || 30,
   };
   var apiKey = document.getElementById("ai-api-key").value;
-  if (apiKey) body.api_key = apiKey;
+  var apiKeyFull = document.getElementById("ai-api-key-full").value;
+  // If user edited the field, use current value; otherwise use stored full value if different from masked
+  if (apiKey && apiKey !== "****" && apiKey !== apiKeyFull.substring(0, 6) + "****") {
+    body.api_key = apiKey;
+  } else if (apiKey === apiKeyFull) {
+    // User toggled to show, didn't change — no update needed, skip
+  }
 
   pswp.authenticatedFetch("/api/settings/ai", {
     method: "POST",

@@ -1,12 +1,15 @@
 """ICM module - pure Python ICM API client (no PowerShell)."""
 import os
+import sys
 import json
 import logging
 import base64
+import subprocess
 import urllib.request
 import urllib.error
 import threading
 import time
+import tempfile
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, g
 from routes.auth import require_auth
@@ -50,10 +53,13 @@ def _parse_jwt_expiry(token: str) -> datetime:
     return datetime.fromtimestamp(dec['exp'], tz=timezone.utc)
 
 
-def _do_token_refresh():
+def _do_token_refresh(auto_browser=True):
     """Refresh ICM token using Cookie.
     Returns dict with keys: ok, message, remaining_min, old_token, new_token, expires_at, obtained_at,
                             error_message, cookie_updated, cookie_expires_at
+
+    If auto_browser is True (default) and the cookie is expired, automatically
+    launches browser extraction to get a new cookie before retrying.
     """
     old_token = ""
     try:
@@ -70,6 +76,22 @@ def _do_token_refresh():
                 auth_cookie = trimmed[len("CloudESAuthCookie="):]
                 break
         if not auth_cookie:
+            # No cookie at all — if auto_browser enabled, extract one
+            if auto_browser:
+                logger.info("CloudESAuthCookie missing — auto-triggering browser extraction...")
+                extract_result = _browser_extract_cookie()
+                if extract_result.get("ok"):
+                    logger.info("Auto browser extract succeeded, retrying token refresh...")
+                    return _do_token_refresh(auto_browser=False)
+                else:
+                    logger.error("Auto browser extract failed: %s",
+                                 extract_result.get("error", "unknown"))
+                    return {"ok": False, "message": f"Browser extract failed: {extract_result.get('error','')}",
+                            "remaining_min": 0.0, "old_token": old_token, "new_token": "",
+                            "expires_at": "", "obtained_at": "",
+                            "error_message": f"Browser extract failed: {extract_result.get('error','')}",
+                            "cookie_updated": None, "cookie_expires_at": None}
+
             logger.error("Token refresh: CloudESAuthCookie not found")
             return {"ok": False, "message": "CloudESAuthCookie not found", "remaining_min": 0.0,
                     "old_token": old_token, "new_token": "", "expires_at": "", "obtained_at": "",
@@ -88,7 +110,34 @@ def _do_token_refresh():
         req.add_header('Referer', 'https://portal.microsofticm.com/imp/v3/')
         req.add_header('Cookie', f'CloudESAuthCookie={auth_cookie}')
 
-        resp = urllib.request.urlopen(req, timeout=30)
+        try:
+            resp = urllib.request.urlopen(req, timeout=30)
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode(errors='replace') if e.fp else ''
+            logger.warning("Token refresh HTTP %d: %s", e.code, error_body[:200])
+
+            # Cookie rejected by server — auto-trigger browser extraction to get a fresh one
+            if auto_browser:
+                logger.info("Cookie rejected by server (HTTP %d) — auto-triggering browser extraction...", e.code)
+                extract_result = _browser_extract_cookie()
+                if extract_result.get("ok"):
+                    logger.info("Auto browser extract succeeded, retrying token refresh...")
+                    return _do_token_refresh(auto_browser=False)
+                else:
+                    logger.error("Auto browser extract failed: %s",
+                                 extract_result.get("error", "unknown"))
+                    return {"ok": False, "message": f"Browser extract failed: {extract_result.get('error','')}",
+                            "remaining_min": 0.0, "old_token": old_token, "new_token": "",
+                            "expires_at": "", "obtained_at": "",
+                            "error_message": f"Browser extract failed: {extract_result.get('error','')}",
+                            "cookie_updated": None, "cookie_expires_at": None}
+
+            return {"ok": False, "message": f"HTTP {e.code}: {error_body[:200]}",
+                    "remaining_min": 0.0, "old_token": old_token, "new_token": "",
+                    "expires_at": "", "obtained_at": "",
+                    "error_message": f"HTTP {e.code}: {error_body[:200]}",
+                    "cookie_updated": None, "cookie_expires_at": None}
+
         resp_body = json.loads(resp.read().decode('utf-8'))
         new_token = resp_body.get('access_token', '')
         if not new_token:
@@ -155,16 +204,155 @@ def _do_token_refresh():
                 "error_message": str(e), "cookie_updated": None, "cookie_expires_at": None}
 
 
+def _is_cookie_expired_or_missing():
+    """Check if the CloudESAuthCookie is missing from config.
+
+    Note: Does NOT check expiry — expiry is handled separately by the auto-refresh
+    loop which attempts API cookie renewal first before resorting to browser.
+
+    Returns:
+        (missing: bool, reason: str) — True + reason if cookie is absent.
+    """
+    try:
+        config_path = os.path.join(_get_project_root(), 'IcMHelper', 'icm_config.json')
+        with open(config_path, 'r', encoding='utf-8') as f:
+            cfg = json.load(f)
+
+        cookie_string = cfg.get('cookie_string', '')
+        auth_cookie = None
+        for part in cookie_string.split(';'):
+            trimmed = part.strip()
+            if trimmed.startswith("CloudESAuthCookie="):
+                auth_cookie = trimmed[len("CloudESAuthCookie="):]
+                break
+        if not auth_cookie:
+            return True, "CloudESAuthCookie not found in config"
+
+        return False, ""
+    except Exception as e:
+        logger.warning("Cookie check failed: %s", e)
+        return False, ""
+
+
+def _browser_extract_cookie(config_path=None, force_fresh=False):
+    """Launch icm_cookie_extractor.py to extract CloudESAuthCookie via browser.
+
+    Args:
+        config_path: Path to icm_config.json. If None, defaults to IcMHelper/icm_config.json.
+        force_fresh: If True, pass --force-fresh to skip reusing stale Edge profiles.
+
+    Returns:
+        dict with keys: ok, cookie_string, cookie_expires
+    """
+    if config_path is None:
+        config_path = os.path.join(_get_project_root(), 'IcMHelper', 'icm_config.json')
+    config_dir = os.path.dirname(config_path)
+
+    # Find the extractor script (one level up from PSWorkspace/)
+    project_root = _get_project_root()
+    extractor_script = os.path.join(project_root, 'icm_cookie_extractor.py')
+
+    # Create a temp result file
+    result_dir = tempfile.gettempdir()
+    result_file = os.path.join(result_dir, 'icm_cookie_extract_result.json')
+
+    cmd = [
+        sys.executable or 'python', extractor_script,
+        '--extract', result_file,
+        '--config-dir', config_dir,
+    ]
+    if force_fresh:
+        cmd.append('--force-fresh')
+
+    logger.info("Starting browser cookie extractor: %s", " ".join(cmd))
+
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    except subprocess.TimeoutExpired:
+        logger.error("Browser cookie extractor timed out after 300s")
+        return {"ok": False, "cookie_string": "", "cookie_expires": "",
+                "error": "Extraction timed out"}
+    except Exception as e:
+        logger.error("Browser cookie extractor failed: %s", e)
+        return {"ok": False, "cookie_string": "", "cookie_expires": "",
+                "error": str(e)}
+
+    logger.info("Extractor exited with code %d", proc.returncode)
+    if proc.stdout.strip():
+        logger.debug("Extractor stdout: %s", proc.stdout[-500:])
+    if proc.stderr.strip():
+        logger.debug("Extractor stderr: %s", proc.stderr[-500:])
+
+    # Read result
+    try:
+        with open(result_file, 'r', encoding='utf-8') as f:
+            result = json.load(f)
+        if result.get('ok'):
+            # Validate: if extracted cookie is expired, retry with a fresh Edge
+            cookie_exp_str = result.get('cookie_expires')
+            if cookie_exp_str:
+                try:
+                    cookie_exp = datetime.fromisoformat(cookie_exp_str)
+                    if cookie_exp.tzinfo is None:
+                        cookie_exp = cookie_exp.replace(tzinfo=timezone.utc)
+                    remaining_hours = (cookie_exp - datetime.now(tz=timezone.utc)).total_seconds() / 3600
+                    if remaining_hours < 0.5 and not force_fresh:
+                        # Cookie expired — stale Edge cache, retry with fresh Edge
+                        logger.info("Extracted cookie expired (%.1fh) — stale Edge cache, retrying with --force-fresh...",
+                                    remaining_hours)
+                        return _browser_extract_cookie(config_path, force_fresh=True)
+                except Exception as e:
+                    logger.debug("Could not parse extracted cookie expiry: %s", e)
+
+            logger.info("Browser cookie extraction succeeded")
+            return {
+                "ok": True,
+                "cookie_string": result.get("cookie_string", ""),
+                "cookie_expires": result.get("cookie_expires", ""),
+                "cookie_value": result.get("cookie_value", ""),
+            }
+        else:
+            logger.error("Browser cookie extraction failed: %s", result.get('error', 'unknown'))
+            return {"ok": False, "cookie_string": "", "cookie_expires": "",
+                    "error": result.get('error', 'extraction failed')}
+    except Exception as e:
+        logger.error("Failed to read extract result: %s", e)
+        return {"ok": False, "cookie_string": "", "cookie_expires": "",
+                "error": str(e)}
+
+
 def _icm_auto_refresh_loop():
     """Daemon loop: every 15 min, check token and cookie expiry → auto-refresh as needed."""
     check_interval = 15 * 60  # 15 minutes
-    cookie_refresh_threshold_hours = 48  # refresh cookie if < 48h remaining
+    cookie_refresh_threshold_hours = 48  # attempt cookie refresh if < 48h remaining
+    cookie_browser_threshold_hours = 2   # launch browser if < 2h remaining
+    cookie_exhausted = False              # True once we gave up on browser extract
     while True:
         try:
             ps_config_path = os.path.join(_get_project_root(), 'IcMHelper', 'icm_config.json')
             with open(ps_config_path, 'r', encoding='utf-8') as f:
                 cfg = json.load(f)
             token = cfg.get('access_token', '')
+
+            # ── Check cookie health first — without cookie, nothing works ──
+            cookie_expired, cookie_reason = _is_cookie_expired_or_missing()
+            if cookie_expired:
+                logger.info("ICM cookie unhealthy: %s — attempting browser extraction...", cookie_reason)
+                extract_result = _browser_extract_cookie()
+                if extract_result.get("ok"):
+                    logger.info("ICM cookie browser extraction succeeded in auto-refresh")
+                    # After getting cookie, try token refresh if no token
+                    if not token:
+                        result = _do_token_refresh(auto_browser=False)
+                        if result["ok"]:
+                            logger.info("ICM token refreshed after cookie recovery: %s", result["message"])
+                        else:
+                            logger.error("ICM token refresh after cookie recovery failed: %s", result["message"])
+                        _record_token_history(result, "auto-cookie-recovery")
+                else:
+                    logger.warning("ICM cookie browser extraction failed in auto-refresh: %s — will retry next cycle",
+                                   extract_result.get("error", "unknown"))
+
             if not token:
                 time.sleep(check_interval)
                 continue
@@ -183,34 +371,42 @@ def _icm_auto_refresh_loop():
                     logger.error("ICM token auto-refresh failed: %s", result["message"])
                     _record_token_history(result, "auto")
 
-            # ── Check cookie expiry ──
-            cookie_expires_str = cfg.get('cookie_expires', '')
-            if cookie_expires_str:
-                try:
-                    cookie_exp = datetime.fromisoformat(cookie_expires_str)
-                    if cookie_exp.tzinfo is None:
-                        cookie_exp = cookie_exp.replace(tzinfo=timezone.utc)
-                    cookie_remaining_hours = (cookie_exp - datetime.now(tz=timezone.utc)).total_seconds() / 3600
-                    if cookie_remaining_hours < cookie_refresh_threshold_hours:
-                        logger.info("ICM cookie expiring in %.1f h (<%dh), attempting cookie refresh...",
-                                    cookie_remaining_hours, cookie_refresh_threshold_hours)
-                        result = _do_token_refresh()
-                        if result["ok"] and result.get("cookie_updated") == "yes":
-                            logger.info("ICM cookie auto-refresh: got new cookie, expires %s",
-                                        result.get("cookie_expires_at", "unknown"))
-                            _record_token_history(result, "auto-cookie")
-                        elif result["ok"]:
-                            logger.info("ICM cookie refresh: token refreshed but no new cookie from API")
-                            _record_token_history(result, "auto-cookie")
+            # ── Proactive cookie refresh — only if cookie is currently healthy ──
+            if not cookie_expired:
+                cookie_expires_str = cfg.get('cookie_expires', '')
+                if cookie_expires_str:
+                    try:
+                        cookie_exp = datetime.fromisoformat(cookie_expires_str)
+                        if cookie_exp.tzinfo is None:
+                            cookie_exp = cookie_exp.replace(tzinfo=timezone.utc)
+                        cookie_remaining_hours = (cookie_exp - datetime.now(tz=timezone.utc)).total_seconds() / 3600
+
+                        if cookie_remaining_hours < cookie_browser_threshold_hours and not cookie_exhausted:
+                            logger.info("ICM cookie critically low (%.1f h < %dh) — cookie is dead, browser extraction handled above",
+                                        cookie_remaining_hours, cookie_browser_threshold_hours)
+                            cookie_exhausted = True
+                        elif cookie_remaining_hours < cookie_refresh_threshold_hours:
+                            logger.info("ICM cookie expiring in %.1f h (<%dh), attempting API cookie refresh...",
+                                        cookie_remaining_hours, cookie_refresh_threshold_hours)
+                            result = _do_token_refresh()
+                            if result["ok"] and result.get("cookie_updated") == "yes":
+                                logger.info("ICM cookie auto-refresh: got new cookie, expires %s",
+                                            result.get("cookie_expires_at", "unknown"))
+                                cookie_exhausted = False  # reset
+                                _record_token_history(result, "auto-cookie")
+                            elif result["ok"]:
+                                logger.info("ICM cookie refresh: token refreshed but no new cookie from API")
+                                _record_token_history(result, "auto-cookie")
+                            else:
+                                logger.error("ICM cookie refresh failed: %s", result["message"])
+                                _record_token_history(result, "auto-cookie")
                         else:
-                            logger.error("ICM cookie refresh failed: %s", result["message"])
-                            _record_token_history(result, "auto-cookie")
-                    else:
-                        logger.debug("ICM cookie OK: %.0f h remaining", cookie_remaining_hours)
-                except Exception as e:
-                    logger.debug("Failed to parse cookie expiry [%s]: %s", cookie_expires_str, e)
-            else:
-                logger.debug("ICM cookie: no cookie_expires in config, skipping cookie check")
+                            logger.debug("ICM cookie OK: %.0f h remaining", cookie_remaining_hours)
+                            cookie_exhausted = False  # reset when healthy
+                    except Exception as e:
+                        logger.debug("Failed to parse cookie expiry [%s]: %s", cookie_expires_str, e)
+                else:
+                    logger.debug("ICM cookie: no cookie_expires in config (cookie value exists, skipping proactive check)")
 
         except Exception as e:
             logger.error("ICM auto-refresh check error: %s", e)
@@ -328,6 +524,53 @@ def token_refresh():
     else:
         task_queue.save_activity("icm", "ICM Token 刷新失败", result["message"], "error")
         return jsonify({"ok": False, "error": result["message"]}), 500
+
+
+@icm_bp.route('/token/browser-extract', methods=['POST'])
+@require_auth
+def browser_extract():
+    """POST /api/icm/token/browser-extract - Launch browser to extract CloudESAuthCookie.
+
+    Launches icm_cookie_extractor.py which opens Edge, navigates to ICM,
+    waits for user login, extracts cookie, writes to icm_config.json,
+    then refreshes the token.
+
+    This is a blocking call — response returns after extraction completes (up to 300s).
+    """
+    logger.info("Browser cookie extract requested by user")
+
+    # Step 1: Extract cookie via browser
+    extract_result = _browser_extract_cookie()
+    if not extract_result.get("ok"):
+        error = extract_result.get("error", "unknown")
+        task_queue.save_activity("icm", "ICM Cookie 浏览器提取失败", error, "error")
+        return jsonify({"ok": False, "error": error, "stage": "extract"}), 500
+
+    task_queue.save_activity("icm", "ICM Cookie 浏览器提取成功",
+                             f"Cookie: {extract_result.get('cookie_string','')[:60]}...", "ok")
+
+    # Step 2: Now try to refresh token with the new cookie
+    token_result = _do_token_refresh()
+    _record_token_history(token_result, "browser-extract")
+    if token_result["ok"]:
+        task_queue.save_activity("icm", "ICM Token 刷新成功（浏览器提取后）",
+                                 f"剩余 {token_result['remaining_min']:.0f} 分钟", "ok")
+        return jsonify({
+            "ok": True,
+            "message": token_result["message"],
+            "remaining_minutes": round(token_result["remaining_min"], 1),
+            "cookie_expires": extract_result.get("cookie_expires"),
+        })
+    else:
+        # Cookie was extracted but token refresh failed — partial success
+        task_queue.save_activity("icm", "ICM Cookie 提取成功但 Token 刷新失败",
+                                 token_result.get("error_message", ""), "error")
+        return jsonify({
+            "ok": True,  # cookie was extracted, token failure may be transient
+            "message": f"Cookie extracted, but token refresh failed: {token_result.get('error_message','')}",
+            "cookie_expires": extract_result.get("cookie_expires"),
+            "token_refresh_failed": True,
+        })
 
 
 # ─── Token History Helpers ────────────────────────────────────
