@@ -98,6 +98,58 @@ def init(db_path: str):
                 created_at         REAL NOT NULL
             )
         """)
+        # Calendar: meeting rooms info
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS meeting_rooms (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                email       TEXT UNIQUE NOT NULL,
+                name        TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                capacity    INTEGER DEFAULT 0,
+                created_at  REAL NOT NULL
+            )
+        """)
+        # Calendar: recurring booking plans
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS recurring_plans (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                name           TEXT NOT NULL,
+                room_email     TEXT NOT NULL,
+                subject        TEXT NOT NULL,
+                day_of_week    INTEGER NOT NULL,
+                start_time     TEXT NOT NULL,
+                end_time       TEXT NOT NULL,
+                max_days_ahead INTEGER NOT NULL DEFAULT 30,
+                enabled        INTEGER NOT NULL DEFAULT 1,
+                created_at     REAL NOT NULL
+            )
+        """)
+        # Calendar: booking history
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS booking_history (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                room_email  TEXT NOT NULL,
+                subject     TEXT NOT NULL,
+                date        TEXT NOT NULL,
+                start_time  TEXT NOT NULL,
+                end_time    TEXT NOT NULL,
+                attendees   TEXT NOT NULL DEFAULT '',
+                source      TEXT NOT NULL DEFAULT 'manual',
+                plan_id     INTEGER,
+                status      TEXT NOT NULL DEFAULT 'booked',
+                created_at  REAL NOT NULL
+            )
+        """)
+        # Calendar: AI suggestions
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS ai_suggestions (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                suggestion  TEXT NOT NULL,
+                reason      TEXT NOT NULL DEFAULT '',
+                action      TEXT NOT NULL DEFAULT 'pending',
+                created_at  REAL NOT NULL
+            )
+        """)
         conn.commit()
         conn.close()
     logger.info(f"[task_queue] SQLite initialized at {db_path}")
@@ -526,3 +578,214 @@ def tfs_feedback_stats() -> dict:
             "diff_count": diff_count,   # human corrected
             "agree_count": agree_count,  # human agreed
         }
+
+
+# ─── Calendar: Meeting Rooms ─────────────────────────────────
+
+
+def get_meeting_rooms() -> list:
+    """List all meeting rooms."""
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT * FROM meeting_rooms ORDER BY name").fetchall()
+        conn.close()
+    return [dict(r) for r in rows]
+
+
+def upsert_meeting_room(email: str, name: str, description: str = "", capacity: int = 0):
+    """Insert or update a meeting room."""
+    with _lock:
+        conn = _conn()
+        conn.execute("""
+            INSERT INTO meeting_rooms (email, name, description, capacity, created_at)
+            VALUES (?,?,?,?,?)
+            ON CONFLICT(email) DO UPDATE SET
+                name=excluded.name, description=excluded.description, capacity=excluded.capacity
+        """, (email, name, description, capacity, time.time()))
+        conn.commit()
+        conn.close()
+
+
+# ─── Calendar: Recurring Plans ───────────────────────────────
+
+
+def create_recurring_plan(name: str, room_email: str, subject: str,
+                          day_of_week: int, start_time: str, end_time: str,
+                          max_days_ahead: int = 30) -> int:
+    """Create a recurring booking plan. Returns plan id."""
+    with _lock:
+        conn = _conn()
+        cursor = conn.execute("""
+            INSERT INTO recurring_plans (name, room_email, subject, day_of_week,
+                                         start_time, end_time, max_days_ahead, created_at)
+            VALUES (?,?,?,?,?,?,?,?)
+        """, (name, room_email, subject, day_of_week, start_time, end_time, max_days_ahead, time.time()))
+        plan_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+    return plan_id
+
+
+def list_recurring_plans() -> list:
+    """List all recurring plans."""
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT * FROM recurring_plans ORDER BY id").fetchall()
+        conn.close()
+    return [dict(r) for r in rows]
+
+
+def toggle_recurring_plan(plan_id: int, enabled: int):
+    """Enable/disable a recurring plan."""
+    with _lock:
+        conn = _conn()
+        conn.execute("UPDATE recurring_plans SET enabled=? WHERE id=?", (enabled, plan_id))
+        conn.commit()
+        conn.close()
+
+
+def delete_recurring_plan(plan_id: int):
+    """Delete a recurring plan."""
+    with _lock:
+        conn = _conn()
+        conn.execute("DELETE FROM recurring_plans WHERE id=?", (plan_id,))
+        conn.commit()
+        conn.close()
+
+
+# ─── Calendar: Booking History ───────────────────────────────
+
+
+def save_booking(room_email: str, subject: str, date: str, start_time: str,
+                 end_time: str, attendees: str = "", source: str = "manual",
+                 plan_id: int = None, status: str = "booked"):
+    """Save a booking record. Returns booking id."""
+    with _lock:
+        conn = _conn()
+        cursor = conn.execute("""
+            INSERT INTO booking_history (room_email, subject, date, start_time, end_time,
+                                         attendees, source, plan_id, status, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+        """, (room_email, subject, date, start_time, end_time,
+              attendees, source, plan_id, status, time.time()))
+        booking_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+    return booking_id
+
+
+def list_bookings(page: int = 1, page_size: int = 30, source: str = None) -> dict:
+    """List booking history with pagination, newest first."""
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        if source:
+            total = conn.execute(
+                "SELECT COUNT(*) FROM booking_history WHERE source=?", (source,)).fetchone()[0]
+            rows = conn.execute(
+                "SELECT * FROM booking_history WHERE source=? ORDER BY id DESC LIMIT ? OFFSET ?",
+                (source, page_size, (page - 1) * page_size)).fetchall()
+        else:
+            total = conn.execute("SELECT COUNT(*) FROM booking_history").fetchone()[0]
+            rows = conn.execute(
+                "SELECT * FROM booking_history ORDER BY id DESC LIMIT ? OFFSET ?",
+                (page_size, (page - 1) * page_size)).fetchall()
+        conn.close()
+    pages = max(1, (total + page_size - 1) // page_size)
+    data = []
+    for r in rows:
+        d = dict(r)
+        d["created_at_str"] = datetime.fromtimestamp(d["created_at"]).isoformat()
+        data.append(d)
+    return {"total": total, "page": page, "page_size": page_size,
+            "pages": pages, "data": data}
+
+
+def get_upcoming_bookings(days: int = 7) -> list:
+    """Get upcoming bookings in the next N days."""
+    from datetime import date, timedelta
+    today = date.today().isoformat()
+    future = (date.today() + timedelta(days=days)).isoformat()
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT * FROM booking_history WHERE date >= ? AND date <= ? AND status='booked' "
+            "ORDER BY date, start_time",
+            (today, future)).fetchall()
+        conn.close()
+    data = []
+    for r in rows:
+        d = dict(r)
+        d["created_at_str"] = datetime.fromtimestamp(d["created_at"]).isoformat()
+        data.append(d)
+    return data
+
+
+# ─── Calendar: AI Suggestions ────────────────────────────────
+
+
+def save_ai_suggestion(suggestion: str, reason: str):
+    """Save an AI suggestion. Returns suggestion id."""
+    with _lock:
+        conn = _conn()
+        cursor = conn.execute("""
+            INSERT INTO ai_suggestions (suggestion, reason, action, created_at)
+            VALUES (?,?, 'pending', ?)
+        """, (suggestion, reason, time.time()))
+        suggestion_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+    return suggestion_id
+
+
+def list_ai_suggestions() -> list:
+    """List all AI suggestions, newest first."""
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT * FROM ai_suggestions ORDER BY id DESC").fetchall()
+        conn.close()
+    data = []
+    for r in rows:
+        d = dict(r)
+        d["created_at_str"] = datetime.fromtimestamp(d["created_at"]).isoformat()
+        data.append(d)
+    return data
+
+
+def respond_ai_suggestion(suggestion_id: int, action: str):
+    """Accept or ignore an AI suggestion."""
+    with _lock:
+        conn = _conn()
+        conn.execute(
+            "UPDATE ai_suggestions SET action=? WHERE id=?",
+            (action, suggestion_id))
+        conn.commit()
+        conn.close()
+
+
+def get_booking_stats() -> dict:
+    """Get booking statistics for AI analysis."""
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        total = conn.execute("SELECT COUNT(*) FROM booking_history").fetchone()[0]
+        rooms = conn.execute(
+            "SELECT room_email, COUNT(*) as cnt FROM booking_history "
+            "GROUP BY room_email ORDER BY cnt DESC").fetchall()
+        times = conn.execute(
+            "SELECT start_time, COUNT(*) as cnt FROM booking_history "
+            "GROUP BY start_time ORDER BY cnt DESC").fetchall()
+        sources = conn.execute(
+            "SELECT source, COUNT(*) as cnt FROM booking_history "
+            "GROUP BY source").fetchall()
+        conn.close()
+    return {
+        "total": total,
+        "rooms": [dict(r) for r in rooms],
+        "times": [dict(r) for r in times],
+        "sources": [dict(r) for r in sources],
+    }

@@ -26,6 +26,10 @@
       <div class="stat-value">&#128737;</div>
       <div class="stat-label">ICM 工单<br><small>创建、管理 ICM 事件</small></div>
     </div>
+    <div class="stat-card" onclick="pswp.navigate('calendar')" style="cursor:pointer">
+      <div class="stat-value">&#128197;</div>
+      <div class="stat-label">会议室预定<br><small>预约、管理会议室</small></div>
+    </div>
   </div>
 
   <!-- Recent Activity -->
@@ -47,7 +51,7 @@
     <div class="card-header">
       <div class="card-title">即将上线</div>
     </div>
-    <div class="grid-3">
+    <div class="grid-2">
       <div style="text-align:center; padding:16px; color:var(--color-text-secondary)">
         <div style="font-size:32px; margin-bottom:8px">&#129302;</div>
         <strong>AIQC</strong>
@@ -57,11 +61,6 @@
         <div style="font-size:32px; margin-bottom:8px">&#127891;</div>
         <strong>出题大师</strong>
         <p style="font-size:12px; margin-top:4px">智能出题系统</p>
-      </div>
-      <div style="text-align:center; padding:16px; color:var(--color-text-secondary)">
-        <div style="font-size:32px; margin-bottom:8px">&#128197;</div>
-        <strong>会议室预定</strong>
-        <p style="font-size:12px; margin-top:4px">会议室预约管理</p>
       </div>
     </div>
   </div>
@@ -693,6 +692,163 @@
 </div>
 </div>
 
+<!-- ═══ Calendar Section ═══ -->
+<div class="page-section" id="page-calendar">
+<div style="width:100%; max-width:1500px;">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">&#128197; 会议室预定</div>
+        <div class="card-subtitle">查询空闲、预定会议室、管理重复计划</div>
+      </div>
+    </div>
+
+    <!-- Sub-tabs -->
+    <div class="tabs" id="calendar-tabs">
+      <div class="tab active" onclick="switchCalendarTab('manual', this)">&#127970; 手动预定</div>
+      <div class="tab" onclick="switchCalendarTab('recurring', this)">&#128197; 重复计划</div>
+      <div class="tab" onclick="switchCalendarTab('history', this)">&#128203; 预定历史</div>
+      <div class="tab" onclick="switchCalendarTab('ai', this)">&#129302; AI 分析</div>
+    </div>
+
+    <!-- ═══ Tab: Manual Booking ═══ -->
+    <div class="tab-content active" id="calendar-manual">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">会议室 *</label>
+          <select class="form-select" id="cal-room-select">
+            <option value="">-- 选择会议室 --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">日期 *</label>
+          <input type="date" class="form-input" id="cal-date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">开始时间 *</label>
+          <select class="form-select" id="cal-start-time"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">结束时间 *</label>
+          <select class="form-select" id="cal-end-time"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">会议标题 *</label>
+        <input type="text" class="form-input" id="cal-subject" placeholder="输入会议标题">
+      </div>
+      <div class="form-group">
+        <label class="form-label">参会人（可选，分号分隔）</label>
+        <input type="text" class="form-input" id="cal-attendees" placeholder="a@x.com;b@x.com">
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary" onclick="calCheckFreeBusy()">&#128260; 查询空闲</button>
+        <button class="btn btn-primary" onclick="calBookMeeting()">&#10004; 预定会议室</button>
+      </div>
+      <div id="cal-freebusy-result" style="margin-top:16px;"></div>
+      <div id="cal-book-result" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- ═══ Tab: Recurring Plans ═══ -->
+    <div class="tab-content" id="calendar-recurring">
+      <div style="margin-bottom:16px;">
+        <button class="btn btn-primary" onclick="showCreatePlanForm()">&#10133; 新建计划</button>
+        <span style="margin-left:12px; font-size:13px; color:var(--color-text-secondary);">
+          公司规定最多提前 30 天预定，计划会自动检查并补订未定时段
+        </span>
+      </div>
+
+      <!-- Create Plan Form (hidden by default) -->
+      <div id="create-plan-form" style="display:none; margin-bottom:16px; padding:16px; background:var(--color-bg-secondary); border-radius:8px; border:1px solid var(--color-border);">
+        <div class="card-title" style="font-size:14px; margin-bottom:12px;">新建重复预定计划</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">计划名称 *</label>
+            <input type="text" class="form-input" id="plan-name" placeholder="Azure Manager Sync">
+          </div>
+          <div class="form-group">
+            <label class="form-label">会议室 *</label>
+            <select class="form-select" id="plan-room-select">
+              <option value="">-- 选择会议室 --</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">会议标题 *</label>
+          <input type="text" class="form-input" id="plan-subject" placeholder="Azure Manager Sync Meeting">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">每周 *</label>
+            <select class="form-select" id="plan-day">
+              <option value="1">星期一</option>
+              <option value="2">星期二</option>
+              <option value="3">星期三</option>
+              <option value="4" selected>星期四</option>
+              <option value="5">星期五</option>
+              <option value="6">星期六</option>
+              <option value="7">星期日</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">开始时间 *</label>
+            <input type="time" class="form-input" id="plan-start" value="15:00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">结束时间 *</label>
+            <input type="time" class="form-input" id="plan-end" value="17:00">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" onclick="createRecurringPlan()">&#10004; 创建计划</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('create-plan-form').style.display='none'">取消</button>
+        </div>
+        <div id="plan-create-result" style="margin-top:8px;"></div>
+      </div>
+
+      <!-- Plans List -->
+      <div id="plan-check-result" style="margin-bottom:12px;"></div>
+      <div id="recurring-plans-list"></div>
+    </div>
+
+    <!-- ═══ Tab: Booking History ═══ -->
+    <div class="tab-content" id="calendar-history">
+      <div style="margin-bottom:12px; display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-secondary btn-sm" onclick="loadBookingHistory()">&#128260; 刷新</button>
+        <select class="form-select" id="cal-history-filter" style="width:140px; padding:4px 8px; font-size:12px;" onchange="loadBookingHistory()">
+          <option value="">全部来源</option>
+          <option value="manual">手动预定</option>
+          <option value="recurring">重复计划</option>
+          <option value="ai-suggested">AI 建议</option>
+        </select>
+      </div>
+      <div id="booking-history-container">
+        <div class="empty-state"><div class="icon">&#128197;</div><p>切换到此标签页自动加载</p></div>
+      </div>
+    </div>
+
+    <!-- ═══ Tab: AI Analysis ═══ -->
+    <div class="tab-content" id="calendar-ai">
+      <div style="margin-bottom:16px;">
+        <button class="btn btn-primary" onclick="calAiAnalyze()">&#129302; AI 智能分析</button>
+        <span style="margin-left:12px; font-size:13px; color:var(--color-text-secondary);">
+          基于你的预定习惯，AI 分析并给出预定建议
+        </span>
+      </div>
+      <div id="cal-ai-result"></div>
+      <div style="margin-top:20px;">
+        <div class="card-title" style="font-size:14px; margin-bottom:8px;">AI 建议记录</div>
+        <div id="cal-ai-suggestions">
+          <div class="empty-state"><p>点击 "AI 智能分析" 开始</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -723,6 +879,7 @@ function loadRecentTasks() {
         dashboard: '⌨',
         tfs: '✍',
         icm: '🔒',
+        calendar: '🗓',
         settings: '⚙'
       };
       var catLabels = {
@@ -730,6 +887,7 @@ function loadRecentTasks() {
         dashboard: '看板',
         tfs: 'TFS',
         icm: 'ICM',
+        calendar: '会议室',
         settings: '设置'
       };
       var html = '<div class="table-container"><table><thead><tr>' +
@@ -2602,6 +2760,17 @@ function initSection(name) {
   sectionInited[name] = true;
   if (name === 'edm-agent') { loadListenerStatus(); loadTempFiles(); }
   if (name === 'edm-dashboard') loadDashboard();
+  if (name === 'calendar') {
+    // Set default date to today & load rooms
+    var today = new Date();
+    var yyyy = today.getFullYear();
+    var mm = String(today.getMonth() + 1).padStart(2, '0');
+    var dd = String(today.getDate()).padStart(2, '0');
+    var calDateEl = document.getElementById("cal-date");
+    if (calDateEl) calDateEl.value = yyyy + '-' + mm + '-' + dd;
+    // Load rooms so dropdown is populated on first visit
+    loadCalRooms();
+  }
 }
 
 /* ─── Dashboard auto-refresh ─────────────────────────────── */
@@ -2770,6 +2939,530 @@ function saveAiSettings() {
     showSaveStatus("ai-save-status", data.ok !== false, data.message || (data.ok ? "保存成功" : "保存失败"));
   })
   .catch(function(e) { showSaveStatus("ai-save-status", false, e.message); });
+}
+
+/* ─── Calendar Functions ──────────────────────────────────── */
+var calRooms = [];
+
+function switchCalendarTab(name, el) {
+  var tabs = document.querySelectorAll("#calendar-tabs .tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  if (el) el.classList.add("active");
+  var contents = document.querySelectorAll("#page-calendar .tab-content");
+  for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
+  var target = document.getElementById("calendar-" + name);
+  if (target) target.classList.add("active");
+
+  if (name === 'manual') loadCalRooms();
+  if (name === 'recurring') { loadCalRooms(); loadRecurringPlans(); }
+  if (name === 'history') loadBookingHistory();
+  if (name === 'ai') loadAiSuggestions();
+}
+
+function loadCalRooms() {
+  // 直接硬编码会议室列表，不需要调用 API
+  calRooms = [
+    { email: '13-1@oe.21vianet.com', name: '13-1', description: '大会议室，能容纳12人', capacity: 12 },
+    { email: '13-3@oe.21vianet.com', name: '13-3', description: '每周 Azure Manager Sync Meeting', capacity: 0 },
+    { email: '13-4@oe.21vianet.com', name: '13-4', description: 'PS Team 每周 Free Talk', capacity: 0 }
+  ];
+  // Populate manual booking room select
+  var sel = document.getElementById("cal-room-select");
+  if (sel) {
+    var current = sel.value;
+    sel.innerHTML = '<option value="">-- 选择会议室 --</option>';
+    for (var i = 0; i < calRooms.length; i++) {
+      var r = calRooms[i];
+      var desc = r.description ? ' — ' + r.description : '';
+      sel.innerHTML += '<option value="' + r.email + '">' + r.name + desc + '</option>';
+    }
+    if (!current) sel.value = '';
+  }
+  // Populate plan room select
+  var psel = document.getElementById("plan-room-select");
+  if (psel) {
+    var pcurrent = psel.value;
+    psel.innerHTML = '<option value="">-- 选择会议室 --</option>';
+    for (var i = 0; i < calRooms.length; i++) {
+      var r = calRooms[i];
+      psel.innerHTML += '<option value="' + r.email + '">' + r.name + '</option>';
+    }
+    if (!pcurrent) psel.value = '';
+  }
+  // Populate time selects with 30-min intervals (09:00 ~ 18:00)
+  var startTimeSel = document.getElementById("cal-start-time");
+  var endTimeSel = document.getElementById("cal-end-time");
+  if (startTimeSel) {
+    var stVal = startTimeSel.value;
+    startTimeSel.innerHTML = '';
+    for (var h = 9; h <= 17; h++) {
+      startTimeSel.innerHTML += '<option value="' + String(h).padStart(2,'0') + ':00">' + String(h).padStart(2,'0') + ':00</option>';
+      startTimeSel.innerHTML += '<option value="' + String(h).padStart(2,'0') + ':30">' + String(h).padStart(2,'0') + ':30</option>';
+    }
+    startTimeSel.value = stVal || '09:00';
+  }
+  if (endTimeSel) {
+    var etVal = endTimeSel.value;
+    endTimeSel.innerHTML = '';
+    for (var h = 9; h <= 18; h++) {
+      endTimeSel.innerHTML += '<option value="' + String(h).padStart(2,'0') + ':00">' + String(h).padStart(2,'0') + ':00</option>';
+      endTimeSel.innerHTML += '<option value="' + String(h).padStart(2,'0') + ':30">' + String(h).padStart(2,'0') + ':30</option>';
+    }
+    endTimeSel.value = etVal || '10:00';
+  }
+}
+
+function calCheckFreeBusy() {
+  var room = document.getElementById("cal-room-select").value;
+  var date = document.getElementById("cal-date").value;
+  if (!room || !date) { alert("请选择会议室和日期"); return; }
+  var resultEl = document.getElementById("cal-freebusy-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 查询中...</div>';
+
+  pswp.authenticatedFetch("/api/calendar/freebusy", {
+    method: "POST",
+    body: JSON.stringify({ room_email: room, date: date })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data.ok) {
+      resultEl.innerHTML = '<div class="alert alert-error">查询失败: ' + escapeHtml(data.error) + '</div>';
+      return;
+    }
+    var html = '<div style="padding:12px; background:var(--color-bg-secondary); border-radius:8px;">';
+    html += '<div style="font-weight:600; margin-bottom:10px;">' + escapeHtml(room.split("@")[0]) + ' — ' + escapeHtml(date) + ' (' + data.source + ')</div>';
+
+    // 30-min time grid
+    var grid = data.time_grid || [];
+    var freeCount = 0;
+    var busyCount = 0;
+    var gridHtml = '<div style="font-size:13px; font-weight:600; margin-bottom:6px;">时间段 (每30分钟):</div>';
+    gridHtml += '<div style="display:flex; flex-wrap:wrap; gap:4px;">';
+    for (var i = 0; i < grid.length; i++) {
+      var slot = grid[i];
+      if (slot.status === 'free') {
+        freeCount++;
+        gridHtml += '<div style="padding:4px 10px; background:#dcfce7; color:#166534; border:1px solid #bbf7d0; border-radius:4px; font-size:12px; font-weight:600; cursor:pointer;" ' +
+          'title="空闲" ' +
+          'onclick="document.getElementById(\'cal-start-time\').value=\'' + slot.time + '\';document.getElementById(\'cal-end-time\').value=\'' + slot.end + '\';">' +
+          slot.time + '-' + slot.end + '</div>';
+      } else {
+        busyCount++;
+        gridHtml += '<div style="padding:4px 10px; background:#fef2f2; color:#991b1b; border:1px solid #fecaca; border-radius:4px; font-size:12px; opacity:0.8;" ' +
+          'title="' + escapeHtml(slot.subject) + '">' +
+          slot.time + '-' + slot.end + '</div>';
+      }
+    }
+    gridHtml += '</div>';
+
+    var summary = '<div style="margin-top:10px; font-size:12px; color:#6b7280;">';
+    summary += '空闲 ' + freeCount + ' 个时段 · 繁忙 ' + busyCount + ' 个时段';
+    summary += '</div>';
+
+    // Free blocks section
+    if (data.free_blocks && data.free_blocks.length > 0) {
+      summary += '<div style="margin-top:6px; font-size:13px; font-weight:600; color:#3b82f6;">可用空档:</div>';
+      for (var j = 0; j < data.free_blocks.length; j++) {
+        var fb = data.free_blocks[j];
+        summary += '<div style="font-size:12px; padding:2px 0; color:#1e40af;">&#10004; ' + fb.start + ' - ' + fb.end + ' (' + fb.minutes + ' 分钟)</div>';
+      }
+    }
+
+    html += gridHtml + summary + '</div>';
+    resultEl.innerHTML = html;
+  })
+  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
+}
+
+function calBookMeeting() {
+  var room = document.getElementById("cal-room-select").value;
+  var date = document.getElementById("cal-date").value;
+  var start = document.getElementById("cal-start-time").value;
+  var end = document.getElementById("cal-end-time").value;
+  var subject = document.getElementById("cal-subject").value.trim();
+  var attendees = document.getElementById("cal-attendees").value.trim();
+
+  if (!room || !date || !start || !end || !subject) {
+    alert("请填写所有必填项（会议室、日期、时间、标题）");
+    return;
+  }
+
+  var resultEl = document.getElementById("cal-book-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 预定中...</div>';
+
+  pswp.authenticatedFetch("/api/calendar/book", {
+    method: "POST",
+    body: JSON.stringify({
+      room_email: room, subject: subject, date: date,
+      start_time: start, end_time: end, attendees: attendees
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      resultEl.innerHTML = '<div class="alert" style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:12px;border-radius:8px;">' +
+        '&#10004; ' + escapeHtml(data.message) + '</div>';
+    } else {
+      var html = '<div style="padding:12px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px;">';
+      html += '<div style="color:#dc2626; font-weight:600; margin-bottom:8px;">&#10008; ' + escapeHtml(data.error) + '</div>';
+      if (data.suggestions && data.suggestions.length > 0) {
+        html += '<div style="font-size:13px; font-weight:600; margin-bottom:4px; color:#3b82f6;">建议时段（点击自动填入时间）:</div>';
+        for (var i = 0; i < data.suggestions.length; i++) {
+          var s = data.suggestions[i];
+          html += '<div style="font-size:12px; padding:4px 8px; margin:2px 0; background:white; border-radius:4px; cursor:pointer; border:1px solid #e5e7eb;" ' +
+            'onclick="document.getElementById(\'cal-start-time\').value=\'' + s.start + '\';document.getElementById(\'cal-end-time\').value=\'' + s.end + '\';">' +
+            s.start + ' - ' + s.end + ' (' + s.minutes + ' 分钟可用)</div>';
+        }
+      }
+      html += '</div>';
+      resultEl.innerHTML = html;
+    }
+  })
+  .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
+}
+
+/* ─── Recurring Plans ─── */
+function showCreatePlanForm() {
+  document.getElementById("create-plan-form").style.display = "block";
+}
+
+function createRecurringPlan() {
+  var name = document.getElementById("plan-name").value.trim();
+  var room = document.getElementById("plan-room-select").value;
+  var subject = document.getElementById("plan-subject").value.trim();
+  var dow = parseInt(document.getElementById("plan-day").value);
+  var start = document.getElementById("plan-start").value;
+  var end = document.getElementById("plan-end").value;
+
+  if (!name || !room || !subject || !start || !end) {
+    alert("请填写所有必填项");
+    return;
+  }
+
+  var resultEl = document.getElementById("plan-create-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 创建中...</div>';
+
+  pswp.authenticatedFetch("/api/calendar/plan/create", {
+    method: "POST",
+    body: JSON.stringify({
+      name: name, room_email: room, subject: subject,
+      day_of_week: dow, start_time: start, end_time: end
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      resultEl.innerHTML = '<div style="color:#166534; padding:8px; background:#f0fdf4; border-radius:6px;">&#10004; ' + escapeHtml(data.message) + '</div>';
+      document.getElementById("create-plan-form").style.display = "none";
+      loadRecurringPlans();
+    } else {
+      resultEl.innerHTML = '<div style="color:#dc2626; padding:8px; background:#fef2f2; border-radius:6px;">创建失败: ' + escapeHtml(data.error) + '</div>';
+    }
+  })
+  .catch(function(e) { resultEl.innerHTML = '<div style="color:#dc2626;">网络错误: ' + e.message + '</div>'; });
+}
+
+function loadRecurringPlans() {
+  pswp.authenticatedFetch("/api/calendar/plan/list")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var container = document.getElementById("recurring-plans-list");
+      if (!data.ok || !data.plans || !data.plans.length) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">&#128197;</div><p>暂无重复计划，点击上方"新建计划"开始</p></div>';
+        return;
+      }
+
+      var roomNames = {};
+      for (var i = 0; i < calRooms.length; i++) {
+        roomNames[calRooms[i].email] = calRooms[i].name;
+      }
+
+      var days = ['一', '二', '三', '四', '五', '六', '日'];
+      var html = '<div class="table-container"><table><thead><tr>' +
+        '<th>计划名称</th><th>会议室</th><th>会议标题</th><th>每周</th>' +
+        '<th>时间</th><th>状态</th><th>操作</th>' +
+        '</tr></thead><tbody>';
+
+      for (var i = 0; i < data.plans.length; i++) {
+        var p = data.plans[i];
+        var rn = roomNames[p.room_email] || p.room_email.split("@")[0];
+        var enabledBadge = p.enabled
+          ? '<span class="status-badge done">启用</span>'
+          : '<span class="status-badge error">禁用</span>';
+        var toggleText = p.enabled ? '禁用' : '启用';
+        var toggleAction = p.enabled ? 0 : 1;
+        html += '<tr>' +
+          '<td><strong>' + escapeHtml(p.name) + '</strong></td>' +
+          '<td>' + escapeHtml(rn) + '</td>' +
+          '<td>' + escapeHtml(p.subject) + '</td>' +
+          '<td>星期' + days[p.day_of_week - 1] + '</td>' +
+          '<td>' + escapeHtml(p.start_time) + '-' + escapeHtml(p.end_time) + '</td>' +
+          '<td>' + enabledBadge + '</td>' +
+          '<td>' +
+          '<button class="btn btn-sm" onclick="togglePlan(' + p.id + ', ' + toggleAction + ')">' + toggleText + '</button> ' +
+          '<button class="btn btn-danger btn-sm" onclick="deletePlan(' + p.id + ')">删除</button>' +
+          '</td></tr>';
+      }
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+
+      // Auto-check for unbooked slots
+      checkPlanSlots();
+    })
+    .catch(function(e) { console.error("Failed to load plans:", e); });
+}
+
+function togglePlan(planId, enabled) {
+  pswp.authenticatedFetch("/api/calendar/plan/toggle", {
+    method: "POST",
+    body: JSON.stringify({ plan_id: planId, enabled: enabled })
+  }).then(function(r) { return r.json(); })
+    .then(function() { loadRecurringPlans(); })
+    .catch(function(e) { alert("操作失败: " + e.message); });
+}
+
+function deletePlan(planId) {
+  if (!confirm("确定删除此计划？")) return;
+  pswp.authenticatedFetch("/api/calendar/plan/delete", {
+    method: "POST",
+    body: JSON.stringify({ plan_id: planId })
+  }).then(function(r) { return r.json(); })
+    .then(function() { loadRecurringPlans(); })
+    .catch(function(e) { alert("删除失败: " + e.message); });
+}
+
+function checkPlanSlots() {
+  var resultEl = document.getElementById("plan-check-result");
+  resultEl.innerHTML = '<div style="font-size:12px; color:var(--color-text-secondary); padding:8px;"><span class="spinner"></span> 检查计划执行情况...</div>';
+
+  pswp.authenticatedFetch("/api/calendar/plan/check", { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok) {
+        resultEl.innerHTML = '<div style="color:#dc2626; padding:8px;">检查失败: ' + escapeHtml(data.error) + '</div>';
+        return;
+      }
+      var unbooked = data.unbooked || [];
+      if (unbooked.length === 0) {
+        resultEl.innerHTML = '<div style="padding:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-size:13px;">' +
+          '&#10004; 所有计划时段已预定完成！</div>';
+      } else {
+        var roomNames2 = {};
+        for (var i = 0; i < calRooms.length; i++) {
+          roomNames2[calRooms[i].email] = calRooms[i].name;
+        }
+        var html = '<div style="padding:12px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; margin-bottom:12px;">';
+        html += '<div style="font-weight:600; color:#d97706; margin-bottom:8px;">' +
+          '&#9888; 发现 ' + unbooked.length + ' 个未预定的计划时段</div>';
+        html += '<div class="table-container"><table><thead><tr>' +
+          '<th>计划</th><th>会议室</th><th>日期</th><th>时间</th><th>操作</th>' +
+          '</tr></thead><tbody>';
+        for (var i = 0; i < unbooked.length; i++) {
+          var u = unbooked[i];
+          var rn = roomNames2[u.room_email] || u.room_email.split("@")[0];
+          // escape the slot JSON for onclick
+          var slotJson = JSON.stringify(u).replace(/'/g, "\\'");
+          html += '<tr>' +
+            '<td>' + escapeHtml(u.plan_name) + '</td>' +
+            '<td>' + escapeHtml(rn) + '</td>' +
+            '<td>' + escapeHtml(u.date) + ' (' + escapeHtml(u.day_name) + ')</td>' +
+            '<td>' + escapeHtml(u.start_time) + '-' + escapeHtml(u.end_time) + '</td>' +
+            '<td><button class="btn btn-primary btn-sm" onclick="bookSingleSlot(' + slotJson + ')">预定</button></td>' +
+            '</tr>';
+        }
+        html += '</tbody></table></div>';
+        html += '<div style="margin-top:8px;">' +
+          '<button class="btn btn-success btn-sm" onclick="bookAllUnbooked()">&#10004; 全部预定</button>' +
+          '</div></div>';
+        resultEl.innerHTML = html;
+        window._calUnbookedSlots = unbooked;
+      }
+    })
+    .catch(function(e) { resultEl.innerHTML = '<div style="color:#dc2626; padding:8px;">网络错误: ' + e.message + '</div>'; });
+}
+
+function bookSingleSlot(slot) {
+  var msg = "预定 " + slot.plan_name + " @ " + slot.room_email.split("@")[0] +
+    " " + slot.date + " " + slot.start_time + "-" + slot.end_time + " ?";
+  if (!confirm(msg)) return;
+
+  pswp.authenticatedFetch("/api/calendar/book", {
+    method: "POST",
+    body: JSON.stringify({
+      room_email: slot.room_email, subject: slot.subject,
+      date: slot.date, start_time: slot.start_time, end_time: slot.end_time,
+      attendees: ""
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      alert("预定成功: " + data.message);
+      loadRecurringPlans();
+    } else {
+      alert("预定失败: " + data.error);
+    }
+  })
+  .catch(function(e) { alert("网络错误: " + e.message); });
+}
+
+function bookAllUnbooked() {
+  var slots = window._calUnbookedSlots || [];
+  if (!slots.length) return;
+  if (!confirm("确定预定全部 " + slots.length + " 个时段？")) return;
+
+  pswp.authenticatedFetch("/api/calendar/plan/book-all", {
+    method: "POST",
+    body: JSON.stringify({ unbooked: slots })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      var ok = data.booked || 0;
+      var fail = data.failed || 0;
+      alert((fail === 0 ? '预定成功' : '部分成功') + ": " + ok + " 成功, " + fail + " 失败");
+      loadRecurringPlans();
+    }
+  })
+  .catch(function(e) { alert("网络错误: " + e.message); });
+}
+
+/* ─── Booking History ─── */
+var _calHistoryPage = 1;
+
+function loadBookingHistory() {
+  var container = document.getElementById("booking-history-container");
+  var source = document.getElementById("cal-history-filter").value;
+  container.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> 加载中...</div>';
+
+  var url = "/api/calendar/history?page=" + _calHistoryPage + "&size=30";
+  if (source) url += "&source=" + source;
+
+  pswp.authenticatedFetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok || !data.data || !data.data.length) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">&#128197;</div><p>暂无预定记录</p></div>';
+        return;
+      }
+
+      var roomNames = {};
+      for (var i = 0; i < calRooms.length; i++) {
+        roomNames[calRooms[i].email] = calRooms[i].name;
+      }
+
+      var sourceLabels = { 'manual': '手动', 'recurring': '重复', 'ai-suggested': 'AI' };
+      var html = '<div class="table-container"><table><thead><tr>' +
+        '<th>日期</th><th>时间</th><th>会议室</th><th>标题</th>' +
+        '<th>来源</th><th>状态</th><th>预定时间</th>' +
+        '</tr></thead><tbody>';
+
+      for (var i = 0; i < data.data.length; i++) {
+        var b = data.data[i];
+        var rn = roomNames[b.room_email] || b.room_email.split("@")[0];
+        var statusClass = b.status === 'booked' ? 'done' : b.status === 'conflict' ? 'error' : 'in-progress';
+        var statusText = b.status === 'booked' ? '已预定' : b.status === 'conflict' ? '冲突' : b.status;
+        var sl = sourceLabels[b.source] || b.source;
+        var timeStr = (b.created_at_str || "").split(".")[0];
+        html += '<tr>' +
+          '<td>' + escapeHtml(b.date) + '</td>' +
+          '<td>' + escapeHtml(b.start_time) + '-' + escapeHtml(b.end_time) + '</td>' +
+          '<td>' + escapeHtml(rn) + '</td>' +
+          '<td>' + escapeHtml(b.subject) + '</td>' +
+          '<td>' + escapeHtml(sl) + '</td>' +
+          '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>' +
+          '<td style="font-size:11px;color:#6b7280;">' + timeStr + '</td>' +
+          '</tr>';
+      }
+      html += '</tbody></table></div>';
+
+      // Pagination
+      if (data.pages > 1) {
+        html += '<div style="display:flex; gap:6px; margin-top:10px; justify-content:center; font-size:12px;">';
+        html += '<span style="padding:4px 10px;color:var(--color-text-secondary);">共 ' + data.total + ' 条</span> ';
+        html += '<button class="btn btn-sm" onclick="_calHistoryPage=1;loadBookingHistory()" ' + (data.page <= 1 ? 'disabled' : '') + '>首页</button> ';
+        html += '<button class="btn btn-sm" onclick="_calHistoryPage=' + (data.page - 1) + ';loadBookingHistory()" ' + (data.page <= 1 ? 'disabled' : '') + '>上一页</button> ';
+        html += '<span style="padding:4px 10px;">' + data.page + ' / ' + data.pages + '</span> ';
+        html += '<button class="btn btn-sm" onclick="_calHistoryPage=' + (data.page + 1) + ';loadBookingHistory()" ' + (data.page >= data.pages ? 'disabled' : '') + '>下一页</button> ';
+        html += '<button class="btn btn-sm" onclick="_calHistoryPage=' + data.pages + ';loadBookingHistory()" ' + (data.page >= data.pages ? 'disabled' : '') + '>尾页</button>';
+        html += '</div>';
+      }
+      container.innerHTML = html;
+    })
+    .catch(function(e) { container.innerHTML = '<div style="color:#dc2626; padding:8px;">加载失败: ' + e.message + '</div>'; });
+}
+
+/* ─── AI Analysis ─── */
+function calAiAnalyze() {
+  var resultEl = document.getElementById("cal-ai-result");
+  resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner"></span> AI 分析中...</div>';
+
+  pswp.authenticatedFetch("/api/calendar/ai/analyze", { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok) {
+        resultEl.innerHTML = '<div class="alert alert-error">分析失败: ' + escapeHtml(data.error) + '</div>';
+        return;
+      }
+      if (data.message) {
+        resultEl.innerHTML = '<div class="alert alert-info">' + escapeHtml(data.message) + '</div>';
+        return;
+      }
+      var suggestions = data.suggestions || [];
+      if (!suggestions.length) {
+        resultEl.innerHTML = '<div class="alert alert-info">AI 暂无建议</div>';
+        return;
+      }
+      var html = '<div style="padding:12px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px;">';
+      html += '<div style="font-weight:600; color:#1e40af; margin-bottom:8px;">&#129302; AI 建议 (' + suggestions.length + ' 条)</div>';
+      for (var i = 0; i < suggestions.length; i++) {
+        var s = suggestions[i];
+        html += '<div style="padding:10px; margin:6px 0; background:white; border-radius:6px; border:1px solid #e5e7eb;">';
+        html += '<div style="font-weight:600; margin-bottom:4px;">' + escapeHtml(s.suggestion) + '</div>';
+        html += '<div style="font-size:12px; color:#6b7280;">' + escapeHtml(s.reason) + '</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+      resultEl.innerHTML = html;
+      loadAiSuggestions();
+    })
+    .catch(function(e) { resultEl.innerHTML = '<div class="alert alert-error">网络错误: ' + e.message + '</div>'; });
+}
+
+function loadAiSuggestions() {
+  pswp.authenticatedFetch("/api/calendar/ai/suggestions")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var container = document.getElementById("cal-ai-suggestions");
+      var suggestions = (data.suggestions || []).filter(function(s) { return s.action === 'pending'; });
+      if (!suggestions.length) {
+        container.innerHTML = '<div class="empty-state"><p>暂无待处理的 AI 建议</p></div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < suggestions.length; i++) {
+        var s = suggestions[i];
+        html += '<div style="padding:10px; margin:6px 0; background:var(--color-bg-secondary); border-radius:6px; border:1px solid var(--color-border); display:flex; justify-content:space-between; align-items:center;">';
+        html += '<div>' +
+          '<div style="font-weight:600; font-size:13px;">' + escapeHtml(s.suggestion) + '</div>' +
+          '<div style="font-size:11px; color:#6b7280; margin-top:2px;">' + escapeHtml(s.reason) + '</div></div>';
+        html += '<div style="display:flex; gap:4px; margin-left:8px;">' +
+          '<button class="btn btn-success btn-sm" onclick="respondAiSuggestion(' + s.id + ', \'accepted\')">&#10004;</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="respondAiSuggestion(' + s.id + ', \'ignored\')">&#10008;</button>' +
+          '</div></div>';
+      }
+      container.innerHTML = html;
+    });
+}
+
+function respondAiSuggestion(id, action) {
+  pswp.authenticatedFetch("/api/calendar/ai/respond", {
+    method: "POST",
+    body: JSON.stringify({ suggestion_id: id, action: action })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function() { loadAiSuggestions(); })
+  .catch(function(e) { alert("操作失败: " + e.message); });
 }
 </script>
 {% endblock %}

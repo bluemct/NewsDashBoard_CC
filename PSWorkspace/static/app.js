@@ -43,6 +43,7 @@
     "edm-dashboard": "page-edm-dashboard",
     "tfs": "page-tfs",
     "icm": "page-icm",
+    "calendar": "page-calendar",
     "settings": "page-settings",
   };
 
