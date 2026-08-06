@@ -25,6 +25,11 @@ SN-*/
 
 # ICM credentials (contains token and cookie)
 icm_config.json
+# Python compiled
+__pycache__/
+*.pyc
+*.pyo
+
 # Session snapshots (large, auto-generated)
 .session_snapshots/
 
