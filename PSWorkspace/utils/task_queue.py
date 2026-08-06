@@ -124,6 +124,13 @@ def init(db_path: str):
                 created_at     REAL NOT NULL
             )
         """)
+        # Migration: add updated_at to recurring_plans if not present
+        try:
+            conn.execute("ALTER TABLE recurring_plans ADD COLUMN updated_at REAL")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+
         # Calendar: booking history
         conn.execute("""
             CREATE TABLE IF NOT EXISTS booking_history (
@@ -651,6 +658,32 @@ def delete_recurring_plan(plan_id: int):
     with _lock:
         conn = _conn()
         conn.execute("DELETE FROM recurring_plans WHERE id=?", (plan_id,))
+        conn.commit()
+        conn.close()
+
+
+def update_recurring_plan(plan_id: int, name: str = None, room_email: str = None,
+                           subject: str = None, day_of_week: int = None,
+                           start_time: str = None, end_time: str = None,
+                           max_days_ahead: int = None):
+    """Update a recurring plan's fields."""
+    with _lock:
+        conn = _conn()
+        sets = []
+        vals = []
+        for col, val in [("name", name), ("room_email", room_email), ("subject", subject),
+                         ("day_of_week", day_of_week), ("start_time", start_time),
+                         ("end_time", end_time), ("max_days_ahead", max_days_ahead)]:
+            if val is not None:
+                sets.append(f"{col}=?")
+                vals.append(val)
+        if not sets:
+            conn.close()
+            return
+        sets.append("updated_at=?")
+        vals.append(time.time())
+        vals.append(plan_id)
+        conn.execute(f"UPDATE recurring_plans SET {','.join(sets)} WHERE id=?", vals)
         conn.commit()
         conn.close()
 
