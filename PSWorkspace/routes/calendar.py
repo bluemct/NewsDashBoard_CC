@@ -13,7 +13,7 @@ from pathlib import Path
 from flask import Blueprint, jsonify, g, request
 
 from utils import task_queue
-from routes.auth import require_auth
+from routes.auth import require_auth, DOMAIN_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -52,34 +52,62 @@ def _load_ews_config():
         return json.load(f)
 
 
-def _ews_credentials(cfg):
+# EWS URL comes from config file
+_EWS_URL = None
+
+def _get_ews_url():
+    """Lazy-load EWS URL from config file."""
+    global _EWS_URL
+    if _EWS_URL is None:
+        cfg = _load_ews_config()
+        _EWS_URL = cfg["ews"]["url"]
+    return _EWS_URL
+
+
+def _get_user_creds():
+    """Get current user's domain credentials for EWS.
+    Returns (domain_user, password)."""
+    user = getattr(g, 'current_user', None) or {}
+    username = user.get('username', '')
+    password = user.get('password')
+    domain = user.get('domain', DOMAIN_NAME)
+    if not username or not password:
+        raise ValueError("用户凭据不可用，请重新登录")
+    return f"{domain}\\{username}", password
+
+
+def _ews_credentials(domain_user, password):
     from exchangelib import Credentials
-    return Credentials(username=cfg["ews"]["domain_user"], password=cfg["ews"]["password"])
+    return Credentials(username=domain_user, password=password)
 
 
-def _ews_configuration(cfg):
+def _ews_configuration(domain_user, password):
     from exchangelib import Configuration
-    return Configuration(service_endpoint=cfg["ews"]["url"], credentials=_ews_credentials(cfg))
+    return Configuration(service_endpoint=_get_ews_url(), credentials=_ews_credentials(domain_user, password))
 
 
-def _ews_service_account(cfg):
+def _ews_ews_account(primary_smtp, domain_user, password):
     from exchangelib import Account, DELEGATE
     return Account(
-        primary_smtp_address=cfg["ews"]["mailbox"],
-        config=_ews_configuration(cfg),
+        primary_smtp_address=primary_smtp,
+        config=_ews_configuration(domain_user, password),
         autodiscover=False,
         access_type=DELEGATE,
     )
 
 
-def _ews_room_account(room_email, cfg):
-    from exchangelib import Account, DELEGATE
-    return Account(
-        primary_smtp_address=room_email,
-        config=_ews_configuration(cfg),
-        autodiscover=False,
-        access_type=DELEGATE,
-    )
+def _ews_service_account():
+    """Create EWS Account for the logged-in domain user."""
+    domain_user, password = _get_user_creds()
+    username = domain_user.split('\\')[-1]
+    return _ews_ews_account(
+        f"{username}@oe.21vianet.com", domain_user, password)
+
+
+def _ews_room_account(room_email):
+    """Create EWS Account for a meeting room, authenticated as logged-in user."""
+    domain_user, password = _get_user_creds()
+    return _ews_ews_account(room_email, domain_user, password)
 
 
 def _ews_datetime(year, month, day, hour, minute):
@@ -121,25 +149,42 @@ def _ews_attendee_labels(attendees):
     return labels
 
 
-def _read_calendar_events(email, day, cfg):
-    """Try calendar.view() first, fallback to GetUserAvailability."""
+def _read_calendar_events(email, start, end=None):
+    """Try calendar.view() first, fallback to GetUserAvailability.
+
+    If *end* is None, queries a single day (start + 1 day).
+    If *end* is provided, queries the full range [start, end).
+    """
+    if end is None:
+        end = start + timedelta(days=1)
+
     try:
-        account = _ews_room_account(email, cfg)
-        day_start = _ews_datetime(day.year, day.month, day.day, 0, 0)
-        day_end = day_start + timedelta(days=1)
+        account = _ews_room_account(email)
+        view_start = _ews_datetime(start.year, start.month, start.day, 0, 0)
+        view_end = _ews_datetime(end.year, end.month, end.day, 0, 0)
         events = []
-        for item in account.calendar.view(start=day_start, end=day_end):
-            start = _ews_to_local_naive(item.start)
-            end = _ews_to_local_naive(item.end)
+        for item in account.calendar.view(start=view_start, end=view_end):
+            start_dt = _ews_to_local_naive(item.start)
+            end_dt = _ews_to_local_naive(item.end)
+            organizer = ""
+            organizer_email = ""
+            org = getattr(item, "organizer", None)
+            if org:
+                organizer = _ews_mailbox_label(org)
+                org_email = getattr(org, "email_address", "")
+                if org_email:
+                    organizer_email = org_email
             events.append({
                 "subject": item.subject or "Busy",
-                "start": start, "end": end,
+                "start": start_dt, "end": end_dt,
+                "organizer": organizer,
+                "organizer_email": organizer_email,
             })
         return sorted(events, key=lambda e: e["start"]), "calendar"
     except Exception as exc:
         cal_err = str(exc)
         try:
-            return _read_freebusy_events(email, day, cfg), "freebusy"
+            return _read_freebusy_events(email, start, end=end), "freebusy"
         except Exception as fb_exc:
             raise RuntimeError(
                 f"Both calendar and FreeBusy failed for {email}. "
@@ -147,17 +192,19 @@ def _read_calendar_events(email, day, cfg):
             ) from fb_exc
 
 
-def _read_freebusy_events(email, day, cfg):
+def _read_freebusy_events(email, start, end=None):
     """GetUserAvailability FreeBusy query."""
+    if end is None:
+        end = start + timedelta(days=1)
     from exchangelib.properties import (
         DaylightTime, Email, FreeBusyViewOptions, MailboxData,
         StandardTime, TimeWindow, TimeZone,
     )
     from exchangelib.services import GetUserAvailability
 
-    account = _ews_service_account(cfg)
-    day_start = _ews_datetime(day.year, day.month, day.day, 0, 0)
-    day_end = day_start + timedelta(days=1)
+    account = _ews_service_account()
+    tw_start = _ews_datetime(start.year, start.month, start.day, 0, 0)
+    tw_end = _ews_datetime(end.year, end.month, end.day, 0, 0)
 
     mailbox_data = [MailboxData(
         email=Email(email_address=email),
@@ -172,7 +219,7 @@ def _read_freebusy_events(email, day, cfg):
                                     occurrence=1, iso_month=1, weekday="Sunday"),
     )
     options = FreeBusyViewOptions(
-        time_window=TimeWindow(start=day_start, end=day_end),
+        time_window=TimeWindow(start=tw_start, end=tw_end),
         merged_free_busy_interval=10,
         requested_view="DetailedMerged",
     )
@@ -194,6 +241,8 @@ def _read_freebusy_events(email, day, cfg):
         subject = getattr(details, "subject", "") if details else busy_type or "Busy"
         events.append({
             "subject": subject, "start": start, "end": end,
+            "organizer": "",
+            "organizer_email": "",
         })
     return sorted(events, key=lambda e: e["start"])
 
@@ -296,8 +345,7 @@ def api_freebusy():
 
     try:
         day = dt.datetime.strptime(date_str, "%Y-%m-%d")
-        cfg = _load_ews_config()
-        events, source = _read_calendar_events(room_email, day, cfg)
+        events, source = _read_calendar_events(room_email, day)
 
         # Build a 30-min time grid
         time_grid = _compute_time_grid(events, day)
@@ -360,10 +408,9 @@ def api_book():
             return jsonify({"ok": False, "error": "end_time must be after start_time"}), 400
 
         attendees = _parse_attendees(attendees_str) if attendees_str else []
-        cfg = _load_ews_config()
 
         # Check conflicts
-        events, _ = _read_calendar_events(room_email, date, cfg)
+        events, _ = _read_calendar_events(room_email, date)
         conflicts = _conflicting_events(events, start_dt, end_dt)
 
         if conflicts:
@@ -394,7 +441,7 @@ def api_book():
             })
 
         # No conflict — book it!
-        account = _ews_service_account(cfg)
+        account = _ews_service_account()
         from exchangelib import CalendarItem, Mailbox
         from exchangelib.items import SEND_TO_ALL_AND_SAVE_COPY
         from exchangelib.properties import Attendee
@@ -489,6 +536,28 @@ def api_plan_toggle():
     return jsonify({"ok": True})
 
 
+@calendar_bp.route('/plan/update', methods=['POST'])
+@require_auth
+def api_plan_update():
+    """POST /api/calendar/plan/update — Update a recurring plan.
+
+    Body: { "plan_id": 1, "name": "...", "room_email": "...", "subject": "...",
+            "day_of_week": 4, "start_time": "15:00", "end_time": "17:00" }
+    """
+    data = request.get_json(force=True)
+    plan_id = int(data.get("plan_id"))
+    task_queue.update_recurring_plan(
+        plan_id=plan_id,
+        name=data.get("name"),
+        room_email=data.get("room_email"),
+        subject=data.get("subject"),
+        day_of_week=int(data["day_of_week"]) if data.get("day_of_week") is not None else None,
+        start_time=data.get("start_time"),
+        end_time=data.get("end_time"),
+        max_days_ahead=int(data["max_days_ahead"]) if data.get("max_days_ahead") is not None else None)
+    return jsonify({"ok": True})
+
+
 @calendar_bp.route('/plan/delete', methods=['POST'])
 @require_auth
 def api_plan_delete():
@@ -502,19 +571,26 @@ def api_plan_delete():
 @calendar_bp.route('/plan/check', methods=['POST'])
 @require_auth
 def api_plan_check():
-    """POST /api/calendar/plan/check — Check all enabled plans, return unbooked slots.
+    """POST /api/calendar/plan/check — Check all enabled plans, return ALL slots with status.
 
-    Returns unbooked slots within the next max_days_ahead (default 30) days.
+    Each slot includes: date, time, status (booked/unbooked/busy),
+    subject (if booked), organizer, and whether the organizer matches current user.
+    Optimisation: query the entire date range once per plan instead of per-day.
     """
     plans = task_queue.list_recurring_plans()
     enabled = [p for p in plans if p.get("enabled")]
 
-    unbooked = []
+    all_slots = []
+    # Validate user credentials are available
     try:
-        cfg = _load_ews_config()
-    except Exception:
-        return jsonify({"ok": False, "error": "EWS config not found"}), 500
+        _get_user_creds()
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 401
 
+    current_user_email = (getattr(g, 'current_user', None) or {}).get("username", "")
+    if current_user_email and "@" not in current_user_email:
+        current_user_email += "@oe.21vianet.com"
+    current_user_email = current_user_email.lower()
     today = dt.date.today()
     days_map = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -525,44 +601,92 @@ def api_plan_check():
         subject = plan["subject"]
         start_t = plan["start_time"]
         end_t = plan["end_time"]
+        end_date = today + dt.timedelta(days=max_ahead)
 
-        # Find all matching dates from today to today + max_ahead
+        sh, sm = map(int, start_t.split(":"))
+        eh, em = map(int, end_t.split(":"))
+
+        # Collect all target dates for this plan
+        target_dates = []
         current = today
-        while current <= today + dt.timedelta(days=max_ahead):
+        while current <= end_date:
             if current.weekday() == dow - 1:  # weekday(): Mon=0
-                date_str = current.isoformat()
-
-                # Check if already booked via calendar events
-                try:
-                    day_dt = dt.datetime.combine(current, dt.time())
-                    events, _ = _read_calendar_events(room_email, day_dt, cfg)
-
-                    sh, sm = map(int, start_t.split(":"))
-                    eh, em = map(int, end_t.split(":"))
-                    slot_start = day_dt.replace(hour=sh, minute=sm)
-                    slot_end = day_dt.replace(hour=eh, minute=em)
-                    conflicts = _conflicting_events(events, slot_start, slot_end)
-
-                    # Any event in this slot means it's booked — no need to match subject
-                    # (freebusy events may have subject "Busy" instead of actual meeting name)
-                    if conflicts:
-                        continue  # slot is already booked, skip
-
-                    unbooked.append({
-                            "plan_id": plan["id"],
-                            "plan_name": plan["name"],
-                            "room_email": room_email,
-                            "subject": subject,
-                            "date": date_str,
-                            "start_time": start_t,
-                            "end_time": end_t,
-                            "day_name": days_map[dow - 1],
-                        })
-                except Exception as exc:
-                    logger.warning(f"plan_check error for {room_email} on {date_str}: {exc}")
+                target_dates.append(current)
             current += dt.timedelta(days=1)
 
-    return jsonify({"ok": True, "unbooked": unbooked})
+        if not target_dates:
+            continue
+
+        # Single EWS call covering the full range for this plan
+        try:
+            range_start = dt.datetime.combine(target_dates[0], dt.time())
+            range_end = dt.datetime.combine(target_dates[-1], dt.time()) + dt.timedelta(days=1)
+            events, _ = _read_calendar_events(room_email, range_start, end=range_end)
+        except Exception as exc:
+            logger.warning(f"plan_check EWS error for {room_email}: {exc}")
+            # Fallback: mark all as unknown
+            for day_date in target_dates:
+                all_slots.append({
+                    "plan_id": plan["id"],
+                    "plan_name": plan["name"],
+                    "room_email": room_email,
+                    "subject": subject,
+                    "date": day_date.isoformat(),
+                    "start_time": start_t,
+                    "end_time": end_t,
+                    "day_name": days_map[dow - 1],
+                    "status": "unknown",
+                    "busy_subject": "",
+                    "organizer": "",
+                    "is_user": False,
+                })
+            continue
+
+        # Check each target date against the events loaded in memory
+        for day_date in target_dates:
+            day_dt = dt.datetime.combine(day_date, dt.time())
+            slot_start = day_dt.replace(hour=sh, minute=sm)
+            slot_end = day_dt.replace(hour=eh, minute=em)
+            conflicts = _conflicting_events(events, slot_start, slot_end)
+
+            if conflicts:
+                conflict = conflicts[0]
+                organizer = conflict.get("organizer", "")
+                organizer_email = (conflict.get("organizer_email", "") or "").lower()
+                is_user = organizer_email == current_user_email if current_user_email else False
+                all_slots.append({
+                    "plan_id": plan["id"],
+                    "plan_name": plan["name"],
+                    "room_email": room_email,
+                    "subject": subject,
+                    "date": day_date.isoformat(),
+                    "start_time": start_t,
+                    "end_time": end_t,
+                    "day_name": days_map[dow - 1],
+                    "status": "booked" if is_user else "busy",
+                    "busy_subject": conflict["subject"],
+                    "busy_start": conflict["start"].strftime("%H:%M"),
+                    "busy_end": conflict["end"].strftime("%H:%M"),
+                    "organizer": organizer,
+                    "is_user": is_user,
+                })
+            else:
+                all_slots.append({
+                    "plan_id": plan["id"],
+                    "plan_name": plan["name"],
+                    "room_email": room_email,
+                    "subject": subject,
+                    "date": day_date.isoformat(),
+                    "start_time": start_t,
+                    "end_time": end_t,
+                    "day_name": days_map[dow - 1],
+                    "status": "unbooked",
+                    "busy_subject": "",
+                    "organizer": "",
+                    "is_user": False,
+                })
+
+    return jsonify({"ok": True, "slots": all_slots})
 
 
 @calendar_bp.route('/plan/book-all', methods=['POST'])
@@ -580,21 +704,20 @@ def api_plan_book_all():
     results = []
     for slot in unbooked:
         try:
-            cfg = _load_ews_config()
             date = dt.datetime.strptime(slot["date"], "%Y-%m-%d")
             sh, sm = map(int, slot["start_time"].split(":"))
             eh, em = map(int, slot["end_time"].split(":"))
             start_dt = date.replace(hour=sh, minute=sm)
             end_dt = date.replace(hour=eh, minute=em)
 
-            events, _ = _read_calendar_events(slot["room_email"], date, cfg)
+            events, _ = _read_calendar_events(slot["room_email"], date)
             conflicts = _conflicting_events(events, start_dt, end_dt)
 
             if conflicts:
                 results.append({"date": slot["date"], "ok": False, "error": "冲突"})
                 continue
 
-            account = _ews_service_account(cfg)
+            account = _ews_service_account()
             from exchangelib import CalendarItem, Mailbox
             from exchangelib.items import SEND_TO_ALL_AND_SAVE_COPY
             from exchangelib.properties import Attendee
@@ -671,7 +794,7 @@ def api_ai_analyze():
         })
 
     try:
-        llm_cfg_path = Path(PROJECT_ROOT) / ".edm_agent_llm_config.json"
+        llm_cfg_path = Path(BASE_DIR) / ".edm_agent_llm_config.json"
         if not llm_cfg_path.exists():
             return jsonify({"ok": False, "error": "AI Model 未配置，请先在设置中配置"}), 400
 

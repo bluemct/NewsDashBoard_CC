@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 DOMAIN_NAME = "BJ-OE"
 
-# Auth storage: token_hash -> (username, expiry_time)
+# Auth storage: token_hash -> (username, expiry_time, password)
 _auth_tokens = {}
 _auth_lock = Lock()
 
@@ -66,27 +66,28 @@ def validate_login(username: str, password: str) -> bool:
     return False
 
 
-def generate_auth_token(username: str) -> str:
+def generate_auth_token(username: str, password: str = None) -> str:
     """Generate a 1-hour auth token."""
     token = f"{username}:{int(time.time())}:{hashlib.md5(username.encode()).hexdigest()[:8]}"
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     with _auth_lock:
-        _auth_tokens[token_hash] = (username, time.time() + 3600)
+        _auth_tokens[token_hash] = (username, time.time() + 3600, password)
     return token
 
 
 def check_auth_token(bearer_value: str):
-    """Validate a Bearer token. Returns username or None."""
+    """Validate a Bearer token. Returns (username, password) or None."""
     token_hash = hashlib.sha256(bearer_value.encode()).hexdigest()
     with _auth_lock:
         entry = _auth_tokens.get(token_hash)
     if entry and entry[1] > time.time():
-        return entry[0]
+        return (entry[0], entry[2])
     return None
 
 
 def _get_user_from_token():
-    """Extract username from Authorization: Bearer header."""
+    """Extract username and password from Authorization: Bearer header.
+    Returns (username, password) or None."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         return check_auth_token(auth_header[7:])
@@ -99,21 +100,23 @@ def require_auth(f):
     """
     @wraps(f)
     def decorated(*args, **kwargs):
-        username = _get_user_from_token()
-        if not username:
+        user_data = _get_user_from_token()
+        if not user_data:
             if request.path.startswith('/api/'):
                 return jsonify({"error": "Unauthorized", "message": "Login required"}), 401
             return redirect(url_for('login_page'))
-        g.current_user = {'username': username, 'domain': DOMAIN_NAME}
+        username, password = user_data
+        g.current_user = {'username': username, 'domain': DOMAIN_NAME, 'password': password}
         return f(*args, **kwargs)
     return decorated
 
 
 def get_current_user():
     """Get current user from Bearer token in request, or None."""
-    username = _get_user_from_token()
-    if username:
-        return {'username': username, 'domain': DOMAIN_NAME}
+    user_data = _get_user_from_token()
+    if user_data:
+        username, password = user_data
+        return {'username': username, 'domain': DOMAIN_NAME, 'password': password}
     return None
 
 
@@ -135,7 +138,7 @@ def login():
         return jsonify({"error": "Bad Request", "message": "username and password required"}), 400
 
     if validate_login(username, password):
-        token = generate_auth_token(username)
+        token = generate_auth_token(username, password)
         logger.info(f"[auth] User {username} logged in")
         return jsonify({
             "ok": True,

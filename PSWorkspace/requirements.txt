@@ -6,3 +6,4 @@ extract-msg
 openpyxl
 olefile
 litellm
+exchangelib
