@@ -66,6 +66,18 @@ def _load_module(module_name):
         return None
 
 
+def _normalize_sn(sn: str) -> str:
+    """Normalize SN format: strip whitespace, ensure SN- prefix."""
+    sn = sn.strip()
+    if not sn:
+        return sn
+    # If user typed just digits like "55247", add SN- prefix
+    m = re.search(r"(\d+)", sn)
+    if m:
+        return f"SN-{m.group(1)}"
+    return sn
+
+
 def _verify_mod():
     """Load verify_list_contacts module."""
     return _load_module("verify_list_contacts")
@@ -265,8 +277,8 @@ def import_list():
 
         # Record to history
         import_status = 'success' if result.get('status') in ('导入成功', 'execute_succeed') else 'failed'
-        task_queue.save_edm_list_history(
-            sn=sn,
+        row_id = task_queue.save_edm_list_history(
+            sn=_normalize_sn(sn),
             list_id=list_id,
             list_title=list_title,
             import_type=mode,
@@ -275,6 +287,7 @@ def import_list():
             import_status=import_status,
             import_result=json.dumps(result, ensure_ascii=False),
         )
+        logger.info(f"[edm-list] Import history saved: id={row_id} sn={sn} list_id={list_id} mode={mode} status={import_status}")
 
         # Save activity
         task_queue.save_activity(
@@ -572,27 +585,20 @@ def verify_email():
         }
         yield f"__RESULT__{json.dumps(result_data, ensure_ascii=False)}"
 
-        # Record to history
-        existing = task_queue.get_latest_edm_list_history(sn, list_id) if sn else None
-        if existing is None:
-            task_queue.save_edm_list_history(
-                sn=sn,
-                list_id=list_id,
-                list_title=list_title,
-                import_type='',
-                xlsx_path=xlsx_path,
-                csv_path='',
-                import_status='',
-                import_result='',
-                verify_email_status='pass' if passed else 'fail',
-                verify_email_result=msg,
-            )
-        else:
-            task_queue.update_edm_list_verify(
-                existing['id'],
-                verify_email_status='pass' if passed else 'fail',
-                verify_email_result=msg,
-            )
+        # Always create a new history record for each verification
+        row_id = task_queue.save_edm_list_history(
+            sn=_normalize_sn(sn),
+            list_id=list_id,
+            list_title=list_title,
+            import_type='',
+            xlsx_path=xlsx_path,
+            csv_path='',
+            import_status='',
+            import_result='',
+            verify_email_status='pass' if passed else 'fail',
+            verify_email_result=msg,
+        )
+        logger.info(f"[edm-list] Email verify history saved: id={row_id} sn={sn} list_id={list_id} status={'pass' if passed else 'fail'}")
 
     task_id = run_task(f"edm-verify-email-{list_id}-{int(time.time())}", _verify_task())
     return jsonify({"task_id": task_id})
@@ -643,6 +649,10 @@ def verify_deep():
         yield f"[DEEP] XLSX: {os.path.basename(xlsx_path)}"
         yield ""
 
+        # Get list info for title
+        info = dmod.get_list_info(list_id)
+        list_title = info["title"] if info else ""
+
         passed, msg = dmod.deep_verify(
             list_id, xlsx_path, save_dir, _Logger(), max_workers=10
         )
@@ -656,31 +666,25 @@ def verify_deep():
             "type": "deep",
             "passed": passed,
             "list_id": list_id,
+            "list_title": list_title,
             "msg": msg,
         }
         yield f"__RESULT__{json.dumps(result_data, ensure_ascii=False)}"
 
-        # Record to history
-        existing = task_queue.get_latest_edm_list_history(sn, list_id) if sn else None
-        if existing is None:
-            task_queue.save_edm_list_history(
-                sn=sn,
-                list_id=list_id,
-                list_title='',
-                import_type='',
-                xlsx_path=xlsx_path,
-                csv_path='',
-                import_status='',
-                import_result='',
-                verify_deep_status='pass' if passed else 'fail',
-                verify_deep_result=msg,
-            )
-        else:
-            task_queue.update_edm_list_verify(
-                existing['id'],
-                verify_deep_status='pass' if passed else 'fail',
-                verify_deep_result=msg,
-            )
+        # Always create a new history record for each verification
+        row_id = task_queue.save_edm_list_history(
+            sn=_normalize_sn(sn),
+            list_id=list_id,
+            list_title=list_title,
+            import_type='',
+            xlsx_path=xlsx_path,
+            csv_path='',
+            import_status='',
+            import_result='',
+            verify_deep_status='pass' if passed else 'fail',
+            verify_deep_result=msg,
+        )
+        logger.info(f"[edm-list] Deep verify history saved: id={row_id} sn={sn} list_id={list_id} status={'pass' if passed else 'fail'}")
 
     task_id = run_task(f"edm-verify-deep-{list_id}-{int(time.time())}", _deep_task())
     return jsonify({"task_id": task_id})

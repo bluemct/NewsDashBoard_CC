@@ -35,8 +35,9 @@ EXCLUDE_DIRS = [
     "projects",           # .claude/projects/ — memory, not needed
 ]
 
-INCLUDE_DIRS = ["PSWorkspace", "EWS", "IcMHelper", "IcMHelperPS", ".claude"]
-INCLUDE_FILES = ["ews_streaming.ps1", "xlsx_search_dir.json", "Tokenmapping.json"]
+INCLUDE_DIRS = ["PSWorkspace", "EWS", "IcMHelper", ".claude"]
+INCLUDE_FILES = ["ews_streaming.ps1", "xlsx_search_dir.json", "Tokenmapping.json",
+                 "unimarketing_test_list.py", "verify_list_contacts.py", "deep_verify_list.py"]
 
 
 def should_exclude(rel_path, full_path):
@@ -101,7 +102,7 @@ def main():
         real_configs = [
             ".edm_agent_config.json",
             "PSWorkspace/ps_workspace_config.json",
-            "IcMHelperPS/icm_config.json",
+            "IcMHelper/icm_config.json",
             "xlsx_search_dir.json",
         ]
         for cfg in real_configs:
@@ -184,7 +185,7 @@ if (Test-Path $cfg2) {
 }
 
 # ICM config is optional
-$IcmConfig = Join-Path (Join-Path $ProjectRoot "IcMHelperPS") "icm_config.json"
+$IcmConfig = Join-Path (Join-Path $ProjectRoot "IcMHelper") "icm_config.json"
 if (-not (Test-Path $IcmConfig)) {
     Write-Host "  [INFO] icm_config.json not found — Token will be auto-fetched at runtime" -ForegroundColor Yellow
 }
@@ -237,7 +238,9 @@ if (Test-Path $ReqFile) {
 # 4. Check key files
 Write-Host "" -ForegroundColor Cyan
 Write-Host "[Check] Key files..." -ForegroundColor Yellow
-foreach ($f in @("PSWorkspace/app.py", "EWS/lib/40/Microsoft.Exchange.WebServices.dll", "ews_streaming.ps1")) {
+foreach ($f in @("PSWorkspace/app.py", "EWS/lib/40/Microsoft.Exchange.WebServices.dll",
+                 "ews_streaming.ps1", "unimarketing_test_list.py",
+                 "verify_list_contacts.py", "deep_verify_list.py")) {
     $Path = Join-Path $ProjectRoot $f
     if (Test-Path $Path) {
         Write-Host "  [OK] $f" -ForegroundColor Green
@@ -273,7 +276,7 @@ def generate_readme():
 
 - `.edm_agent_config.json` — EWS 凭据及 EDM 监听配置（已包含真实信息）
 - `PSWorkspace/ps_workspace_config.json` — Flask 应用配置（已包含真实路径）
-- `IcMHelperPS/icm_config.json` — ICM Token 配置（如不存在，Token 将在运行时自动获取）
+- `IcMHelper/icm_config.json` — ICM Token 配置（如不存在，Token 将在运行时自动获取）
 
 ## 前置条件
 

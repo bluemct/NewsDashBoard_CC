@@ -866,6 +866,7 @@ def save_edm_list_history(sn='', list_id='', list_title='', import_type='',
         row_id = cursor.lastrowid
         conn.commit()
         conn.close()
+    logger.info(f"[task_queue] save_edm_list_history: id={row_id} sn={sn} list_id={list_id}")
     return row_id
 
 

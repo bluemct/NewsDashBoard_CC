@@ -56,6 +56,22 @@ def _get_project_root():
     return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
+def _get_output_base():
+    """Get EDM output base directory from config, fallback to project_root/EDM."""
+    project_root = _get_project_root()
+    cfg_path = os.path.join(project_root, ".edm_agent_config.json")
+    try:
+        with open(cfg_path, 'r', encoding='utf-8') as f:
+            cfg = json.load(f)
+        base = cfg.get("output_base", "")
+        if base and os.path.isdir(base):
+            return base
+    except Exception:
+        pass
+    # Fallback to project_root/EDM
+    return os.path.join(project_root, "EDM")
+
+
 def _load_config():
     config_path = os.path.join(current_app.config['BASE_DIR'], 'ps_workspace_config.json')
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -91,7 +107,8 @@ def _add_event(event: dict):
 def _listener_reader():
     """Background thread: read JSON events from PowerShell streaming subprocess."""
     project_root = _get_project_root()
-    temp_dir = os.path.join(project_root, "EDM", "Temp")
+    output_base = _get_output_base()
+    temp_dir = os.path.join(output_base, "Temp")
     os.makedirs(temp_dir, exist_ok=True)
 
     config_path = os.path.join(project_root, ".edm_agent_config.json")
@@ -412,7 +429,8 @@ def listener_events():
 @require_auth
 def temp_files():
     project_root = _get_project_root()
-    temp_dir = os.path.join(project_root, "EDM", "Temp")
+    output_base = _get_output_base()
+    temp_dir = os.path.join(output_base, "Temp")
     if not os.path.isdir(temp_dir):
         return jsonify({"files": [], "message": "Temp directory not found"})
 
@@ -438,7 +456,8 @@ def temp_files():
 @require_auth
 def history():
     project_root = _get_project_root()
-    edm_dir = os.path.join(project_root, "EDM")
+    output_base = _get_output_base()
+    edm_dir = output_base
     if not os.path.isdir(edm_dir):
         return jsonify({"history": []})
 
@@ -599,7 +618,8 @@ def process_file(filename):
     from utils.task_queue import run_task
 
     project_root = _get_project_root()
-    temp_dir = os.path.join(project_root, "EDM", "Temp")
+    output_base = _get_output_base()
+    temp_dir = os.path.join(output_base, "Temp")
     eml_path = os.path.join(temp_dir, filename)
 
     if not os.path.isfile(eml_path):
@@ -643,7 +663,8 @@ def process_file(filename):
             ".claude", "skills", "edm-process", "edm_process_eml.py"
         )
         result = subprocess.run(
-            [sys.executable, edm_script, "--temp-dir", temp_dir, "--file", filename],
+            [sys.executable, edm_script, "--temp-dir", temp_dir,
+             "--edm-dir", output_base, "--file", filename],
             capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         if result.stdout:

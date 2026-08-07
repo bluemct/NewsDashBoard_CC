@@ -212,44 +212,60 @@
       </div>
     </div>
 
-    <div class="form-group" style="max-width:500px;">
-      <label>SN 编号</label>
-      <div style="display:flex; gap:8px;">
-        <input type="text" class="form-control" id="verify-sn" placeholder="SN-56287" style="flex:1;">
-        <button class="btn btn-secondary" onclick="discoverListsForVerify()" style="white-space:nowrap;">发现 List</button>
-        <button class="btn btn-secondary" onclick="discoverXlsxForVerify()" style="white-space:nowrap;">自动发现 xlsx</button>
+    <div class="verify-panel">
+      <!-- Left: input fields + verify mode + action -->
+      <div class="verify-panel-left">
+        <div class="verify-section-label">&#128203; 参数配置</div>
+        <div class="form-group">
+          <label class="form-label form-label-accent">SN 编号</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" class="form-control" id="verify-sn" placeholder="SN-56287" style="flex:1; font-family:Consolas,monospace; font-size:13px;">
+            <button class="btn btn-secondary" onclick="discoverListsForVerify()" style="white-space:nowrap;">发现 List</button>
+            <button class="btn btn-secondary" onclick="discoverXlsxForVerify()" style="white-space:nowrap;">自动发现 xlsx</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label form-label-accent">XLSX 文件路径</label>
+          <div style="display:flex; gap:8px;">
+            <textarea class="form-control" id="verify-xlsx" rows="2" placeholder="输入或自动发现 xlsx 路径" style="flex:1; min-width:0; font-family:Consolas,monospace; font-size:13px; resize:none; overflow-y:auto;" title=""></textarea>
+            <button class="btn btn-secondary" onclick="browseXlsxFileWithTarget('verify-xlsx')" style="white-space:nowrap; flex-shrink:0;">浏览</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label form-label-accent">选择 List</label>
+          <select class="form-control" id="verify-list-select" multiple size="4" style="min-height:90px; font-family:Consolas,monospace; font-size:13px; width:100%; box-sizing:border-box;">
+            <option>-- 输入 SN 并点击「发现 List」--</option>
+          </select>
+        </div>
+
+        <div class="verify-mode-card">
+          <div class="verify-mode-title">验证模式</div>
+          <div class="verify-mode-row">
+            <label class="verify-radio-inline">
+              <input type="radio" name="verify-mode" value="email" checked>
+              <span class="verify-radio-dot"></span>
+              <span class="verify-radio-text">Email 验证</span>
+            </label>
+            <label class="verify-radio-inline">
+              <input type="radio" name="verify-mode" value="deep">
+              <span class="verify-radio-dot"></span>
+              <span class="verify-radio-text">深度验证</span>
+            </label>
+          </div>
+        </div>
+        <button class="btn btn-primary verify-run-btn" onclick="doVerify()" id="btn-verify">&#10004; 开始验证</button>
       </div>
-    </div>
-    <div class="form-group" style="margin-top:12px;">
-      <label>xlsx 文件路径</label>
-      <div style="display:flex; gap:8px;">
-        <input type="text" class="form-control" id="verify-xlsx" placeholder="自动发现后自动填充，也可手动输入" style="flex:1; min-width:0;">
-        <button class="btn btn-secondary" onclick="browseXlsxFileWithTarget('verify-xlsx')" style="white-space:nowrap; flex-shrink:0;">浏览</button>
+
+      <!-- Divider -->
+      <div class="verify-divider"></div>
+
+      <!-- Right: output log only -->
+      <div class="verify-panel-right">
+        <div id="verify-progress">
+          <div class="verify-output-label">&#128170; 输出日志</div>
+          <div id="verify-debug" class="verify-console"></div>
+        </div>
       </div>
-    </div>
-
-    <div class="form-group" style="margin-top:12px;">
-      <label>选择 List</label>
-      <select class="form-control" id="verify-list-select" multiple size="5" style="min-height:100px;">
-        <option>-- 输入 SN 并点击「发现 List」--</option>
-      </select>
-      <small style="color:var(--color-text-secondary);">按住 Ctrl 多选，默认使用第一个选中的 List</small>
-    </div>
-
-    <div style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-      <label style="font-weight:500;">验证模式：</label>
-      <label style="display:flex; align-items:center; gap:4px;">
-        <input type="radio" name="verify-mode" value="email" checked> Email 验证（邮箱是否存在）
-      </label>
-      <label style="display:flex; align-items:center; gap:4px;">
-        <input type="radio" name="verify-mode" value="deep"> 深度验证（字段级比对）
-      </label>
-      <button class="btn btn-primary" onclick="doVerify()" id="btn-verify">&#10004; 开始验证</button>
-    </div>
-
-    <!-- Verify Result -->
-    <div id="verify-progress" style="margin-top:16px; display:none;">
-      <div id="verify-debug" style="padding:8px 12px; background:#1e1e1e; color:#0f0; font-family:Consolas,monospace; font-size:11px; border-radius:6px; max-height:400px; overflow-y:auto; white-space:pre-wrap;"></div>
     </div>
   </div>
   </div>
@@ -1320,8 +1336,8 @@ function discoverXlsxForVerify() {
 
   var logEl = document.getElementById("verify-debug");
   var progressEl = document.getElementById("verify-progress");
-  progressEl.style.display = "block";
-  logEl.innerHTML = "正在在 xlsx_search_dir 中搜索 '" + escapeHtml(sn) + "' 相关的 xlsx 文件...";
+  progressEl.style.display = "flex";
+  consoleLogMsg(logEl, "正在在 xlsx_search_dir 中搜索 '" + escapeHtml(sn) + "' 相关的 xlsx 文件...");
 
   pswp.authenticatedFetch("/api/edm/list/xlsx-discover", {
     method: "POST",
@@ -1331,6 +1347,7 @@ function discoverXlsxForVerify() {
   .then(function(data) {
     if (data.xlsx_path) {
       document.getElementById("verify-xlsx").value = data.xlsx_path;
+      document.getElementById("verify-xlsx").title = data.xlsx_path;
       consoleLogMsg(logEl, '[OK] 发现 xlsx: ' + data.xlsx_name);
       consoleLogMsg(logEl, '路径: ' + data.xlsx_path);
     } else {
@@ -1401,8 +1418,9 @@ function doVerify() {
 
   var progressEl = document.getElementById("verify-progress");
   var debugEl = document.getElementById("verify-debug");
-  progressEl.style.display = "block";
-  clearConsoleLog(debugEl);
+  progressEl.style.display = "flex";
+  consoleLogMsg(debugEl, "");
+  consoleLogMsg(debugEl, "========================================");
   consoleLogMsg(debugEl, ">>> 开始 " + modeLabel);
   consoleLogMsg(debugEl, "List ID: " + listId);
   consoleLogMsg(debugEl, "XLSX: " + xlsxPath);
@@ -1444,7 +1462,6 @@ function doVerify() {
               consoleLogMsg(debugEl, "FAILED: " + modeLabel + " NOT PASSED", '#ef4444');
             }
             consoleLogMsg(debugEl, "=== Verify Done ===", '#60a5fa');
-            showVerifyResultModal(resultJson, modeLabel, mode === 'email' ? 'email' : 'deep', stdout);
           }
         }
       });
