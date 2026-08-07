@@ -124,6 +124,13 @@ def init(db_path: str):
                 created_at     REAL NOT NULL
             )
         """)
+        # Migration: add updated_at to recurring_plans if not present
+        try:
+            conn.execute("ALTER TABLE recurring_plans ADD COLUMN updated_at REAL")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+
         # Calendar: booking history
         conn.execute("""
             CREATE TABLE IF NOT EXISTS booking_history (
@@ -148,6 +155,25 @@ def init(db_path: str):
                 reason      TEXT NOT NULL DEFAULT '',
                 action      TEXT NOT NULL DEFAULT 'pending',
                 created_at  REAL NOT NULL
+            )
+        """)
+        # EDM List Import/Verify history
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS edm_list_history (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                sn                TEXT NOT NULL DEFAULT '',
+                list_id           TEXT NOT NULL DEFAULT '',
+                list_title        TEXT NOT NULL DEFAULT '',
+                import_type       TEXT NOT NULL DEFAULT '',
+                xlsx_path         TEXT NOT NULL DEFAULT '',
+                csv_path          TEXT NOT NULL DEFAULT '',
+                import_status     TEXT NOT NULL DEFAULT '',
+                import_result     TEXT NOT NULL DEFAULT '',
+                verify_email_status TEXT NOT NULL DEFAULT '',
+                verify_email_result TEXT NOT NULL DEFAULT '',
+                verify_deep_status  TEXT NOT NULL DEFAULT '',
+                verify_deep_result  TEXT NOT NULL DEFAULT '',
+                created_at        REAL NOT NULL
             )
         """)
         conn.commit()
@@ -655,6 +681,32 @@ def delete_recurring_plan(plan_id: int):
         conn.close()
 
 
+def update_recurring_plan(plan_id: int, name: str = None, room_email: str = None,
+                           subject: str = None, day_of_week: int = None,
+                           start_time: str = None, end_time: str = None,
+                           max_days_ahead: int = None):
+    """Update a recurring plan's fields."""
+    with _lock:
+        conn = _conn()
+        sets = []
+        vals = []
+        for col, val in [("name", name), ("room_email", room_email), ("subject", subject),
+                         ("day_of_week", day_of_week), ("start_time", start_time),
+                         ("end_time", end_time), ("max_days_ahead", max_days_ahead)]:
+            if val is not None:
+                sets.append(f"{col}=?")
+                vals.append(val)
+        if not sets:
+            conn.close()
+            return
+        sets.append("updated_at=?")
+        vals.append(time.time())
+        vals.append(plan_id)
+        conn.execute(f"UPDATE recurring_plans SET {','.join(sets)} WHERE id=?", vals)
+        conn.commit()
+        conn.close()
+
+
 # ─── Calendar: Booking History ───────────────────────────────
 
 
@@ -789,3 +841,97 @@ def get_booking_stats() -> dict:
         "times": [dict(r) for r in times],
         "sources": [dict(r) for r in sources],
     }
+
+
+# ─── EDM List History ────────────────────────────────────────────────
+
+
+def save_edm_list_history(sn='', list_id='', list_title='', import_type='',
+                          xlsx_path='', csv_path='', import_status='',
+                          import_result='', verify_email_status='',
+                          verify_email_result='', verify_deep_status='',
+                          verify_deep_result=''):
+    """Save an EDM list import/verify history record. Returns row id."""
+    with _lock:
+        conn = _conn()
+        cursor = conn.execute("""
+            INSERT INTO edm_list_history (
+                sn, list_id, list_title, import_type, xlsx_path, csv_path,
+                import_status, import_result, verify_email_status, verify_email_result,
+                verify_deep_status, verify_deep_result, created_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (sn, list_id, list_title, import_type, xlsx_path, csv_path,
+              import_status, import_result, verify_email_status, verify_email_result,
+              verify_deep_status, verify_deep_result, time.time()))
+        row_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+    return row_id
+
+
+def update_edm_list_verify(history_id, verify_email_status=None,
+                            verify_email_result=None,
+                            verify_deep_status=None, verify_deep_result=None):
+    """Update verification status on an existing history record."""
+    with _lock:
+        conn = _conn()
+        sets = []
+        vals = []
+        for col, val in [
+            ('verify_email_status', verify_email_status),
+            ('verify_email_result', verify_email_result),
+            ('verify_deep_status', verify_deep_status),
+            ('verify_deep_result', verify_deep_result),
+        ]:
+            if val is not None:
+                sets.append(f"{col}=?")
+                vals.append(val)
+        if not sets:
+            conn.close()
+            return
+        vals.append(history_id)
+        conn.execute(f"UPDATE edm_list_history SET {','.join(sets)} WHERE id=?", vals)
+        conn.commit()
+        conn.close()
+
+
+def get_latest_edm_list_history(sn, list_id):
+    """Get the most recent history record matching sn + list_id. Returns dict or None."""
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT * FROM edm_list_history WHERE sn=? AND list_id=? ORDER BY id DESC LIMIT 1",
+            (sn, list_id),
+        ).fetchone()
+        conn.close()
+    return dict(row) if row else None
+
+
+def list_edm_list_history(page=1, page_size=20, sn=None):
+    """List EDM list history with pagination, newest first.
+
+    Returns: {"total": int, "page": int, "page_size": int, "pages": int, "data": [...]}
+    """
+    with _lock:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        if sn:
+            total = conn.execute("SELECT COUNT(*) FROM edm_list_history WHERE sn=?", (sn,)).fetchone()[0]
+            rows = conn.execute(
+                "SELECT * FROM edm_list_history WHERE sn=? ORDER BY id DESC LIMIT ? OFFSET ?",
+                (sn, page_size, (page - 1) * page_size)).fetchall()
+        else:
+            total = conn.execute("SELECT COUNT(*) FROM edm_list_history").fetchone()[0]
+            rows = conn.execute(
+                "SELECT * FROM edm_list_history ORDER BY id DESC LIMIT ? OFFSET ?",
+                (page_size, (page - 1) * page_size)).fetchall()
+        conn.close()
+    pages = max(1, (total + page_size - 1) // page_size)
+    data = []
+    for r in rows:
+        d = dict(r)
+        d["created_at_str"] = datetime.fromtimestamp(d["created_at"]).isoformat()
+        data.append(d)
+    return {"total": total, "page": page, "page_size": page_size,
+            "pages": pages, "data": data}

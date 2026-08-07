@@ -14,6 +14,10 @@
       <div class="stat-value">&#9993;</div>
       <div class="stat-label">EDM 监听处理<br><small>扫描、处理 EDM 邮件</small></div>
     </div>
+    <div class="stat-card" onclick="pswp.navigate('edm-agent'); setTimeout(function(){var el=document.querySelector('#edm-agent-tabs .tab:nth-child(3)');if(el)el.click();},300)" style="cursor:pointer">
+      <div class="stat-value">&#128203;</div>
+      <div class="stat-label">List 验证<br><small>导入、验证 Unimarketing List</small></div>
+    </div>
     <div class="stat-card" onclick="pswp.navigate('edm-dashboard')" style="cursor:pointer">
       <div class="stat-value">&#128202;</div>
       <div class="stat-label">EDM 看板<br><small>查看 EDM 处理进度</small></div>
@@ -68,64 +72,212 @@
 </div>
 
 <!-- ═══ EDM Agent Section ═══ -->
+<!-- ═══ EDM Agent Section ═══ -->
 <div class="page-section" id="page-edm-agent">
 <div style="width:100%; max-width:1500px;">
-<div class="card">
-  <div class="card-header">
+  <!-- Sub-tabs -->
+  <div class="tabs" id="edm-agent-tabs">
+    <div class="tab active" onclick="switchEdmAgentTab('listener', this)">&#128269; 监听</div>
+    <div class="tab" onclick="switchEdmAgentTab('process', this)">&#9881; 邮件处理</div>
+    <div class="tab" onclick="switchEdmAgentTab('list', this)">&#128203; List 导入验证</div>
+  </div>
+
+  <!-- ─── Tab 1: Listener ──────────────────────────── -->
+  <div class="tab-content active" id="edm-tab-listener">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">&#9993; EDM 邮件监听</div>
+        <div class="card-subtitle">通过 EWS Streaming 实时监听 EDM 文件夹新邮件</div>
+      </div>
+    </div>
+
+    <!-- Listener Controls -->
+    <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
+      <button class="btn btn-primary" id="btn-listener-start" onclick="doListenerStart()">&#9654; 启动监听</button>
+      <button class="btn btn-danger" id="btn-listener-stop" onclick="doListenerStop()" disabled>&#9632; 停止监听</button>
+      <button class="btn btn-secondary" onclick="loadListenerStatus()">&#128260; 刷新状态</button>
+      <span id="listener-status-badge" style="margin-left:auto; font-weight:bold;">未知</span>
+    </div>
+
+    <!-- Listener Rules -->
+    <div class="alert alert-info" style="margin-bottom:16px;">
+      <strong>监听规则：</strong>
+      <span id="listener-rules">加载中...</span>
+    </div>
+
+    <!-- Event Log -->
     <div>
-      <div class="card-title">&#9993; EDM 监听处理</div>
-      <div class="card-subtitle">通过 EWS 监听 EDM 文件夹，自动检测新邮件</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="card-title" style="font-size:13px;">检测事件</div>
+        <button class="btn btn-secondary btn-sm" onclick="loadListenerEvents()">&#128260; 刷新事件</button>
+      </div>
+      <div id="listener-events" class="log-output" style="max-height:300px; overflow-y:auto; font-size:12px; background:var(--color-bg-secondary); border-radius:6px; padding:10px;">
+        暂无事件
+      </div>
     </div>
   </div>
-
-  <!-- Listener Controls -->
-  <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
-    <button class="btn btn-primary" id="btn-listener-start" onclick="doListenerStart()">&#9654; 启动监听</button>
-    <button class="btn btn-danger" id="btn-listener-stop" onclick="doListenerStop()" disabled>&#9632; 停止监听</button>
-    <button class="btn btn-secondary" onclick="loadListenerStatus()">&#128260; 刷新状态</button>
-    <span id="listener-status-badge" style="margin-left:auto; font-weight:bold;">未知</span>
   </div>
 
-  <!-- Listener Rules -->
-  <div class="alert alert-info" style="margin-bottom:16px;">
-    <strong>监听规则：</strong>
-    <span id="listener-rules">加载中...</span>
-  </div>
-
-  <!-- Event Log -->
-  <div style="margin-bottom:20px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <div class="card-title" style="font-size:13px;">检测事件</div>
-      <button class="btn btn-secondary btn-sm" onclick="loadListenerEvents()">&#128260; 刷新事件</button>
+  <!-- ─── Tab 2: Process ──────────────────────────── -->
+  <div class="tab-content" id="edm-tab-process">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">&#9881; EDM 邮件处理</div>
+        <div class="card-subtitle">发现并处理 EDM/Temp/ 中的邮件文件</div>
+      </div>
     </div>
-    <div id="listener-events" class="log-output" style="max-height:300px; overflow-y:auto; font-size:12px; background:var(--color-bg-secondary); border-radius:6px; padding:10px;">
-      暂无事件
-    </div>
-  </div>
 
-  <!-- Temp Files -->
-  <div class="card" style="box-shadow:none; border:1px solid var(--color-border);">
-    <div class="card-title" style="font-size:14px; margin-bottom:12px;">EDM/Temp/ 文件</div>
+    <!-- Temp Files -->
     <div style="margin-bottom:8px;">
       <button class="btn btn-secondary btn-sm" onclick="loadTempFiles()">&#128260; 刷新 Temp 文件</button>
     </div>
     <div id="temp-files">
       <div class="empty-state"><p>点击 "刷新 Temp 文件" 查看</p></div>
     </div>
+
+    <!-- History -->
+    <div class="card" style="box-shadow:none; border:1px solid var(--color-border); margin-top:16px;">
+      <div class="card-title" style="font-size:14px; margin-bottom:12px;">已处理 SN</div>
+      <div style="margin-bottom:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="loadHistory()">&#128260; 刷新历史</button>
+      </div>
+      <div id="history">
+        <div class="empty-state"><p>点击 "刷新历史" 查看</p></div>
+      </div>
+    </div>
+  </div>
   </div>
 
-  <!-- History -->
-  <div class="card" style="box-shadow:none; border:1px solid var(--color-border); margin-top:16px;">
-    <div class="card-title" style="font-size:14px; margin-bottom:12px;">已处理 SN</div>
-    <div style="margin-bottom:8px;">
-      <button class="btn btn-secondary btn-sm" onclick="loadHistory()">&#128260; 刷新历史</button>
+  <!-- ─── Tab 3: List Import & Verify ─────────────── -->
+  <div class="tab-content" id="edm-tab-list">
+  <!-- Sub-tabs for List -->
+  <div class="tabs" id="edm-list-tabs" style="margin-bottom:12px;">
+    <div class="tab active" onclick="switchEdmListTab('import', this)">&#128190; 导入</div>
+    <div class="tab" onclick="switchEdmListTab('verify', this)">&#10004; 验证</div>
+    <div class="tab" onclick="switchEdmListTab('verify-history', this)">&#128196; 历史</div>
+  </div>
+
+  <!-- ── SubTab: Import ────────────────────────── -->
+  <div class="tab-content active" id="edm-list-tab-import">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">&#128190; List 导入</div>
+        <div class="card-subtitle">将 xlsx 联系人列表导入 Unimarketing（Test / Formal）</div>
+      </div>
     </div>
-    <div id="history">
-      <div class="empty-state"><p>点击 "刷新历史" 查看</p></div>
+
+    <div class="form-group" style="max-width:500px;">
+      <label>SN 编号</label>
+      <div style="display:flex; gap:8px;">
+        <input type="text" class="form-control" id="list-import-sn" placeholder="SN-56287" style="flex:1;">
+        <button class="btn btn-secondary" onclick="discoverXlsxForImport()" style="white-space:nowrap;">自动发现</button>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>xlsx 文件路径</label>
+      <div style="display:flex; gap:8px;">
+        <input type="text" class="form-control" id="list-import-xlsx" placeholder="自动发现后自动填充，也可手动输入" style="flex:1; min-width:0;">
+        <button class="btn btn-secondary" onclick="browseXlsxFileWithTarget('list-import-xlsx')" style="white-space:nowrap; flex-shrink:0;">浏览</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <label style="font-weight:500;">导入模式：</label>
+      <label style="display:flex; align-items:center; gap:4px;">
+        <input type="radio" name="list-import-mode" value="test" checked> Test（测试邮箱）
+      </label>
+      <label style="display:flex; align-items:center; gap:4px;">
+        <input type="radio" name="list-import-mode" value="formal"> Formal（全部邮箱）
+      </label>
+      <button class="btn btn-primary" id="btn-list-import" onclick="doListImport()">&#128190; 开始导入</button>
+    </div>
+
+    <!-- Import Progress -->
+    <div id="list-import-progress" style="margin-top:16px; display:none;">
+      <div id="list-import-debug" style="padding:8px 12px; background:#1e1e1e; color:#0f0; font-family:Consolas,monospace; font-size:11px; border-radius:6px; max-height:350px; overflow-y:auto; white-space:pre-wrap;"></div>
     </div>
   </div>
-</div>
-</div>
+  </div>
+
+  <!-- ── SubTab: Verify (merged Email + Deep) ──────────── -->
+  <div class="tab-content" id="edm-list-tab-verify">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">&#10004; 验证</div>
+        <div class="card-subtitle">验证 xlsx 联系人数据与 Unimarketing List 的一致性</div>
+      </div>
+    </div>
+
+    <div class="form-group" style="max-width:500px;">
+      <label>SN 编号</label>
+      <div style="display:flex; gap:8px;">
+        <input type="text" class="form-control" id="verify-sn" placeholder="SN-56287" style="flex:1;">
+        <button class="btn btn-secondary" onclick="discoverListsForVerify()" style="white-space:nowrap;">发现 List</button>
+        <button class="btn btn-secondary" onclick="discoverXlsxForVerify()" style="white-space:nowrap;">自动发现 xlsx</button>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>xlsx 文件路径</label>
+      <div style="display:flex; gap:8px;">
+        <input type="text" class="form-control" id="verify-xlsx" placeholder="自动发现后自动填充，也可手动输入" style="flex:1; min-width:0;">
+        <button class="btn btn-secondary" onclick="browseXlsxFileWithTarget('verify-xlsx')" style="white-space:nowrap; flex-shrink:0;">浏览</button>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:12px;">
+      <label>选择 List</label>
+      <select class="form-control" id="verify-list-select" multiple size="5" style="min-height:100px;">
+        <option>-- 输入 SN 并点击「发现 List」--</option>
+      </select>
+      <small style="color:var(--color-text-secondary);">按住 Ctrl 多选，默认使用第一个选中的 List</small>
+    </div>
+
+    <div style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <label style="font-weight:500;">验证模式：</label>
+      <label style="display:flex; align-items:center; gap:4px;">
+        <input type="radio" name="verify-mode" value="email" checked> Email 验证（邮箱是否存在）
+      </label>
+      <label style="display:flex; align-items:center; gap:4px;">
+        <input type="radio" name="verify-mode" value="deep"> 深度验证（字段级比对）
+      </label>
+      <button class="btn btn-primary" onclick="doVerify()" id="btn-verify">&#10004; 开始验证</button>
+    </div>
+
+    <!-- Verify Result -->
+    <div id="verify-progress" style="margin-top:16px; display:none;">
+      <div id="verify-debug" style="padding:8px 12px; background:#1e1e1e; color:#0f0; font-family:Consolas,monospace; font-size:11px; border-radius:6px; max-height:400px; overflow-y:auto; white-space:pre-wrap;"></div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ── SubTab: History ───────────────────────── -->
+  <div class="tab-content" id="edm-list-tab-verify-history">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">&#128196; 历史记录</div>
+        <div class="card-subtitle">List 导入与验证任务记录</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="loadListVerifyHistory()">&#128260; 刷新</button>
+    </div>
+    <div class="tabs" id="history-filter-tabs" style="margin-bottom:12px;">
+      <div class="tab active" onclick="filterHistory('all', this)">全部</div>
+      <div class="tab" onclick="filterHistory('import', this)">&#128190; 导入</div>
+      <div class="tab" onclick="filterHistory('email', this)">&#10004; Email 验证</div>
+      <div class="tab" onclick="filterHistory('deep', this)">&#128270; 深度验证</div>
+    </div>
+    <div id="list-verify-history">
+      <div class="empty-state"><p>点击 "刷新" 查看</p></div>
+    </div>
+  </div>
+  </div>
+
+  </div><!-- end edm-tab-list -->
+  </div><!-- end max-width wrapper -->
 </div>
 
 <!-- ═══ EDM Dashboard Section ═══ -->
@@ -613,6 +765,14 @@
       </div>
 
       <div class="card" style="box-shadow:none; border:1px solid var(--color-border); margin-bottom:16px;">
+        <div class="card-title" style="font-size:14px; margin-bottom:16px;">&#128190; 测试邮箱</div>
+        <div class="form-group">
+          <label class="form-label">List 导入测试邮箱（逗号分隔）</label>
+          <input type="text" class="form-input" id="edm-test-emails" placeholder="ma.chuntao@oe.21vianet.com, microsoft.163163@163.com">
+        </div>
+      </div>
+
+      <div class="card" style="box-shadow:none; border:1px solid var(--color-border); margin-bottom:16px;">
         <div class="card-title" style="font-size:14px; margin-bottom:16px;">&#128193; 路径配置</div>
         <div class="form-group">
           <label class="form-label">EDM 输出基础目录</label>
@@ -847,6 +1007,49 @@
     </div>
   </div>
 </div>
+
+<!-- ═══ Plan Edit Modal ═══ -->
+<div class="plan-edit-overlay" id="plan-edit-overlay">
+  <div class="plan-edit-modal">
+    <h3>&#9998; 编辑重复计划</h3>
+    <div class="form-row">
+      <label>计划名称 *</label>
+      <input type="text" id="edit-plan-name" placeholder="如: Azure Manager Sync">
+    </div>
+    <div class="form-row">
+      <label>会议标题 *</label>
+      <input type="text" id="edit-plan-subject" placeholder="如: Azure Manager Sync Meeting">
+    </div>
+    <div class="form-row">
+      <label>会议室 *</label>
+      <select id="edit-plan-room">
+      </select>
+    </div>
+    <div class="form-row">
+      <label>星期 *</label>
+      <select id="edit-plan-day">
+        <option value="1">星期一</option>
+        <option value="2">星期二</option>
+        <option value="3">星期三</option>
+        <option value="4">星期四</option>
+        <option value="5">星期五</option>
+        <option value="6">星期六</option>
+        <option value="7">星期日</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>开始时间 *</label>
+      <select id="edit-plan-start"></select>
+    </div>
+    <div class="form-row">
+      <label>结束时间 *</label>
+      <select id="edit-plan-end"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closePlanEditModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveRecurringPlan()">保存</button>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
@@ -913,6 +1116,626 @@ function loadRecentTasks() {
     .catch(function(e) { console.error("Failed to load activities:", e); });
 }
 document.addEventListener("DOMContentLoaded", loadRecentTasks);
+
+/* ─── EDM Agent Tab Switching ─────────────────────────────── */
+function switchEdmAgentTab(name, el) {
+  var tabs = document.querySelectorAll("#edm-agent-tabs .tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  if (el) el.classList.add("active");
+  var contents = document.querySelectorAll("#page-edm-agent > div > .tab-content");
+  for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
+  var target = document.getElementById("edm-tab-" + name);
+  if (target) target.classList.add("active");
+  // Auto-load data on tab switch
+  if (name === 'listener') loadListenerStatus();
+  if (name === 'process') loadTempFiles();
+}
+
+/* ─── EDM List Sub-Tab Switching ──────────────────────────── */
+function switchEdmListTab(name, el) {
+  var tabs = document.querySelectorAll("#edm-list-tabs .tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  if (el) el.classList.add("active");
+  var contents = document.querySelectorAll("#edm-tab-list > .tab-content");
+  for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
+  var target = document.getElementById("edm-list-tab-" + name);
+  if (target) target.classList.add("active");
+  if (name === 'verify-history') loadListVerifyHistory();
+}
+
+/* ─── Console-Style Progress Log (EDM Dashboard debug-log style) ─────── */
+function consoleLogMsg(debugEl, msg, color) {
+  var ts = new Date().toLocaleTimeString();
+  var line = '[' + ts + '] ' + escapeHtml(msg);
+  var displayColor = color || '#0f0';
+  var fontWeight = 'normal';
+  if (msg.toLowerCase().indexOf('error') >= 0 || msg.toLowerCase().indexOf('fail') >= 0) displayColor = '#ef4444';
+  else if (msg.toLowerCase().indexOf('pass') >= 0 || msg.toLowerCase().indexOf('success') >= 0) displayColor = '#22c55e';
+  else if (msg.toLowerCase().indexOf('mismatch') >= 0) displayColor = '#f59e0b';
+  else if (msg.indexOf('===') === 0 || msg.indexOf('===') === msg.length - 3) displayColor = '#60a5fa';
+  else if (msg.toLowerCase().indexOf('test emails:') >= 0) { displayColor = '#fbbf24'; fontWeight = 'bold'; }
+  else if (msg.indexOf('SN:') === 0 || msg.indexOf('List:') === 0) displayColor = '#c084fc';
+  var span = document.createElement('span');
+  span.style.color = displayColor;
+  span.style.fontWeight = fontWeight;
+  span.textContent = line;
+  debugEl.appendChild(span);
+  debugEl.appendChild(document.createTextNode('\n'));
+  // Use scrollIntoView for reliable auto-scroll
+  requestAnimationFrame(function() {
+    debugEl.scrollTop = debugEl.scrollHeight;
+  });
+}
+
+function clearConsoleLog(debugEl) {
+  debugEl.innerHTML = '';
+}
+
+/* ─── XLSX Browse — Directory tree view ────────────────────────── */
+function browseXlsxFileWithTarget(inputId) {
+  var overlay = document.createElement('div');
+  overlay.id = 'xlsx-browse-overlay';
+  overlay.setAttribute('data-input-id', inputId);
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+  var dialog = document.createElement('div');
+  dialog.style.cssText = 'background:white;border-radius:12px;width:600px;max-height:80vh;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column;';
+  dialog.innerHTML =
+    '<div style="padding:14px 20px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px;">' +
+    '<span style="font-size:15px;font-weight:bold;">选择 xlsx 文件</span>' +
+    '<span id="xlsx-browse-dir" style="margin-left:auto;font-size:11px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px;" title="">加载中...</span>' +
+    '<button onclick="document.getElementById(\'xlsx-browse-overlay\').remove()" style="margin-left:8px;border:none;background:none;font-size:18px;cursor:pointer;">✕</button>' +
+    '</div>' +
+    '<div id="xlsx-browse-list" style="overflow-y:auto;flex:1;padding:8px 0;">' +
+    '<div style="text-align:center;padding:40px;"><div class="spinner"></div></div>' +
+    '</div>';
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  pswp.authenticatedFetch("/api/edm/list/xlsx-browse")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var listEl = document.getElementById('xlsx-browse-list');
+      var dirSpan = document.getElementById('xlsx-browse-dir');
+      dirSpan.textContent = data.search_dir || '';
+      dirSpan.title = data.search_dir || '';
+      if (!data.tree) {
+        listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">空目录</div>';
+        return;
+      }
+      var html = renderXlsxTree(data.tree, inputId, 0);
+      if (!html) listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">未找到 xlsx 文件</div>';
+      else listEl.innerHTML = html;
+    })
+    .catch(function(e) {
+      document.getElementById('xlsx-browse-list').innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;">加载失败: ' + escapeHtml(e.message) + '</div>';
+    });
+}
+
+function renderXlsxTree(node, inputId, depth) {
+  if (!node) return '';
+  var html = '';
+  var folderPad = 'padding-left:' + (depth * 24) + 'px;';
+  var filePad = 'padding-left:' + ((depth + 1) * 24) + 'px;';
+
+  // Files first at this level
+  if (node.files) {
+    for (var j = 0; j < node.files.length; j++) {
+      var f = node.files[j];
+      html += '<div class="xlsx-tree-file" onmouseover="this.style.background=\'#f0f7ff\'" onmouseout="this.style.background=\'\'" style="padding:2px 0;">' +
+        '<div style="display:flex;align-items:center;padding:3px 8px;">' +
+        '<span style="' + filePad + '">&#128196;</span> ' +
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(f.name) + '</span> ' +
+        '<small style="color:#999;margin-left:8px;">' + (f.size >= 1024 ? Math.round(f.size/1024) + 'KB' : f.size + 'B') + '</small>' +
+        '</div>' +
+        '<div style="text-align:right;padding:2px 8px 2px ' + ((depth + 2) * 24) + 'px;">' +
+        '<button class="btn btn-sm btn-primary" data-xlsx-path="' + escapeHtml(f.path).replace(/"/g, '&quot;') + '" onclick="_xlsxPick(this)">✓ 选择</button>' +
+        '</div></div>';
+    }
+  }
+
+  // Then sub-directories
+  if (node.children) {
+    for (var i = 0; i < node.children.length; i++) {
+      var child = node.children[i];
+      var subHtml = renderXlsxTree(child, inputId, depth + 1);
+      if (subHtml) {
+        html += '<div>' +
+          '<div onclick="_xlsxToggleFolder(this)" style="cursor:pointer;padding:4px 8px;white-space:nowrap;font-weight:500;color:#333;">' +
+          '<span style="' + folderPad + '">&#9654; </span>' +
+          escapeHtml(child.name) + '</div>' +
+          '<div style="display:none;">' + subHtml + '</div></div>';
+      }
+    }
+  }
+  return html;
+}
+
+function _xlsxToggleFolder(headerEl) {
+  var childEl = headerEl.nextElementSibling;
+  var arrow = headerEl.querySelector('span');
+  if (childEl.style.display === 'none' || !childEl.style.display) {
+    childEl.style.display = 'block';
+    arrow.textContent = '▼ ';
+  } else {
+    childEl.style.display = 'none';
+    arrow.textContent = '▶ ';
+  }
+}
+
+function _xlsxPick(btn) {
+  var path = btn.getAttribute('data-xlsx-path');
+  // Get the target input from the overlay's nearest input id context
+  // We pass inputId via a global on the overlay
+  var overlay = document.getElementById('xlsx-browse-overlay');
+  if (overlay) {
+    var inputId = overlay.getAttribute('data-input-id');
+    if (inputId) document.getElementById(inputId).value = path;
+    overlay.remove();
+  }
+}
+
+/* ─── XLSX Discovery for List Import ──────────────────────── */
+function discoverXlsxForImport() {
+  var sn = document.getElementById("list-import-sn").value.trim();
+  if (!sn) { alert("请先输入 SN 编号"); return; }
+
+  var logEl = document.getElementById("list-import-debug");
+  var progressEl = document.getElementById("list-import-progress");
+  progressEl.style.display = "block";
+  logEl.innerHTML = "正在在 xlsx_search_dir 中搜索 '" + escapeHtml(sn) + "' 相关的 xlsx 文件...";
+
+  console.log("[discoverXlsxForImport] SN:", sn);
+
+  pswp.authenticatedFetch("/api/edm/list/xlsx-discover", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sn: sn })
+  })
+  .then(function(r) {
+    console.log("[discoverXlsxForImport] Response status:", r.status);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  })
+  .then(function(data) {
+    console.log("[discoverXlsxForImport] Response data:", data);
+    if (data.xlsx_path) {
+      document.getElementById("list-import-xlsx").value = data.xlsx_path;
+      logEl.innerHTML = '[OK] 发现 xlsx: ' + escapeHtml(data.xlsx_name) + '\n路径: ' + escapeHtml(data.xlsx_path);
+    } else {
+      logEl.innerHTML = '[ERROR] ' + escapeHtml(data.error || '未找到 xlsx');
+    }
+  })
+  .catch(function(e) {
+    console.error("[discoverXlsxForImport] Error:", e);
+    logEl.innerHTML = '[ERROR] ' + escapeHtml(e.message);
+  });
+}
+
+function discoverXlsxForVerify() {
+  var sn = document.getElementById("verify-sn").value.trim();
+  if (!sn) { alert("请先输入 SN 编号"); return; }
+
+  var logEl = document.getElementById("verify-debug");
+  var progressEl = document.getElementById("verify-progress");
+  progressEl.style.display = "block";
+  logEl.innerHTML = "正在在 xlsx_search_dir 中搜索 '" + escapeHtml(sn) + "' 相关的 xlsx 文件...";
+
+  pswp.authenticatedFetch("/api/edm/list/xlsx-discover", {
+    method: "POST",
+    body: JSON.stringify({ sn: sn })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.xlsx_path) {
+      document.getElementById("verify-xlsx").value = data.xlsx_path;
+      consoleLogMsg(logEl, '[OK] 发现 xlsx: ' + data.xlsx_name);
+      consoleLogMsg(logEl, '路径: ' + data.xlsx_path);
+    } else {
+      consoleLogMsg(logEl, '[ERROR] ' + (data.error || '未找到 xlsx'));
+    }
+  })
+  .catch(function(e) {
+    consoleLogMsg(logEl, '[ERROR] ' + e.message);
+  });
+}
+
+/* ─── List Discovery for Verify ───────────────────────────── */
+function discoverListsForVerify() {
+  var sn = document.getElementById("verify-sn").value.trim();
+  if (!sn) { alert("请先输入 SN 编号"); return; }
+
+  var selectEl = document.getElementById("verify-list-select");
+  selectEl.innerHTML = '<option>加载中...</option>';
+
+  var logEl = document.getElementById("verify-debug");
+  var progressEl = document.getElementById("verify-progress");
+  progressEl.style.display = "block";
+  consoleLogMsg(logEl, "正在搜索 List...");
+
+  pswp.authenticatedFetch("/api/edm/list/discover", {
+    method: "POST",
+    body: JSON.stringify({ sn: sn })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var lists = data.lists || [];
+    if (!lists.length) {
+      selectEl.innerHTML = '<option>未找到 List</option>';
+      consoleLogMsg(logEl, '[INFO] 未找到匹配的 List');
+      return;
+    }
+    selectEl.innerHTML = '';
+    for (var i = 0; i < lists.length; i++) {
+      var opt = document.createElement("option");
+      opt.value = lists[i].list_id;
+      var typeLabel = lists[i].type === 'formal' ? '[Formal]' : '[Test]';
+      opt.textContent = '[' + lists[i].list_id + '] ' + typeLabel + ' ' + lists[i].title;
+      selectEl.appendChild(opt);
+    }
+    consoleLogMsg(logEl, '[OK] 找到 ' + lists.length + ' 个 List');
+  })
+  .catch(function(e) {
+    selectEl.innerHTML = '<option>查询失败</option>';
+    consoleLogMsg(logEl, '[ERROR] ' + e.message);
+  });
+}
+
+/* ─── Verify (merged Email + Deep) ─────────────────────────── */
+function doVerify() {
+  var sn = document.getElementById("verify-sn").value.trim();
+  var xlsxPath = document.getElementById("verify-xlsx").value.trim();
+  var selectEl = document.getElementById("verify-list-select");
+  var listId = selectEl.value;
+  var mode = document.querySelector('input[name="verify-mode"]:checked').value;
+
+  if (!listId || listId === '-- 输入 SN 并点击「发现 List」--') { alert("请选择一个 List"); return; }
+  if (!xlsxPath) { alert("请选择或输入 xlsx 文件路径"); return; }
+
+  var btn = document.getElementById("btn-verify");
+  btn.disabled = true;
+  var modeLabel = mode === 'email' ? 'Email 验证' : '深度验证';
+  btn.innerHTML = '<span class="spinner"></span> ' + modeLabel + '中...';
+
+  var progressEl = document.getElementById("verify-progress");
+  var debugEl = document.getElementById("verify-debug");
+  progressEl.style.display = "block";
+  clearConsoleLog(debugEl);
+  consoleLogMsg(debugEl, ">>> 开始 " + modeLabel);
+  consoleLogMsg(debugEl, "List ID: " + listId);
+  consoleLogMsg(debugEl, "XLSX: " + xlsxPath);
+
+  var apiUrl = mode === 'email' ? "/api/edm/list/verify-email" : "/api/edm/list/verify-deep";
+
+  pswp.authenticatedFetch(apiUrl, {
+    method: "POST",
+    body: JSON.stringify({ list_id: listId, xlsx_path: xlsxPath, sn: sn })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.task_id) {
+      var prevLen = 0;
+      var resultJson = null;
+      pswp.pollTask(data.task_id, function(task) {
+        var stdout = task.stdout || "";
+        var lines = stdout.split("\n");
+        for (var i = prevLen; i < lines.length; i++) {
+          var line = lines[i];
+          if (line.startsWith("__RESULT__")) {
+            try { resultJson = JSON.parse(line.substring(10)); } catch(e) {}
+          } else if (line.trim()) {
+            consoleLogMsg(debugEl, line);
+          }
+        }
+        prevLen = lines.length;
+
+        if (task.status === "completed" || task.status === "failed") {
+          btn.disabled = false;
+          btn.innerHTML = '&#10004; 开始验证';
+          if (task.status === "failed") {
+            consoleLogMsg(debugEl, "ERROR: Task execution failed", '#ef4444');
+            consoleLogMsg(debugEl, "=== Verify Done ===", '#60a5fa');
+          } else if (resultJson) {
+            if (resultJson.passed) {
+              consoleLogMsg(debugEl, "SUCCESS: " + modeLabel + " PASSED", '#22c55e');
+            } else {
+              consoleLogMsg(debugEl, "FAILED: " + modeLabel + " NOT PASSED", '#ef4444');
+            }
+            consoleLogMsg(debugEl, "=== Verify Done ===", '#60a5fa');
+            showVerifyResultModal(resultJson, modeLabel, mode === 'email' ? 'email' : 'deep', stdout);
+          }
+        }
+      });
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '&#10004; 开始验证';
+      alert("提交失败: " + (data.error || "未知错误"));
+    }
+  })
+  .catch(function(e) {
+    btn.disabled = false;
+    btn.innerHTML = '&#10004; 开始验证';
+    alert("验证失败: " + e.message);
+  });
+}
+
+/* ─── Verify Result Modal ────────────────────────────────────────── */
+function showVerifyResultModal(result, modeLabel, verifyType, fullLog) {
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+  var passed = result.passed;
+  var statusColor = passed ? '#22c55e' : '#ef4444';
+  var statusBg = passed ? '#f0fdf4' : '#fef2f2';
+  var statusText = passed ? '通过 ✓' : '未通过 ✗';
+  var icon = passed ? '✓' : '✗';
+
+  // Parse the full log to extract detailed info
+  var lines = fullLog.split('\n');
+  var foundInList = 0, missingCount = 0, mismatchCount = 0, mismatchedFields = [];
+  var details = [];
+
+  for (var k = 0; k < lines.length; k++) {
+    var l = lines[k].trim();
+    // Email verify patterns
+    if (l.indexOf('List total') >= 0) details.push('List 总人数: ' + l.split(':')[1]);
+    if (l.indexOf('XLSX emails') >= 0) details.push('XLSX 邮箱数: ' + l.split(':')[1]);
+    if (l.indexOf('In list') >= 0 && l.indexOf('Extra') < 0) details.push('在 List 中找到: ' + l.split(':')[1]);
+    if (l.indexOf('Matched') >= 0 && l.indexOf('Match') < 0) details.push('匹配: ' + l.split(':')[1]);
+    if (l.indexOf('MISSING') >= 0) missingCount = parseInt(l.match(/\d+/)) || 0;
+    if (l.indexOf('EXTRA') >= 0) details.push('List 多余: ' + l.split(':')[1]);
+    // Deep verify patterns
+    if (l.indexOf('MISMATCH') >= 0) { mismatchCount++; details.push('字段不匹配: ' + l.replace('[VERIFY]', '')); }
+    if (l.indexOf('Token') >= 0 && l.indexOf('PASS') >= 0) details.push('Token 验证: 通过');
+    if (l.indexOf('SubId') >= 0 && l.indexOf('PASS') >= 0) details.push('SubId 验证: 通过');
+    if (l.indexOf('PASS') >= 0 && l.indexOf('RESULT') >= 0) details.push('结果: 通过');
+    if (l.indexOf('FAIL') >= 0 && l.indexOf('RESULT') >= 0) details.push('结果: 未通过');
+  }
+
+  // Build summary stats for email verify
+  var summaryHtml = '';
+  if (result.type === 'email' && result.type) {
+    summaryHtml = '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin:16px 0;">' +
+      '<div style="text-align:center; padding:12px; background:#f8f9fa; border-radius:8px;">' +
+      '<div style="font-size:24px; font-weight:bold; color:' + statusColor + ';">' + (result.total_in_list || '?') + '</div>' +
+      '<div style="font-size:12px; color:#888; margin-top:4px;">List 总人数</div></div>' +
+      '<div style="text-align:center; padding:12px; background:#f8f9fa; border-radius:8px;">' +
+      '<div style="font-size:24px; font-weight:bold; color:#3b82f6;">' + (result.xlsx_emails || 0) + '</div>' +
+      '<div style="font-size:12px; color:#888; margin-top:4px;">XLSX 邮箱数</div></div>' +
+      '<div style="text-align:center; padding:12px; background:' + statusBg + '; border-radius:8px;">' +
+      '<div style="font-size:24px; font-weight:bold; color:' + statusColor + ';">' + statusText + '</div>' +
+      '<div style="font-size:12px; color:#888; margin-top:4px;">验证结果</div></div>' +
+      '</div>';
+  } else {
+    summaryHtml = '<div style="text-align:center; padding:16px; background:' + statusBg + '; border-radius:8px; margin:16px 0;">' +
+      '<div style="font-size:32px; font-weight:bold; color:' + statusColor + ';">' + statusText + '</div></div>';
+  }
+
+  var detailHtml = '';
+  if (details.length > 0) {
+    detailHtml = '<div style="margin:16px 0;"><div style="font-weight:bold; margin-bottom:8px; color:#555;">详细对比</div>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+      '<thead><tr style="border-bottom:2px solid #eee;"><th style="text-align:left;padding:6px;">项目</th><th style="text-align:left;padding:6px;">结果</th></tr></thead><tbody>';
+    for (var d = 0; d < details.length; d++) {
+      var parts = details[d].split(':');
+      detailHtml += '<tr style="border-bottom:1px solid #f0f0f0;">' +
+        '<td style="padding:6px;font-weight:500;">' + escapeHtml(parts[0]) + '</td>' +
+        '<td style="padding:6px;">' + escapeHtml(parts.slice(1).join(':')) + '</td></tr>';
+    }
+    detailHtml += '</tbody></table></div>';
+  }
+
+  var dialog = document.createElement('div');
+  dialog.style.cssText = 'background:white;border-radius:12px;width:500px;max-height:80vh;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column;';
+  dialog.innerHTML =
+    '<div style="padding:16px 20px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px;">' +
+    '<span style="font-size:24px; color:' + statusColor + ';">' + icon + '</span>' +
+    '<span style="font-size:16px; font-weight:bold;">' + modeLabel + ' 结果</span>' +
+    '<span style="margin-left:auto;font-size:13px; font-weight:bold; color:' + statusColor + ';">' + statusText + '</span>' +
+    '<button onclick="this.parentElement.parentElement.parentElement.remove()" style="margin-left:8px;border:none;background:none;font-size:18px;cursor:pointer;">✕</button>' +
+    '</div>' +
+    '<div style="overflow-y:auto;flex:1;padding:8px 20px 20px;">' +
+    summaryHtml + detailHtml +
+    '<div style="margin-top:12px; text-align:center;">' +
+    '<button onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="border:none; background:#f0f0f0; padding:8px 32px; border-radius:6px; cursor:pointer; font-size:14px;">关闭</button>' +
+    '</div></div>';
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+}
+
+/* ─── List Import ──────────────────────────────────────────── */
+function doListImport() {
+  var sn = document.getElementById("list-import-sn").value.trim();
+  var xlsxPath = document.getElementById("list-import-xlsx").value.trim();
+  var mode = document.querySelector('input[name="list-import-mode"]:checked').value;
+
+  if (!sn) { alert("请输入 SN 编号"); return; }
+  if (!xlsxPath) { alert("请选择或输入 xlsx 文件路径"); return; }
+
+  var btn = document.getElementById("btn-list-import");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 导入中...';
+
+  var progressEl = document.getElementById("list-import-progress");
+  var debugEl = document.getElementById("list-import-debug");
+  progressEl.style.display = "block";
+  clearConsoleLog(debugEl);
+  consoleLogMsg(debugEl, ">>> 开始 List 导入 (" + mode + ")");
+  consoleLogMsg(debugEl, "SN: " + sn);
+  consoleLogMsg(debugEl, "XLSX: " + xlsxPath);
+
+  pswp.authenticatedFetch("/api/edm/list/import", {
+    method: "POST",
+    body: JSON.stringify({ xlsx_path: xlsxPath, sn: sn, mode: mode })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.task_id) {
+      var prevLen = 0;
+      pswp.pollTask(data.task_id, function(task) {
+        var stdout = task.stdout || "";
+        var lines = stdout.split("\n");
+        for (var i = prevLen; i < lines.length; i++) {
+          if (lines[i].trim()) consoleLogMsg(debugEl, lines[i]);
+        }
+        prevLen = lines.length;
+
+        if (task.status === "completed") {
+          btn.disabled = false;
+          btn.innerHTML = '&#128190; 开始导入';
+          btn.style.background = '#22c55e';
+          btn.style.color = 'white';
+          consoleLogMsg(debugEl, "Done! (导入完成) ✓");
+          setTimeout(function() { btn.style.background = ''; btn.style.color = ''; }, 3000);
+          if (task.stderr) {
+            var errLines = task.stderr.split("\n");
+            for (var j = 0; j < errLines.length; j++) { if (errLines[j].trim()) consoleLogMsg(debugEl, errLines[j], '#ef4444'); }
+          }
+        } else if (task.status === "failed") {
+          btn.disabled = false;
+          btn.innerHTML = '&#128190; 开始导入';
+          if (task.stderr) consoleLogMsg(debugEl, "ERROR: " + task.stderr, '#ef4444');
+          consoleLogMsg(debugEl, "Done! (导入失败) ✗", '#ef4444');
+        }
+      });
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '&#128190; 开始导入';
+      alert("提交失败: " + (data.error || "未知错误"));
+    }
+  })
+  .catch(function(e) {
+    btn.disabled = false;
+    btn.innerHTML = '&#128190; 开始导入';
+    alert("导入失败: " + e.message);
+  });
+}
+
+/* ─── List Verify History ──────────────────────────────────── */
+var _historyData = [];  // store loaded history for filtering
+
+function loadListVerifyHistory() {
+  pswp.authenticatedFetch("/api/edm/list/history?page_size=50")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var container = document.getElementById("list-verify-history");
+      var items = data.data || [];
+      if (!items.length) {
+        container.innerHTML = '<div class="empty-state"><p>暂无记录</p></div>';
+        _historyData = [];
+        return;
+      }
+      // Flatten: each record can have up to 3 task rows (import, email verify, deep verify)
+      var rows = [];
+      for (var i = 0; i < items.length; i++) {
+        var h = items[i];
+        if (h.import_status) {
+          rows.push({
+            task_type: 'import',
+            task_type_label: '&#128190; 导入',
+            sn: h.sn || '—',
+            list_id: h.list_id || '—',
+            list_title: h.list_title || '',
+            import_type: h.import_type || '',
+            status: h.import_status,
+            status_label: h.import_status === 'success' ? '成功' : (h.import_status === 'failed' ? '失败' : h.import_status),
+            status_ok: h.import_status === 'success',
+            created_at: h.created_at_str || '',
+            xlsx_name: h.xlsx_path ? h.xlsx_path.split('/').pop() : '',
+            detail: ''
+          });
+        }
+        if (h.verify_email_status) {
+          rows.push({
+            task_type: 'email',
+            task_type_label: '&#10004; Email 验证',
+            sn: h.sn || '—',
+            list_id: h.list_id || '—',
+            list_title: h.list_title || '',
+            import_type: '',
+            status: h.verify_email_status,
+            status_label: h.verify_email_status === 'pass' ? 'PASS' : (h.verify_email_status === 'fail' ? 'FAIL' : h.verify_email_status),
+            status_ok: h.verify_email_status === 'pass',
+            created_at: h.created_at_str || '',
+            xlsx_name: h.xlsx_path ? h.xlsx_path.split('/').pop() : '',
+            detail: h.verify_email_result || ''
+          });
+        }
+        if (h.verify_deep_status) {
+          rows.push({
+            task_type: 'deep',
+            task_type_label: '&#128270; 深度验证',
+            sn: h.sn || '—',
+            list_id: h.list_id || '—',
+            list_title: h.list_title || '',
+            import_type: '',
+            status: h.verify_deep_status,
+            status_label: h.verify_deep_status === 'pass' ? 'PASS' : (h.verify_deep_status === 'fail' ? 'FAIL' : h.verify_deep_status),
+            status_ok: h.verify_deep_status === 'pass',
+            created_at: h.created_at_str || '',
+            xlsx_name: h.xlsx_path ? h.xlsx_path.split('/').pop() : '',
+            detail: h.verify_deep_result || ''
+          });
+        }
+      }
+      // Sort by time descending
+      rows.sort(function(a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); });
+      _historyData = rows;
+      renderHistoryTable(rows);
+    })
+    .catch(function(e) { console.error("Failed to load list verify history:", e); });
+}
+
+function renderHistoryTable(rows) {
+  var container = document.getElementById("list-verify-history");
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty-state"><p>暂无记录</p></div>';
+    return;
+  }
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+    '<thead><tr style="border-bottom:2px solid #eee;">' +
+    '<th style="text-align:left;padding:8px 6px;">任务类型</th>' +
+    '<th style="text-align:left;padding:8px 6px;">SN</th>' +
+    '<th style="text-align:left;padding:8px 6px;">List ID</th>' +
+    '<th style="text-align:left;padding:8px 6px;">List 名称</th>' +
+    '<th style="text-align:left;padding:8px 6px;">XLSX</th>' +
+    '<th style="text-align:left;padding:8px 6px;">导入模式</th>' +
+    '<th style="text-align:left;padding:8px 6px;">状态</th>' +
+    '<th style="text-align:left;padding:8px 6px;">时间</th>' +
+    '</tr></thead><tbody>';
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var badgeColor = r.status_ok ? '#22c55e' : '#ef4444';
+    html += '<tr style="border-bottom:1px solid #f0f0f0;" onmouseover="this.style.background=\'#f8f9fa\'" onmouseout="this.style.background=\'\'">' +
+      '<td style="padding:6px;">' + r.task_type_label + '</td>' +
+      '<td style="padding:6px;font-weight:500;">' + escapeHtml(r.sn) + '</td>' +
+      '<td style="padding:6px;">' + escapeHtml(r.list_id) + '</td>' +
+      '<td style="padding:6px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(r.list_title) + '">' + escapeHtml(r.list_title || '—') + '</td>' +
+      '<td style="padding:6px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(r.xlsx_name) + '">' + escapeHtml(r.xlsx_name || '—') + '</td>' +
+      '<td style="padding:6px;color:#888;">' + escapeHtml(r.import_type || '—') + '</td>' +
+      '<td style="padding:6px;"><span style="color:' + badgeColor + ';font-weight:bold;">' + escapeHtml(r.status_label) + '</span></td>' +
+      '<td style="padding:6px;color:#888;white-space:nowrap;">' + (r.created_at || '—') + '</td>' +
+      '</tr>';
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function filterHistory(type, el) {
+  var tabs = document.querySelectorAll("#history-filter-tabs .tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  if (el) el.classList.add("active");
+  if (type === 'all') {
+    renderHistoryTable(_historyData);
+  } else {
+    var filtered = _historyData.filter(function(r) { return r.task_type === type; });
+    renderHistoryTable(filtered);
+  }
+}
 
 /* ─── EDM Agent Functions ───────────────────────────────── */
 /* Auto-refresh listener status every 10s when visible */
@@ -1282,7 +2105,9 @@ function _debugLog(msg) {
   if (el) {
     el.style.display = 'block';
     el.textContent = dashboardDebugLog.join('\n');
-    el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(function() {
+      el.scrollTop = el.scrollHeight;
+    });
   }
 }
 function loadDashboard() {
@@ -2828,6 +3653,7 @@ function loadEdmSettings() {
       document.getElementById("edm-sender").value = fr.sender || "";
       document.getElementById("edm-subject-keywords").value = fr.subject_keywords || "";
       document.getElementById("edm-body-keywords").value = fr.body_keywords || "";
+      document.getElementById("edm-test-emails").value = data.test_emails || "";
       document.getElementById("edm-output-base").value = data.output_base || "";
       document.getElementById("edm-xlsx-search-dir").value = data.xlsx_search_directory || "";
     })
@@ -2849,6 +3675,7 @@ function saveEdmSettings() {
         sender: document.getElementById("edm-sender").value,
         subject_keywords: document.getElementById("edm-subject-keywords").value,
         body_keywords: document.getElementById("edm-body-keywords").value,
+        test_emails: document.getElementById("edm-test-emails").value,
       },
       output_base: document.getElementById("edm-output-base").value,
       xlsx_search_directory: document.getElementById("edm-xlsx-search-dir").value,
@@ -3200,6 +4027,7 @@ function loadRecurringPlans() {
           '<td>' + enabledBadge + '</td>' +
           '<td>' +
           '<button class="btn btn-sm" onclick="togglePlan(' + p.id + ', ' + toggleAction + ')">' + toggleText + '</button> ' +
+          '<button class="btn btn-primary btn-sm" onclick="editRecurringPlan(' + p.id + ')">编辑</button> ' +
           '<button class="btn btn-danger btn-sm" onclick="deletePlan(' + p.id + ')">删除</button>' +
           '</td></tr>';
       }
@@ -3231,6 +4059,101 @@ function deletePlan(planId) {
     .catch(function(e) { alert("删除失败: " + e.message); });
 }
 
+var planEditPlanData = null;
+
+function editRecurringPlan(planId) {
+  // Load plan data and show the modal
+  pswp.authenticatedFetch("/api/calendar/plan/list")
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok) return;
+      var plan = null;
+      for (var i = 0; i < data.plans.length; i++) {
+        if (data.plans[i].id === planId) { plan = data.plans[i]; break; }
+      }
+      if (!plan) return;
+      planEditPlanData = plan;
+
+      // Populate form fields
+      document.getElementById("edit-plan-name").value = plan.name || "";
+      document.getElementById("edit-plan-subject").value = plan.subject || "";
+      document.getElementById("edit-plan-room").value = plan.room_email || "";
+      document.getElementById("edit-plan-day").value = plan.day_of_week || 1;
+      document.getElementById("edit-plan-start").value = plan.start_time || "09:00";
+      document.getElementById("edit-plan-end").value = plan.end_time || "10:00";
+
+      // Populate room options dynamically
+      var roomSelect = document.getElementById("edit-plan-room");
+      roomSelect.innerHTML = '';
+      for (var j = 0; j < calRooms.length; j++) {
+        var opt = document.createElement("option");
+        opt.value = calRooms[j].email;
+        opt.textContent = calRooms[j].name + (calRooms[j].description ? ' - ' + calRooms[j].description : '');
+        if (calRooms[j].email === plan.room_email) opt.selected = true;
+        roomSelect.appendChild(opt);
+      }
+
+      // Populate time selects (30-min intervals 09:00-18:00)
+      var startSelect = document.getElementById("edit-plan-start");
+      var endSelect = document.getElementById("edit-plan-end");
+      startSelect.innerHTML = '';
+      endSelect.innerHTML = '';
+      for (var h = 9; h <= 18; h++) {
+        for (var m = 0; m < 60; m += 30) {
+          var t = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+          startSelect.appendChild(new Option(t, t));
+          endSelect.appendChild(new Option(t, t));
+        }
+      }
+      startSelect.value = plan.start_time || "09:00";
+      endSelect.value = plan.end_time || "10:00";
+
+      document.getElementById("plan-edit-overlay").classList.add("active");
+    });
+}
+
+function closePlanEditModal() {
+  document.getElementById("plan-edit-overlay").classList.remove("active");
+  planEditPlanData = null;
+}
+
+function saveRecurringPlan() {
+  if (!planEditPlanData) return;
+  var plan_id = planEditPlanData.id;
+  var name = document.getElementById("edit-plan-name").value.trim();
+  var subject = document.getElementById("edit-plan-subject").value.trim();
+  var room_email = document.getElementById("edit-plan-room").value;
+  var day_of_week = parseInt(document.getElementById("edit-plan-day").value);
+  var start_time = document.getElementById("edit-plan-start").value;
+  var end_time = document.getElementById("edit-plan-end").value;
+  if (!name || !subject || !room_email || !start_time || !end_time) {
+    alert("请填写所有必填项");
+    return;
+  }
+
+  pswp.authenticatedFetch("/api/calendar/plan/update", {
+    method: "POST",
+    body: JSON.stringify({
+      plan_id: plan_id,
+      name: name,
+      subject: subject,
+      room_email: room_email,
+      day_of_week: day_of_week,
+      start_time: start_time,
+      end_time: end_time
+    })
+  }).then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        closePlanEditModal();
+        loadRecurringPlans();
+      } else {
+        alert("更新失败: " + (data.error || '未知错误'));
+      }
+    })
+    .catch(function(e) { alert("网络错误: " + e.message); });
+}
+
 function checkPlanSlots() {
   var resultEl = document.getElementById("plan-check-result");
   resultEl.innerHTML = '<div style="font-size:12px; color:var(--color-text-secondary); padding:8px;"><span class="spinner"></span> 检查计划执行情况...</div>';
@@ -3242,41 +4165,96 @@ function checkPlanSlots() {
         resultEl.innerHTML = '<div style="color:#dc2626; padding:8px;">检查失败: ' + escapeHtml(data.error) + '</div>';
         return;
       }
-      var unbooked = data.unbooked || [];
-      if (unbooked.length === 0) {
-        resultEl.innerHTML = '<div style="padding:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-size:13px;">' +
-          '&#10004; 所有计划时段已预定完成！</div>';
-      } else {
-        var roomNames2 = {};
-        for (var i = 0; i < calRooms.length; i++) {
-          roomNames2[calRooms[i].email] = calRooms[i].name;
-        }
-        var html = '<div style="padding:12px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; margin-bottom:12px;">';
-        html += '<div style="font-weight:600; color:#d97706; margin-bottom:8px;">' +
-          '&#9888; 发现 ' + unbooked.length + ' 个未预定的计划时段</div>';
-        html += '<div class="table-container"><table><thead><tr>' +
-          '<th>计划</th><th>会议室</th><th>日期</th><th>时间</th><th>操作</th>' +
-          '</tr></thead><tbody>';
-        for (var i = 0; i < unbooked.length; i++) {
-          var u = unbooked[i];
-          var rn = roomNames2[u.room_email] || u.room_email.split("@")[0];
-          // escape the slot JSON for onclick
-          var slotJson = JSON.stringify(u).replace(/'/g, "\\'");
-          html += '<tr>' +
-            '<td>' + escapeHtml(u.plan_name) + '</td>' +
-            '<td>' + escapeHtml(rn) + '</td>' +
-            '<td>' + escapeHtml(u.date) + ' (' + escapeHtml(u.day_name) + ')</td>' +
-            '<td>' + escapeHtml(u.start_time) + '-' + escapeHtml(u.end_time) + '</td>' +
-            '<td><button class="btn btn-primary btn-sm" onclick="bookSingleSlot(' + slotJson + ')">预定</button></td>' +
-            '</tr>';
-        }
-        html += '</tbody></table></div>';
-        html += '<div style="margin-top:8px;">' +
-          '<button class="btn btn-success btn-sm" onclick="bookAllUnbooked()">&#10004; 全部预定</button>' +
-          '</div></div>';
-        resultEl.innerHTML = html;
-        window._calUnbookedSlots = unbooked;
+      var slots = data.slots || [];
+      var roomNames2 = {};
+      for (var i = 0; i < calRooms.length; i++) {
+        roomNames2[calRooms[i].email] = calRooms[i].name;
       }
+
+      // Summary counts
+      var booked = 0, busy = 0, unbooked = 0;
+      for (var i = 0; i < slots.length; i++) {
+        if (slots[i].status === "booked") booked++;
+        else if (slots[i].status === "busy") busy++;
+        else unbooked++;
+      }
+
+      var html = '';
+      // Summary bar
+      html += '<div style="display:flex; gap:12px; padding:10px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:12px; font-size:13px;">';
+      html += '<span style="color:#166534;"><b>&#10004; 已预定: ' + booked + '</b></span>';
+      if (busy > 0) html += '<span style="color:#d97706;"><b>&#9888; 被占用: ' + busy + '</b></span>';
+      if (unbooked > 0) html += '<span style="color:#dc2626;"><b>&#10008; 未预定: ' + unbooked + '</b></span>';
+      html += '</div>';
+
+      // Table
+      html += '<div class="table-container"><table><thead><tr>' +
+        '<th>计划</th><th>会议室</th><th>日期</th><th>时间</th><th>状态</th><th>预定人</th><th>操作</th>' +
+        '</tr></thead><tbody>';
+
+      for (var i = 0; i < slots.length; i++) {
+        var s = slots[i];
+        var rn = roomNames2[s.room_email] || s.room_email.split("@")[0];
+        var statusBadge = '';
+        if (s.status === 'booked') {
+          statusBadge = '<span style="display:inline-block;padding:2px 8px;background:#dcfce7;color:#166534;border-radius:4px;font-size:12px;font-weight:600;">已预定</span>';
+        } else if (s.status === 'busy') {
+          statusBadge = '<span style="display:inline-block;padding:2px 8px;background:#fef3c7;color:#92400e;border-radius:4px;font-size:12px;font-weight:600;">被占用</span>';
+        } else if (s.status === 'unbooked') {
+          statusBadge = '<span style="display:inline-block;padding:2px 8px;background:#fee2e2;color:#991b1b;border-radius:4px;font-size:12px;font-weight:600;">未预定</span>';
+        } else {
+          statusBadge = '<span style="display:inline-block;padding:2px 8px;background:#f1f5f9;color:#64748b;border-radius:4px;font-size:12px;">未知</span>';
+        }
+
+        var organizerCell = '';
+        if (s.status === 'busy' || s.status === 'booked') {
+          organizerCell = escapeHtml(s.organizer || s.busy_subject) || '-';
+        } else {
+          organizerCell = '-';
+        }
+
+        var actionCell = '';
+        if (s.status === 'unbooked') {
+          actionCell = '<button class="btn btn-primary btn-sm" data-plan-id="' + s.plan_id + '" data-slot-date="' + s.date + '" onclick="bookSingleSlotById(this)">预定</button>';
+        } else if (s.status === 'busy') {
+          actionCell = '<span style="font-size:11px;color:#92400e;"><b>冲突时段:</b> ' + escapeHtml(s.busy_start || '') + '-' + escapeHtml(s.busy_end || '') + '</span>';
+        } else if (s.status === 'booked') {
+          actionCell = '<span style="font-size:11px;color:#166534;">&#10004; 本计划</span>';
+        } else {
+          actionCell = '-';
+        }
+
+        html += '<tr>' +
+          '<td>' + escapeHtml(s.plan_name) + '</td>' +
+          '<td>' + escapeHtml(rn) + '</td>' +
+          '<td>' + escapeHtml(s.date) + ' <span style="font-size:11px;color:#94a3b8;">' + escapeHtml(s.day_name) + '</span></td>' +
+          '<td>' + escapeHtml(s.start_time) + '-' + escapeHtml(s.end_time) + '</td>' +
+          '<td>' + statusBadge + '</td>' +
+          '<td>' + organizerCell + '</td>' +
+          '<td>' + actionCell + '</td>' +
+          '</tr>';
+      }
+
+      html += '</tbody></table></div>';
+
+      // Action buttons at bottom
+      if (unbooked > 0) {
+        html += '<div style="margin-top:12px; padding:10px 14px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px;">';
+        html += '<div style="font-weight:600; color:#d97706; margin-bottom:8px;">';
+        html += '&#9888; 发现 ' + unbooked + ' 个未预定的计划时段';
+        html += '</div>';
+        html += '<button class="btn btn-success btn-sm" onclick="bookAllUnbooked()">&#10004; 全部预定未预定时段</button>';
+        html += '</div>';
+      } else if (booked === slots.length) {
+        html += '<div style="margin-top:12px; padding:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-size:13px;">';
+        html += '&#10004; 所有计划时段已预定完成！';
+        html += '</div>';
+      }
+
+      resultEl.innerHTML = html;
+      // Store unbooked slots for bulk book
+      window._calAllSlots = slots;
+      window._calUnbookedSlots = slots.filter(function(s) { return s.status === 'unbooked'; });
     })
     .catch(function(e) { resultEl.innerHTML = '<div style="color:#dc2626; padding:8px;">网络错误: ' + e.message + '</div>'; });
 }
@@ -3304,6 +4282,21 @@ function bookSingleSlot(slot) {
     }
   })
   .catch(function(e) { alert("网络错误: " + e.message); });
+}
+
+function bookSingleSlotById(btn) {
+  var planId = parseInt(btn.getAttribute("data-plan-id"));
+  var date = btn.getAttribute("data-slot-date");
+  var slots = window._calAllSlots || [];
+  var slot = null;
+  for (var i = 0; i < slots.length; i++) {
+    if (slots[i].status === 'unbooked' && slots[i].plan_id === planId && slots[i].date === date) {
+      slot = slots[i];
+      break;
+    }
+  }
+  if (!slot) { alert("找不到时段信息"); return; }
+  bookSingleSlot(slot);
 }
 
 function bookAllUnbooked() {

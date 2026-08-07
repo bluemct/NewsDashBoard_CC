@@ -19,6 +19,7 @@ os.makedirs(os.path.join(PROJECT_ROOT, "Log"), exist_ok=True)
 
 from routes.auth import auth_bp, require_auth, get_current_user
 from routes.edm_eml import edm_eml_bp as edm_bp, _set_project_root
+from routes.edm_list import edm_list_bp, _set_project_root as _set_edm_list_project_root
 from routes.tfs import tfs_bp
 from routes.icm import icm_bp, _set_project_root as _set_icm_project_root, _start_auto_refresh
 from routes.task import task_bp
@@ -61,6 +62,7 @@ def create_app() -> Flask:
     # Initialize module-level state for background threads
     _set_project_root(PROJECT_ROOT)
     _set_icm_project_root(PROJECT_ROOT)
+    _set_edm_list_project_root(PROJECT_ROOT)
 
     # Initialize task queue SQLite
     task_queue.init(os.path.join(PROJECT_ROOT, "Log", "ps_workspace_tasks.db"))
@@ -74,6 +76,7 @@ def create_app() -> Flask:
     # ─── Register Blueprints ──────────────────────────────────
     app.register_blueprint(auth_bp)
     app.register_blueprint(edm_bp)
+    app.register_blueprint(edm_list_bp)
     app.register_blueprint(tfs_bp)
     app.register_blueprint(icm_bp)
     app.register_blueprint(task_bp)

@@ -72,6 +72,7 @@ def settings_edm_get():
             "subject_keywords": ", ".join(filter_rules.get("subject_keywords", [])),
             "body_keywords": ", ".join(filter_rules.get("body_keywords", [])),
         },
+        "test_emails": ", ".join(cfg.get("test_emails", ["ma.chuntao@oe.21vianet.com", "microsoft.163163@163.com"])),
         "output_base": cfg.get("output_base", ""),
         "xlsx_search_directory": xlsx_dir.get("search_directory", ""),
     })
@@ -96,6 +97,9 @@ def settings_edm_save():
         "subject_keywords": [s.strip() for s in filter_data.get("subject_keywords", "").split(",") if s.strip()],
         "body_keywords": [s.strip() for s in filter_data.get("body_keywords", "").split(",") if s.strip()],
     }
+    # Handle test_emails from comma-separated string
+    if filter_data.get("test_emails") is not None:
+        cfg["test_emails"] = [s.strip() for s in filter_data.get("test_emails", "").split(",") if s.strip()]
     # Handle output_base from top-level
     if data.get("output_base"):
         cfg["output_base"] = data["output_base"]
