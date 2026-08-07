@@ -23,5 +23,8 @@
     "collection": "DefaultCollection",
     "assignee_group": "PS",
     "default_assignee": "Michael Ma"
+  },
+  "quiz": {
+    "url": "http://183.84.16.115:20270"
   }
 }

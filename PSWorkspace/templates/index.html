@@ -34,6 +34,10 @@
       <div class="stat-value">&#128197;</div>
       <div class="stat-label">会议室预定<br><small>预约、管理会议室</small></div>
     </div>
+    <div class="stat-card" onclick="pswp.navigate('quiz')" style="cursor:pointer">
+      <div class="stat-value">&#127891;</div>
+      <div class="stat-label">出题大师<br><small>智能出题系统</small></div>
+    </div>
   </div>
 
   <!-- Recent Activity -->
@@ -60,11 +64,6 @@
         <div style="font-size:32px; margin-bottom:8px">&#129302;</div>
         <strong>AIQC</strong>
         <p style="font-size:12px; margin-top:4px">AI 驱动的质量检查</p>
-      </div>
-      <div style="text-align:center; padding:16px; color:var(--color-text-secondary)">
-        <div style="font-size:32px; margin-bottom:8px">&#127891;</div>
-        <strong>出题大师</strong>
-        <p style="font-size:12px; margin-top:4px">智能出题系统</p>
       </div>
     </div>
   </div>
@@ -1067,6 +1066,9 @@
     </div>
   </div>
 </div>
+
+<!-- ═══ Quiz Master (出题大师) Section ═══ -->
+<div class="page-section" id="page-quiz"></div>
 
 {% endblock %}
 
@@ -3598,24 +3600,55 @@ function initSection(name) {
     loadEdmSettings(); loadIcmSettings(); loadAiSettings();
     return;
   }
+  if (name === 'quiz') {
+    // Always recreate — overlay is removed when navigating away
+    var existing = document.getElementById("quiz-overlay");
+    if (existing) existing.remove();
+
+    var overlay = document.createElement("div");
+    overlay.id = "quiz-overlay";
+    overlay.style.cssText = "position:fixed;top:48px;left:220px;right:0;bottom:0;z-index:1100;background:#fff;";
+
+    // Loading spinner
+    var loader = document.createElement("div");
+    loader.id = "quiz-loader";
+    loader.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;width:100%;";
+    loader.innerHTML = '<div style="font-size:40px;margin-bottom:16px;">&#127891;</div>' +
+      '<div style="width:36px;height:36px;border:3px solid #e5e7eb;border-top-color:#0078d4;border-radius:50%;animation:quiz-spin 0.8s linear infinite;margin:0 auto 12px;"></div>' +
+      '<div style="color:#605e5c;font-size:14px;">正在加载出题大师，请稍候…</div>';
+    overlay.appendChild(loader);
+
+    // Inject keyframe animation
+    if (!document.getElementById("quiz-spinner-style")) {
+      var styleEl = document.createElement("style");
+      styleEl.id = "quiz-spinner-style";
+      styleEl.textContent = "@keyframes quiz-spin{to{transform:rotate(360deg)}}";
+      document.head.appendChild(styleEl);
+    }
+
+    var iframe = document.createElement("iframe");
+    iframe.style.cssText = "width:100%;height:100%;border:none;z-index:1;position:relative;";
+    iframe.onload = function() { loader.style.display = "none"; };
+    iframe.src = "{{ quiz_url }}";
+
+    overlay.appendChild(iframe);
+    document.body.appendChild(overlay);
+    return;
+  }
   if (sectionInited[name]) return;
   sectionInited[name] = true;
   if (name === 'edm-agent') { loadListenerStatus(); loadTempFiles(); }
   if (name === 'edm-dashboard') loadDashboard();
   if (name === 'calendar') {
-    // Set default date to today & load rooms
     var today = new Date();
     var yyyy = today.getFullYear();
     var mm = String(today.getMonth() + 1).padStart(2, '0');
     var dd = String(today.getDate()).padStart(2, '0');
     var calDateEl = document.getElementById("cal-date");
     if (calDateEl) calDateEl.value = yyyy + '-' + mm + '-' + dd;
-    // Load rooms so dropdown is populated on first visit
     loadCalRooms();
   }
 }
-
-/* ─── Dashboard auto-refresh ─────────────────────────────── */
 setInterval(function() {
   var section = document.getElementById("page-edm-dashboard");
   if (section && section.classList.contains("active")) {

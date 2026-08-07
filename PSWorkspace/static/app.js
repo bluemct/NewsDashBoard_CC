@@ -45,6 +45,7 @@
     "icm": "page-icm",
     "calendar": "page-calendar",
     "settings": "page-settings",
+    "quiz": "page-quiz",
   };
 
   function setActiveNav(page) {
@@ -59,6 +60,12 @@
   }
 
   function navigate(page) {
+    // Hide quiz overlay when navigating away from quiz
+    if (page !== "quiz") {
+      var quizOverlay = document.getElementById("quiz-overlay");
+      if (quizOverlay) quizOverlay.remove();
+    }
+
     // Hide all page sections
     var sections = document.querySelectorAll(".page-section");
     for (var i = 0; i < sections.length; i++) {

@@ -4,7 +4,7 @@ import sys
 import json
 import logging
 
-from flask import Flask, render_template, jsonify, g, request, redirect
+from flask import Flask, render_template, jsonify, g, request, redirect, make_response, Response
 
 # BASE_DIR = PSWorkspace/ directory (where this script lives)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +26,9 @@ from routes.task import task_bp
 from routes.settings import settings_bp
 from routes.calendar import calendar_bp
 from utils import task_queue
+
+# For quiz proxy
+import requests as _http_requests
 
 # ─── Logging ──────────────────────────────────────────────────
 
@@ -97,12 +100,105 @@ def create_app() -> Flask:
     @app.route("/")
     def index():
         """Home page - JS handles auth verification via token."""
-        return render_template("index.html", user={})
+        return render_template("index.html", user={}, quiz_url="/quiz_proxy/")
 
     @app.route("/login")
     def login_page():
         """Login page."""
         return render_template("login.html")
+
+    # ─── Quiz Proxy (iframe bypass for X-Frame-Options / CSP) ──
+
+    @app.route("/quiz_proxy", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    @app.route("/quiz_proxy/", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    @app.route("/quiz_proxy/<path:subpath>", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    def quiz_proxy(subpath=None):
+        """Proxy requests to the quiz master site, rewriting HTML <base> for correct resource paths."""
+        if request.method == "OPTIONS":
+            return "", 204
+
+        base_url = _config.get("quiz", {}).get("url", "http://183.84.16.115:20270").rstrip("/")
+        target = base_url + "/" + (subpath or "")
+
+        # Forward query string
+        if request.query_string:
+            sep = "&" if "?" in target else "?"
+            target += sep + request.query_string.decode("utf-8")
+
+        try:
+            resp = _http_requests.request(
+                method=request.method,
+                url=target,
+                headers={k: v for k, v in request.headers if k.lower() != "host"},
+                data=request.get_data(),
+                cookies=request.cookies,
+                allow_redirects=False,
+                timeout=300,
+            )
+
+            # Handle redirects — rewrite Location to point back to /quiz_proxy/
+            if resp.status_code in (301, 302, 303, 307, 308):
+                loc = resp.headers.get("Location", "")
+                if loc.startswith(base_url):
+                    loc = "/quiz_proxy" + loc[len(base_url):]
+                elif loc.startswith("/"):
+                    loc = "/quiz_proxy" + loc
+                return "", resp.status_code, {"Location": loc}
+
+            content_type = resp.headers.get("content-type", "").lower()
+
+            # For HTML, rewrite all internal paths so they go through proxy
+            if "text/html" in content_type or "application/xhtml" in content_type:
+                body = resp.content.decode("utf-8", errors="replace")
+                # Direct string replacement for ALL internal paths — no regex complexity
+                body = body.replace('href="/', 'href="/quiz_proxy/')
+                body = body.replace('src="/', 'src="/quiz_proxy/')
+                body = body.replace('action="/', 'action="/quiz_proxy/')
+                # Rewrite JS navigation
+                body = body.replace("location.href = '/'", "location.href = '/quiz_proxy/'")
+                body = body.replace("location.href='/'", "location.href='/quiz_proxy/'")
+                body = body.replace("location.href= '/'", "location.href= '/quiz_proxy/'")
+                # Inject JS to intercept ALL fetch/XHR calls — place in <head> so it runs BEFORE any page scripts
+                interceptor = '''
+<script>
+(function(){
+  var _fetch = window.fetch;
+  window.fetch = function(){
+    var u = arguments[0];
+    if(typeof u === "string" && u.charAt(0)==="/" && u.indexOf("/quiz_proxy/")===-1){
+      arguments[0] = "/quiz_proxy" + u;
+    }
+    return _fetch.apply(this, arguments);
+  };
+  var _open = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(){
+    var u = arguments[1];
+    if(typeof u === "string" && u.charAt(0)==="/" && u.indexOf("/quiz_proxy/")===-1){
+      arguments[1] = "/quiz_proxy" + u;
+    }
+    return _open.apply(this, arguments);
+  };
+})();
+</script>
+'''
+                body = body.replace("<head>", "<head>\n" + interceptor, 1)
+                content = body.encode("utf-8")
+            else:
+                content = resp.content
+
+            # Build response, stripping frame-restricting headers
+            exclude_headers = {
+                "content-encoding", "content-length", "transfer-encoding",
+                "connection", "x-frame-options", "content-security-policy",
+                "content-security-policy-report-only", "x-content-security-policy",
+                "x-webkit-csp", "referrer-policy",
+            }
+            headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in exclude_headers]
+
+            return Response(content, resp.status_code, headers)
+        except Exception as e:
+            logger.error(f"Quiz proxy error: {e}")
+            return f"<h1>Proxy Error</h1><p>{e}</p>", 502
 
     # ─── Health Check ─────────────────────────────────────────
 
